@@ -206,6 +206,19 @@ impl ExtensionRegistry {
         hooks.sort_by(|a, b| b.priority().cmp(&a.priority()));
         hooks
     }
+
+    // ─── Clone (Phase 3) ─────────────────────────────────────
+
+    /// 获取克隆引用（用于子扩展如 Workflow）
+    pub fn clone_inner(&self) -> Self {
+        Self {
+            action_handlers: self.action_handlers.clone(),
+            condition_handlers: self.condition_handlers.clone(),
+            hooks_before: self.hooks_before.clone(),
+            hooks_after: self.hooks_after.clone(),
+            hooks_error: self.hooks_error.clone(),
+        }
+    }
 }
 
 impl Default for ExtensionRegistry {

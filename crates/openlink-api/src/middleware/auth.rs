@@ -3,13 +3,7 @@
 //! Phase 2: 管理API需要Token认证，重定向API不需要认证。
 //! 支持多Token，每个Token有权限范围（read/write/admin）。
 
-use axum::{
-    body::Body,
-    extract::Request,
-    http::{StatusCode, HeaderMap},
-    middleware::Next,
-    response::{IntoResponse, Response},
-};
+use axum::{extract::Request, http::{HeaderMap, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use crate::state::AppState;
 use std::sync::Arc;
 
@@ -53,7 +47,7 @@ fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
 /// 在 router.rs 中将管理路由与公开路由分开，
 /// 管理路由添加认证中间件层。
 pub async fn auth_middleware(
-    mut req: Request,
+    req: Request,
     next: Next,
 ) -> Response {
     // 从扩展中获取 AppState

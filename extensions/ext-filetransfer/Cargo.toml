@@ -1,0 +1,24 @@
+[package]
+name = "ext-filetransfer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../../crates/openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
+tokio = { workspace = true, features = ["fs", "io-util"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+tempfile = "3"

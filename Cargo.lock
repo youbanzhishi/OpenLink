@@ -401,6 +401,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ext-filetransfer"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "hmac",
+ "openlink-core",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "ext-hooks"
 version = "0.2.0"
 dependencies = [
@@ -444,6 +465,18 @@ dependencies = [
  "chrono",
  "openlink-core",
  "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "ext-workflow"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "openlink-core",
  "serde",
  "serde_json",
  "tokio",
@@ -1252,6 +1285,7 @@ dependencies = [
  "ext-webhook",
  "openlink-core",
  "openlink-store",
+ "rand",
  "serde",
  "serde_json",
  "thiserror",
@@ -1287,9 +1321,13 @@ version = "0.2.0"
 name = "openlink-sdk"
 version = "0.2.0"
 dependencies = [
+ "chrono",
  "openlink-core",
+ "reqwest",
  "serde",
  "serde_json",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

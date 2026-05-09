@@ -3,12 +3,7 @@
 //! 记录每个请求的方法、路径、耗时等信息。
 //! 可观测内置：每次路由决策都有完整上下文记录。
 
-use axum::{
-    body::Body,
-    extract::Request,
-    middleware::Next,
-    response::Response,
-};
+use axum::{extract::Request, middleware::Next, response::Response};
 
 /// 请求日志中间件
 pub async fn request_logging(req: Request, next: Next) -> Response {

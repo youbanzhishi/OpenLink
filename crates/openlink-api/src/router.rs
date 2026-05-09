@@ -7,8 +7,11 @@
 //! - /v1/links/:code/stats — 访问统计（需认证）
 //! - /v1/stats/overview — 全局概览（需认证）
 //! - /v1/extensions — 扩展管理（需认证）
+//! - /v1/agent/* — Agent 专用 API（Phase 3 新增）
+//! - /v1/files/* — 文件传输 API（Phase 3 新增）
 //!
 //! Phase 2: 管理API需要Token认证，重定向API不需要认证
+//! Phase 3: Agent API使用 X-Agent-ID Header认证
 
 use std::sync::Arc;
 use axum::{
@@ -32,11 +35,18 @@ use crate::middleware::logging::request_logging;
 /// - GET /v1/stats/overview → 全局概览（需认证）
 /// - POST/GET /v1/extensions → 注册/列出扩展（需认证）
 /// - DELETE /v1/extensions/:name → 卸载扩展（需认证）
+/// - POST /v1/agent/resolve → 批量解析（Agent API）
+/// - POST /v1/agent/discover → 发现 Link（Agent API）
+/// - POST /v1/agent/upload → 文件上传（Agent API）
+/// - POST /v1/agent/download → 文件下载（Agent API）
+/// - POST /v1/agent/share → 文件分享（Agent API）
 pub fn build_app(state: AppState) -> Router {
     // 公开路由（无需认证）
     let public_routes = Router::new()
         // 核心路径：/:code 重定向（最高频，必须最快，无需认证）
-        .route("/:code", get(handlers::redirect::redirect));
+        .route("/:code", get(handlers::redirect::redirect))
+        // 分享码访问
+        .route("/s/:share_code", get(handlers::redirect::share_redirect));
 
     // 管理路由（需认证 — Phase 2 实现 Bearer Token 中间件后启用）
     let admin_routes = Router::new()
@@ -56,9 +66,25 @@ pub fn build_app(state: AppState) -> Router {
         .route("/v1/extensions", post(handlers::extension::register_extension).get(handlers::extension::list_extensions))
         .route("/v1/extensions/:name", delete(handlers::extension::delete_extension));
 
+    // Agent API 路由（Phase 3 — 使用 X-Agent-ID Header 认证）
+    let agent_routes = Router::new()
+        .route("/v1/agent/resolve", post(handlers::agent::batch_resolve))
+        .route("/v1/agent/discover", post(handlers::agent::discover))
+        .route("/v1/agent/upload", post(handlers::agent::init_upload))
+        .route("/v1/agent/download", post(handlers::agent::request_download))
+        .route("/v1/agent/share", post(handlers::agent::share_file));
+
+    // 文件 API 路由（Phase 3）
+    let file_routes = Router::new()
+        .route("/v1/files/upload", post(handlers::agent::init_upload))
+        .route("/v1/files/:file_id/download", get(handlers::agent::request_download))
+        .route("/v1/files/share", post(handlers::agent::share_file));
+
     Router::new()
         .merge(public_routes)
         .merge(admin_routes)
+        .merge(agent_routes)
+        .merge(file_routes)
         // 全局中间件：请求日志
         .layer(middleware::from_fn(request_logging))
         .with_state(Arc::new(state))

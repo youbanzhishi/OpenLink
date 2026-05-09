@@ -189,3 +189,29 @@ async fn log_access(
     };
     state.store.log_access(&log).await
 }
+
+/// 分享码重定向 — 通过分享码访问文件
+///
+/// GET /s/:share_code → 302 重定向到文件下载 URL 或返回 JSON
+pub async fn share_redirect(
+    State(_state): State<Arc<AppState>>,
+    Path(share_code): Path<String>,
+    _headers: HeaderMap,
+) -> impl IntoResponse {
+    // 在实际实现中，应该查询 share_code 对应的文件
+    // 这里简化处理，返回一个 JSON 响应告知客户端调用下载 API
+    
+    tracing::info!(share_code = %share_code, "Share code accessed");
+    
+    // 查找分享记录
+    // 这里应该调用 state.store.get_file_by_share_code(&share_code)
+    // 简化处理，返回元信息
+    
+    let response = serde_json::json!({
+        "type": "share_access",
+        "share_code": share_code,
+        "message": "Use /api/v1/files/download endpoint with this share_code"
+    });
+    
+    (StatusCode::OK, Json(response)).into_response()
+}
