@@ -8,3 +8,4 @@ pub mod extension;
 pub mod redirect;
 pub mod stats;
 pub mod agent; // Phase 3: Agent API
+pub mod monitoring; // Phase 5: 健康检查

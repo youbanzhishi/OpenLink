@@ -1,0 +1,20 @@
+[package]
+name = "ext-p2p-transfer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../../crates/openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+thiserror = "1"
+rand = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

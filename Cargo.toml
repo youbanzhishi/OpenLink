@@ -6,6 +6,7 @@ members = [
     "crates/openlink-edge",
     "crates/openlink-sdk",
     "crates/openlink-node",
+    "crates/openlink-cache",
     "extensions/ext-redirect",
     "extensions/ext-webhook",
     "extensions/ext-conditions",
@@ -15,6 +16,7 @@ members = [
     "extensions/ext-filetransfer",
     "extensions/ext-direct-transfer",
     "extensions/ext-daw-distribute",
+    "extensions/ext-p2p-transfer",
 ]
 resolver = "2"
 
@@ -66,9 +68,15 @@ hex = "0.4"
 # Phase 4: LAN discovery & file transfer
 tokio-util = { version = "0.7", features = ["codec"] }
 futures = "0.3"
-warp = "0.3"            # Lightweight HTTP server for node file service
+warp = "0.3"
 bytes = "1"
 
 # Phase 4: URL encoding for DAW deeplinks
 urlencoding = "2"
 hostname = "0.4"
+
+# Phase 5: Monitoring
+prometheus = "0.13"
+
+# Phase 5: LRU Cache
+lru = "0.12"

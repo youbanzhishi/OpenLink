@@ -144,17 +144,17 @@ pub async fn create_link(
 
 /// 查询短链信息
 ///
-/// GET /v1/links/:code
+/// GET /v1/links/:id
 pub async fn get_link(
     State(state): State<Arc<AppState>>,
-    Path(code): Path<String>,
+    Path(id): Path<String>,
 ) -> Result<Json<LinkResponse>, (StatusCode, String)> {
     let link = state
         .store
-        .get_link_by_code(&code)
+        .get_link(&id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", id)))?;
 
     Ok(Json(LinkResponse::from(link)))
 }
@@ -166,15 +166,17 @@ pub async fn list_links(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ListLinksQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let limit = query.limit.min(100) as usize;
     let links = state
         .store
-        .list_links(query.offset, query.limit)
+        .list_links(None, limit)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let total = state
+    // 获取总数
+    let stats = state
         .store
-        .count_active_links()
+        .get_overview_stats()
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -182,7 +184,7 @@ pub async fn list_links(
 
     Ok(Json(serde_json::json!({
         "links": link_responses,
-        "total": total,
+        "total": stats.active_links,
         "offset": query.offset,
         "limit": query.limit,
     })))
@@ -190,15 +192,34 @@ pub async fn list_links(
 
 /// 更新短链
 ///
-/// PUT /v1/links/:code
+/// PUT /v1/links/:id
 pub async fn update_link(
     State(state): State<Arc<AppState>>,
-    Path(code): Path<String>,
+    Path(id): Path<String>,
     Json(req): Json<UpdateLinkRequest>,
 ) -> Result<Json<LinkResponse>, (StatusCode, String)> {
+    // 先获取现有 link
+    let existing = state
+        .store
+        .get_link(&id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", id)))?;
+
+    // 更新字段
+    let updated_link = Link {
+        id: existing.id,
+        code: existing.code,
+        payload: req.payload,
+        owner: existing.owner,
+        created_at: existing.created_at,
+        metadata: req.metadata,
+        is_active: existing.is_active,
+    };
+
     let updated = state
         .store
-        .update_link(&code, &req.payload, &req.metadata)
+        .update_link(&updated_link)
         .await
         .map_err(|e| {
             match e {
@@ -207,20 +228,20 @@ pub async fn update_link(
             }
         })?;
 
-    tracing::info!(code = %code, "Link updated");
+    tracing::info!(id = %id, "Link updated");
     Ok(Json(LinkResponse::from(updated)))
 }
 
 /// 删除短链（软删除）
 ///
-/// DELETE /v1/links/:code
+/// DELETE /v1/links/:id
 pub async fn delete_link(
     State(state): State<Arc<AppState>>,
-    Path(code): Path<String>,
+    Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .store
-        .delete_link(&code)
+        .delete_link(&id)
         .await
         .map_err(|e| {
             match e {
@@ -229,6 +250,6 @@ pub async fn delete_link(
             }
         })?;
 
-    tracing::info!(code = %code, "Link deleted");
+    tracing::info!(id = %id, "Link deleted");
     Ok(StatusCode::NO_CONTENT)
 }

@@ -4,4 +4,37 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-# Phase 1: 空壳，Phase 5 将编译为 WASM
+# 核心：最小依赖
+openlink-core = { path = "../openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["rt", "net", "sync", "time", "macros"] }
+tracing = { workspace = true }
+thiserror = "1"
+bytes = { workspace = true }
+
+# 缓存
+lru = "0.12"
+
+# 轻量 HTTP（边缘友好的小库）
+tiny_http = "0.12"
+
+# 配置
+toml = "0.8"
+
+# UUID
+uuid = { workspace = true }
+
+# 时间
+chrono = { workspace = true }
+
+[profile.release]
+opt-level = "z"      # 极致优化大小
+lto = true          # Link Time Optimization
+codegen-units = 1
+strip = true        # 自动 strip
+panic = "abort"      # 减少 panic 展开代码
+
+[dev-dependencies]
+tempfile = "3.27.0"

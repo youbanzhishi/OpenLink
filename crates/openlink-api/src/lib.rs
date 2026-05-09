@@ -1,13 +1,22 @@
-//! # OpenLink API — HTTP 接口层
+//! # OpenLink API Server — HTTP 服务
 //!
-//! 基于 Axum 构建的 HTTP API，提供短链管理、重定向、路由规则管理等功能。
-//!
-//! 核心路径：GET /:code → 302 重定向（零配置开箱即用）
+//! 提供完整的 REST API：
+//! - Link CRUD
+//! - Route 配置
+//! - 重定向处理
+//! - 统计查询
+//! - 扩展管理
+//! - 健康检查 (Phase 5)
+//! - Prometheus 指标 (Phase 5)
 
+pub mod handlers;
+pub mod middleware;
 pub mod router;
 pub mod state;
 pub mod config;
-pub mod handlers;
-pub mod middleware;
+pub mod monitoring;
 
+pub use state::AppState;
+pub use config::AppConfig;
+pub use monitoring::{AppMetrics, HealthStatus, HealthCheck};
 pub use router::build_app;

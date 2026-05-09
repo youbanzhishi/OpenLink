@@ -132,22 +132,27 @@ fn rule_input_to_rule(input: RuleInput) -> Rule {
 
 /// 创建路由规则
 ///
-/// POST /v1/links/:code/routes
+/// POST /v1/routes
 pub async fn create_route(
     State(state): State<Arc<AppState>>,
-    Path(code): Path<String>,
     Json(req): Json<CreateRouteRequest>,
 ) -> Result<(StatusCode, Json<RouteResponse>), (StatusCode, String)> {
-    // 查找链接
-    let link = state
+    // 获取 link_id 从请求中（假设必填）
+    let link_id = req.default_target.params.get("link_id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Missing link_id in default_target".to_string()))?
+        .to_string();
+
+    // 验证链接存在
+    state
         .store
-        .get_link_by_code(&code)
+        .get_link(&link_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", link_id)))?;
 
     // 检查是否已有路由
-    if state.store.get_route_by_link_id(&link.id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.is_some() {
+    if state.store.get_route_by_link_id(&link_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.is_some() {
         return Err((StatusCode::CONFLICT, "Route already exists for this link".to_string()));
     }
 
@@ -160,7 +165,7 @@ pub async fn create_route(
 
     let route = Route {
         id: uuid::Uuid::new_v4().to_string(),
-        link_id: link.id,
+        link_id,
         rules,
         default_target: Target::from(req.default_target),
         version: 1,
@@ -173,30 +178,22 @@ pub async fn create_route(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    tracing::info!(code = %code, route_id = %created.id, "Route created");
+    tracing::info!(route_id = %created.id, "Route created");
     Ok((StatusCode::CREATED, Json(RouteResponse::from(created))))
 }
 
 /// 更新路由规则
 ///
-/// PUT /v1/links/:code/routes/:route_id
+/// PUT /v1/routes/:id
 pub async fn update_route(
     State(state): State<Arc<AppState>>,
-    Path((code, route_id)): Path<(String, String)>,
+    Path(route_id): Path<String>,
     Json(req): Json<UpdateRouteRequest>,
 ) -> Result<Json<RouteResponse>, (StatusCode, String)> {
-    // 验证链接存在
-    let link = state
-        .store
-        .get_link_by_code(&code)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
-
     // 获取当前路由
     let current = state
         .store
-        .get_route_by_link_id(&link.id)
+        .get_route(&route_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or_else(|| (StatusCode::NOT_FOUND, "Route not found".to_string()))?;
@@ -215,7 +212,7 @@ pub async fn update_route(
 
     let updated = state
         .store
-        .update_route(&route_id, &Route {
+        .update_route(&Route {
             id: current.id,
             link_id: current.link_id,
             rules,
@@ -226,16 +223,16 @@ pub async fn update_route(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    tracing::info!(code = %code, route_id = %route_id, "Route updated");
+    tracing::info!(route_id = %route_id, "Route updated");
     Ok(Json(RouteResponse::from(updated)))
 }
 
 /// 删除路由规则
 ///
-/// DELETE /v1/links/:code/routes/:route_id
+/// DELETE /v1/routes/:id
 pub async fn delete_route(
     State(state): State<Arc<AppState>>,
-    Path((_code, route_id)): Path<(String, String)>,
+    Path(route_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .store

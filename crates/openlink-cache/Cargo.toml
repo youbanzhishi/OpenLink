@@ -1,0 +1,23 @@
+[package]
+name = "openlink-cache"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+tracing = { workspace = true }
+thiserror = "1"
+lru = "0.12"
+chrono = { workspace = true }
+async-trait = "0.1"
+
+# Redis 支持
+[dependencies.redis]
+version = "0.24"
+optional = true
+
+[features]
+default = []
+redis = ["dep:redis"]

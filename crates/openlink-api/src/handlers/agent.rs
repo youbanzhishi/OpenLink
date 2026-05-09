@@ -3,8 +3,6 @@
 //! Agent 专用 API：
 //! - POST /api/v1/agent/resolve — 批量解析短链
 //! - POST /api/v1/agent/discover — 发现可用 Link
-//! - POST /api/v1/agent/upload — 文件上传
-//! - POST /api/v1/agent/download — 文件下载
 //!
 //! 认证使用 X-Agent-ID / X-Agent-Type Header
 
@@ -141,12 +139,10 @@ pub async fn discover(
 ) -> Result<Json<DiscoverResponse>, (StatusCode, String)> {
     let _ctx = build_agent_context(&headers);
     
-    // list_links 只接受 (offset, limit) 两个参数
-    let limit = req.limit as i64;
-    let offset = 0i64;
+    let limit = req.limit.min(100);
     
-    // 根据 discover_type 构建查询
-    let links = state.store.list_links(offset, limit)
+    // list_links(owner, limit)
+    let links = state.store.list_links(None, limit)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     
@@ -163,155 +159,6 @@ pub async fn discover(
     Ok(Json(DiscoverResponse {
         links: link_values,
         total,
-    }))
-}
-
-/// 文件上传请求
-#[derive(Debug, Deserialize)]
-pub struct FileUploadInitRequest {
-    pub filename: String,
-    pub size: u64,
-    pub content_type: String,
-    #[serde(default)]
-    pub storage: Option<String>,
-}
-
-/// 文件上传响应
-#[derive(Debug, Serialize)]
-pub struct FileUploadInitResponse {
-    pub file_id: String,
-    pub upload_url: String,
-    pub expires_in: u64,
-}
-
-/// 初始化文件上传
-///
-/// 返回预签名上传 URL。
-pub async fn init_upload(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    Json(req): Json<FileUploadInitRequest>,
-) -> Result<Json<FileUploadInitResponse>, (StatusCode, String)> {
-    let _ctx = build_agent_context(&headers);
-    
-    let file_id = uuid::Uuid::new_v4().to_string();
-    
-    // 使用 server.host 和 server.port 构建 base_url
-    let base_url = format!("http://{}:{}", 
-        state.config.server.host.trim_start_matches("0.0.0.0"),
-        state.config.server.port);
-    
-    let upload_url = format!("{}/api/v1/files/{}/upload", 
-        base_url.trim_end_matches('/'),
-        file_id);
-    
-    tracing::info!(file_id = %file_id, filename = %req.filename, size = req.size, "File upload initiated");
-    
-    Ok(Json(FileUploadInitResponse {
-        file_id,
-        upload_url,
-        expires_in: 3600, // 1 hour
-    }))
-}
-
-/// 文件下载请求
-#[derive(Debug, Deserialize)]
-pub struct FileDownloadRequest {
-    pub file_id: String,
-    #[serde(default = "default_download_ttl")]
-    pub ttl: u64,
-}
-
-fn default_download_ttl() -> u64 {
-    3600
-}
-
-/// 文件下载响应
-#[derive(Debug, Serialize)]
-pub struct FileDownloadResponse {
-    pub file_id: String,
-    pub download_url: String,
-    pub expires_at: String,
-}
-
-/// 请求文件下载 URL
-pub async fn request_download(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    Json(req): Json<FileDownloadRequest>,
-) -> Result<Json<FileDownloadResponse>, (StatusCode, String)> {
-    let _ctx = build_agent_context(&headers);
-    
-    // 使用 server.host 和 server.port 构建 base_url
-    let base_url = format!("http://{}:{}", 
-        state.config.server.host.trim_start_matches("0.0.0.0"),
-        state.config.server.port);
-    
-    let download_url = format!("{}/api/v1/files/{}/download",
-        base_url.trim_end_matches('/'),
-        req.file_id);
-    
-    let expires_at = chrono::Utc::now() + chrono::Duration::seconds(req.ttl as i64);
-    
-    tracing::info!(file_id = %req.file_id, "File download requested");
-    
-    Ok(Json(FileDownloadResponse {
-        file_id: req.file_id,
-        download_url,
-        expires_at: expires_at.to_rfc3339(),
-    }))
-}
-
-/// 文件分享请求
-#[derive(Debug, Deserialize)]
-pub struct FileShareRequest {
-    pub file_id: String,
-    #[serde(default = "default_share_ttl")]
-    pub ttl_secs: u64,
-}
-
-fn default_share_ttl() -> u64 {
-    3600 * 24 * 7 // 7 days
-}
-
-/// 文件分享响应
-#[derive(Debug, Serialize)]
-pub struct FileShareResponse {
-    pub file_id: String,
-    pub share_code: String,
-    pub share_url: String,
-    pub expires_at: String,
-}
-
-/// 生成分享链接
-pub async fn share_file(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-    Json(req): Json<FileShareRequest>,
-) -> Result<Json<FileShareResponse>, (StatusCode, String)> {
-    let _ctx = build_agent_context(&headers);
-    
-    // 生成分享码
-    let share_code = generate_share_code();
-    
-    // 使用 server.host 和 server.port 构建 base_url
-    let base_url = format!("http://{}:{}", 
-        state.config.server.host.trim_start_matches("0.0.0.0"),
-        state.config.server.port);
-    
-    let share_url = format!("{}/s/{}", 
-        base_url.trim_end_matches('/'),
-        share_code);
-    
-    let expires_at = chrono::Utc::now() + chrono::Duration::seconds(req.ttl_secs as i64);
-    
-    tracing::info!(file_id = %req.file_id, share_code = %share_code, "File shared");
-    
-    Ok(Json(FileShareResponse {
-        file_id: req.file_id,
-        share_code,
-        share_url,
-        expires_at: expires_at.to_rfc3339(),
     }))
 }
 
@@ -353,35 +200,11 @@ fn build_agent_context(headers: &HeaderMap) -> Context {
     ctx
 }
 
-/// 生成分享码
-fn generate_share_code() -> String {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    let code: String = (0..8)
-        .map(|_| {
-            let idx = rng.gen_range(0..62);
-            let chars = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-            chars[idx] as char
-        })
-        .collect();
-    code
-}
-
 // ─── Tests ─────────────────────────────────────────────────--
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_generate_share_code() {
-        let code1 = generate_share_code();
-        let code2 = generate_share_code();
-        
-        assert_eq!(code1.len(), 8);
-        assert_eq!(code2.len(), 8);
-        assert_ne!(code1, code2);
-    }
 
     #[test]
     fn test_build_agent_context() {

@@ -9,7 +9,7 @@
 //!
 //! Phase 2 增强：
 //! - access_logs 表扩展字段（code, visitor_ip, identity_type, device_type）
-//! - 新增 list_links / count_links / count_active_links
+//! - 新增 list_links
 //! - 新增 get_overview_stats
 //! - 增强 get_link_stats（设备/身份分布）
 
@@ -227,6 +227,39 @@ impl From<ExtensionRow> for Extension {
     }
 }
 
+#[derive(sqlx::FromRow)]
+struct AccessLogRow {
+    id: String,
+    link_id: String,
+    context: String,
+    matched_rule: Option<String>,
+    action_taken: String,
+    response_time_ms: Option<i32>,
+    created_at: String,
+    code: Option<String>,
+    visitor_ip: Option<String>,
+    identity_type: Option<String>,
+    device_type: Option<String>,
+}
+
+impl From<AccessLogRow> for AccessLog {
+    fn from(row: AccessLogRow) -> Self {
+        AccessLog {
+            id: row.id,
+            link_id: row.link_id,
+            context: serde_json::from_str(&row.context).unwrap_or_default(),
+            matched_rule: row.matched_rule,
+            action_taken: row.action_taken,
+            response_time_ms: row.response_time_ms.map(|v| v as i64),
+            created_at: row.created_at.parse().unwrap_or_else(|_| Utc::now()),
+            code: row.code,
+            visitor_ip: row.visitor_ip,
+            identity_type: row.identity_type,
+            device_type: row.device_type,
+        }
+    }
+}
+
 #[async_trait]
 impl Store for SqliteStore {
     // ─── Link 操作 ───────────────────────────────────────────
@@ -253,6 +286,17 @@ impl Store for SqliteStore {
         Ok(link.clone())
     }
 
+    async fn get_link(&self, id: &str) -> Result<Option<Link>, StoreError> {
+        let row = sqlx::query_as::<_, LinkRow>(
+            "SELECT * FROM links WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(Link::from))
+    }
+
     async fn get_link_by_code(&self, code: &str) -> Result<Option<Link>, StoreError> {
         let row = sqlx::query_as::<_, LinkRow>(
             "SELECT * FROM links WHERE code = ? AND is_active = 1",
@@ -264,67 +308,62 @@ impl Store for SqliteStore {
         Ok(row.map(Link::from))
     }
 
-    async fn update_link(&self, code: &str, payload: &serde_json::Value, metadata: &serde_json::Value) -> Result<Link, StoreError> {
+    async fn update_link(&self, link: &Link) -> Result<Link, StoreError> {
         let now = Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE links SET payload = ?, metadata = ?, updated_at = ? WHERE code = ? AND is_active = 1",
+            "UPDATE links SET code = ?, payload = ?, metadata = ?, updated_at = ? WHERE id = ?",
         )
-        .bind(serde_json::to_string(payload)?)
-        .bind(serde_json::to_string(metadata)?)
+        .bind(&link.code)
+        .bind(serde_json::to_string(&link.payload)?)
+        .bind(serde_json::to_string(&link.metadata)?)
         .bind(&now)
-        .bind(code)
+        .bind(&link.id)
         .execute(&self.pool)
         .await?;
 
-        self.get_link_by_code(code)
+        self.get_link(&link.id)
             .await?
-            .ok_or_else(|| StoreError::NotFound(format!("Link '{}' not found", code)))
+            .ok_or_else(|| StoreError::NotFound(format!("Link '{}' not found", link.id)))
     }
 
-    async fn delete_link(&self, code: &str) -> Result<(), StoreError> {
+    async fn delete_link(&self, id: &str) -> Result<(), StoreError> {
         let now = Utc::now().to_rfc3339();
         let result = sqlx::query(
-            "UPDATE links SET is_active = 0, updated_at = ? WHERE code = ?",
+            "UPDATE links SET is_active = 0, updated_at = ? WHERE id = ?",
         )
         .bind(&now)
-        .bind(code)
+        .bind(id)
         .execute(&self.pool)
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(StoreError::NotFound(format!("Link '{}' not found", code)));
+            return Err(StoreError::NotFound(format!("Link '{}' not found", id)));
         }
         Ok(())
     }
 
-    async fn list_links(&self, offset: i64, limit: i64) -> Result<Vec<Link>, StoreError> {
-        let rows = sqlx::query_as::<_, LinkRow>(
-            "SELECT * FROM links WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
+    async fn list_links(&self, owner: Option<&str>, limit: usize) -> Result<Vec<Link>, StoreError> {
+        let rows = match owner {
+            Some(owner_id) => {
+                sqlx::query_as::<_, LinkRow>(
+                    "SELECT * FROM links WHERE is_active = 1 AND owner_id = ? ORDER BY created_at DESC LIMIT ?",
+                )
+                .bind(owner_id)
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            None => {
+                sqlx::query_as::<_, LinkRow>(
+                    "SELECT * FROM links WHERE is_active = 1 ORDER BY created_at DESC LIMIT ?",
+                )
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+            }
+        };
 
         Ok(rows.into_iter().map(Link::from).collect())
-    }
-
-    async fn count_links(&self) -> Result<i64, StoreError> {
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM links",
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(count.0)
-    }
-
-    async fn count_active_links(&self) -> Result<i64, StoreError> {
-        let count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM links WHERE is_active = 1",
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(count.0)
     }
 
     // ─── Route 操作 ──────────────────────────────────────────
@@ -349,6 +388,17 @@ impl Store for SqliteStore {
         Ok(route.clone())
     }
 
+    async fn get_route(&self, id: &str) -> Result<Option<Route>, StoreError> {
+        let row = sqlx::query_as::<_, RouteRow>(
+            "SELECT * FROM routes WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(Route::from))
+    }
+
     async fn get_route_by_link_id(&self, link_id: &str) -> Result<Option<Route>, StoreError> {
         let row = sqlx::query_as::<_, RouteRow>(
             "SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC LIMIT 1",
@@ -360,7 +410,7 @@ impl Store for SqliteStore {
         Ok(row.map(Route::from))
     }
 
-    async fn update_route(&self, id: &str, route: &Route) -> Result<Route, StoreError> {
+    async fn update_route(&self, route: &Route) -> Result<Route, StoreError> {
         sqlx::query(
             r#"
             UPDATE routes SET rules = ?, default_target = ?, version = version + 1
@@ -369,16 +419,13 @@ impl Store for SqliteStore {
         )
         .bind(serde_json::to_string(&route.rules)?)
         .bind(serde_json::to_string(&route.default_target)?)
-        .bind(id)
+        .bind(&route.id)
         .execute(&self.pool)
         .await?;
 
-        let row = sqlx::query_as::<_, RouteRow>("SELECT * FROM routes WHERE id = ?")
-            .bind(id)
-            .fetch_one(&self.pool)
-            .await?;
-
-        Ok(Route::from(row))
+        self.get_route(&route.id)
+            .await?
+            .ok_or_else(|| StoreError::NotFound(format!("Route '{}' not found", route.id)))
     }
 
     async fn delete_route(&self, id: &str) -> Result<(), StoreError> {
@@ -393,27 +440,29 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    // ─── Extension 操作 ─────────────────────────────────────
+    async fn list_routes(&self, link_id: Option<&str>) -> Result<Vec<Route>, StoreError> {
+        let rows = match link_id {
+            Some(lid) => {
+                sqlx::query_as::<_, RouteRow>(
+                    "SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC",
+                )
+                .bind(lid)
+                .fetch_all(&self.pool)
+                .await?
+            }
+            None => {
+                sqlx::query_as::<_, RouteRow>(
+                    "SELECT * FROM routes ORDER BY created_at DESC",
+                )
+                .fetch_all(&self.pool)
+                .await?
+            }
+        };
 
-    async fn register_extension(&self, ext: &Extension) -> Result<Extension, StoreError> {
-        let now = Utc::now().to_rfc3339();
-        sqlx::query(
-            r#"
-            INSERT INTO extensions (id, ext_type, name, config, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            "#,
-        )
-        .bind(&ext.id)
-        .bind(&ext.ext_type)
-        .bind(&ext.name)
-        .bind(serde_json::to_string(&ext.config)?)
-        .bind(if ext.is_active { 1 } else { 0 })
-        .bind(&now)
-        .execute(&self.pool)
-        .await?;
-
-        Ok(ext.clone())
+        Ok(rows.into_iter().map(Route::from).collect())
     }
+
+    // ─── Extension 操作 ─────────────────────────────────────
 
     async fn list_extensions(&self) -> Result<Vec<Extension>, StoreError> {
         let rows = sqlx::query_as::<_, ExtensionRow>(
@@ -425,29 +474,27 @@ impl Store for SqliteStore {
         Ok(rows.into_iter().map(Extension::from).collect())
     }
 
-    async fn get_extension_by_name(&self, name: &str) -> Result<Option<Extension>, StoreError> {
-        let row = sqlx::query_as::<_, ExtensionRow>(
-            "SELECT * FROM extensions WHERE name = ? AND is_active = 1",
-        )
-        .bind(name)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row.map(Extension::from))
-    }
-
-    async fn delete_extension(&self, name: &str) -> Result<(), StoreError> {
+    async fn save_extension(&self, ext: &Extension) -> Result<(), StoreError> {
         let now = Utc::now().to_rfc3339();
-        let result = sqlx::query(
-            "UPDATE extensions SET is_active = 0 WHERE name = ?",
+        sqlx::query(
+            r#"
+            INSERT INTO extensions (id, ext_type, name, config, is_active, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                ext_type = excluded.ext_type,
+                config = excluded.config,
+                is_active = excluded.is_active
+            "#,
         )
-        .bind(name)
+        .bind(&ext.id)
+        .bind(&ext.ext_type)
+        .bind(&ext.name)
+        .bind(serde_json::to_string(&ext.config)?)
+        .bind(if ext.is_active { 1 } else { 0 })
+        .bind(&now)
         .execute(&self.pool)
         .await?;
 
-        if result.rows_affected() == 0 {
-            return Err(StoreError::NotFound(format!("Extension '{}' not found", name)));
-        }
         Ok(())
     }
 
@@ -476,6 +523,18 @@ impl Store for SqliteStore {
         .await?;
 
         Ok(())
+    }
+
+    async fn get_access_logs(&self, link_id: &str, limit: usize) -> Result<Vec<AccessLog>, StoreError> {
+        let rows = sqlx::query_as::<_, AccessLogRow>(
+            "SELECT * FROM access_logs WHERE link_id = ? ORDER BY created_at DESC LIMIT ?",
+        )
+        .bind(link_id)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(AccessLog::from).collect())
     }
 
     async fn get_link_stats(&self, link_id: &str) -> Result<LinkStats, StoreError> {
@@ -622,6 +681,15 @@ impl Store for SqliteStore {
             top_links,
         })
     }
+
+    // ─── Health Check (Phase 5) ─────────────────────────────
+
+    async fn health_check(&self) -> Result<(), StoreError> {
+        sqlx::query("SELECT 1")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -654,14 +722,13 @@ mod tests {
         assert_eq!(found.unwrap().owner, "test-user");
 
         // 更新链接
-        let updated = store
-            .update_link("test01", &serde_json::json!({"url": "https://updated.com"}), &serde_json::json!({}))
-            .await
-            .unwrap();
+        let mut updated_link = link.clone();
+        updated_link.payload = serde_json::json!({"url": "https://updated.com"});
+        let updated = store.update_link(&updated_link).await.unwrap();
         assert_eq!(updated.payload["url"], "https://updated.com");
 
         // 删除链接（软删除）
-        store.delete_link("test01").await.unwrap();
+        store.delete_link(&link.id).await.unwrap();
         let found = store.get_link_by_code("test01").await.unwrap();
         assert!(found.is_none());
     }
@@ -716,13 +783,10 @@ mod tests {
             created_at: Utc::now(),
         };
 
-        store.register_extension(&ext).await.unwrap();
+        store.save_extension(&ext).await.unwrap();
 
         let exts = store.list_extensions().await.unwrap();
         assert_eq!(exts.len(), 1);
-
-        let found = store.get_extension_by_name("redirect").await.unwrap();
-        assert!(found.is_some());
     }
 
     #[tokio::test]
@@ -771,11 +835,93 @@ mod tests {
             store.create_link(&link).await.unwrap();
         }
 
-        let links = store.list_links(0, 3).await.unwrap();
+        // 测试 list_links(owner, limit)
+        let links = store.list_links(Some("test-user"), 3).await.unwrap();
         assert_eq!(links.len(), 3);
 
-        let count = store.count_active_links().await.unwrap();
-        assert_eq!(count, 5);
+        // 测试 list_links(None, limit) 获取所有
+        let all_links = store.list_links(None, 10).await.unwrap();
+        assert_eq!(all_links.len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_list_routes() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+
+        // 先创建链接
+        let link = Link {
+            id: "link-routes".to_string(),
+            code: "rt01".to_string(),
+            payload: serde_json::json!({}),
+            owner: "test-user".to_string(),
+            created_at: Utc::now(),
+            metadata: serde_json::json!({}),
+            is_active: true,
+        };
+        store.create_link(&link).await.unwrap();
+
+        // 创建多个路由
+        for i in 0..3 {
+            let route = Route {
+                id: format!("route-{}", i),
+                link_id: "link-routes".to_string(),
+                rules: vec![],
+                default_target: Target {
+                    action: Action::Redirect,
+                    params: serde_json::json!({"url": format!("https://example{}.com", i)}),
+                },
+                version: 1,
+                created_at: Utc::now(),
+            };
+            store.create_route(&route).await.unwrap();
+        }
+
+        // 测试 list_routes(Some(link_id))
+        let routes = store.list_routes(Some("link-routes")).await.unwrap();
+        assert_eq!(routes.len(), 3);
+
+        // 测试 list_routes(None) 获取所有
+        let all_routes = store.list_routes(None).await.unwrap();
+        assert!(all_routes.len() >= 3);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_get_access_logs() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+
+        // 先创建链接
+        let link = Link {
+            id: "link-logs".to_string(),
+            code: "log01".to_string(),
+            payload: serde_json::json!({}),
+            owner: "test-user".to_string(),
+            created_at: Utc::now(),
+            metadata: serde_json::json!({}),
+            is_active: true,
+        };
+        store.create_link(&link).await.unwrap();
+
+        // 创建多条访问日志
+        for i in 0..5 {
+            let log = AccessLog {
+                id: uuid::Uuid::new_v4().to_string(),
+                link_id: "link-logs".to_string(),
+                context: serde_json::json!({"code": "log01"}),
+                matched_rule: None,
+                action_taken: "redirect".to_string(),
+                response_time_ms: Some(42 + i),
+                created_at: Utc::now(),
+                code: Some("log01".to_string()),
+                visitor_ip: Some(format!("127.0.0.{}", i)),
+                identity_type: Some("human".to_string()),
+                device_type: Some("desktop".to_string()),
+            };
+            store.log_access(&log).await.unwrap();
+        }
+
+        // 测试 get_access_logs
+        let logs = store.get_access_logs("link-logs", 3).await.unwrap();
+        assert_eq!(logs.len(), 3);
     }
 
     #[tokio::test]
@@ -820,5 +966,12 @@ mod tests {
         let stats = store.get_link_stats("link-alog").await.unwrap();
         assert_eq!(stats.total_accesses, 1);
         assert_eq!(stats.code, "alog01");
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_health_check() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+        let result = store.health_check().await;
+        assert!(result.is_ok());
     }
 }

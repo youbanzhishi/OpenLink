@@ -56,14 +56,14 @@ pub async fn register_extension(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterExtensionRequest>,
 ) -> Result<(StatusCode, Json<ExtensionResponse>), (StatusCode, String)> {
-    // 检查是否已存在
-    if state
+    // 检查是否已存在同名扩展
+    let existing = state
         .store
-        .get_extension_by_name(&req.name)
+        .list_extensions()
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .is_some()
-    {
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    if existing.iter().any(|e| e.name == req.name) {
         return Err((StatusCode::CONFLICT, format!("Extension '{}' already exists", req.name)));
     }
 
@@ -76,14 +76,14 @@ pub async fn register_extension(
         created_at: chrono::Utc::now(),
     };
 
-    let created = state
+    state
         .store
-        .register_extension(&ext)
+        .save_extension(&ext)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    tracing::info!(name = %created.name, ext_type = %created.ext_type, "Extension registered");
-    Ok((StatusCode::CREATED, Json(ExtensionResponse::from(created))))
+    tracing::info!(name = %ext.name, ext_type = %ext.ext_type, "Extension registered");
+    Ok((StatusCode::CREATED, Json(ExtensionResponse::from(ext))))
 }
 
 /// 列出所有扩展
@@ -102,23 +102,40 @@ pub async fn list_extensions(
     Ok(Json(responses))
 }
 
-/// 卸载扩展
+/// 卸载扩展（通过删除扩展的激活状态实现）
 ///
 /// DELETE /v1/extensions/:name
 pub async fn delete_extension(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    // 获取扩展
+    let exts = state
+        .store
+        .list_extensions()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let ext = exts
+        .iter()
+        .find(|e| e.name == name)
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Extension '{}' not found", name)))?;
+
+    // 创建已禁用的版本并保存
+    let disabled_ext = Extension {
+        id: ext.id.clone(),
+        ext_type: ext.ext_type.clone(),
+        name: ext.name.clone(),
+        config: ext.config.clone(),
+        is_active: false,
+        created_at: ext.created_at,
+    };
+
     state
         .store
-        .delete_extension(&name)
+        .save_extension(&disabled_ext)
         .await
-        .map_err(|e| {
-            match e {
-                openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            }
-        })?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     tracing::info!(name = %name, "Extension deleted");
     Ok(StatusCode::NO_CONTENT)

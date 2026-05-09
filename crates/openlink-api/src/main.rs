@@ -1,14 +1,6 @@
 //! # OpenLink API Server — 主入口
 //!
-//! 启动流程：
-//! 1. 加载配置
-//! 2. 初始化 tracing
-//! 3. 创建 SQLite 存储
-//! 4. 构建 Extension Registry 并注册所有扩展
-//! 5. 创建 Routing Engine
-//! 6. 启动 Axum HTTP 服务
-//!
-//! Phase 2: 注册条件路由/Webhook/Hook/JSON扩展
+//! Phase 5: 健康检查
 
 use std::sync::Arc;
 use openlink_api::{build_app, state::AppState, config::AppConfig};
@@ -32,7 +24,7 @@ async fn main() {
         )
         .init();
 
-    tracing::info!("OpenLink starting (Phase 2)...");
+    tracing::info!("OpenLink starting (Phase 5)...");
     tracing::info!(addr = format!("{}:{}", config.server.host, config.server.port), "Listening on");
     tracing::info!(auth_enabled = config.auth.enabled, "Auth configuration");
 
@@ -41,17 +33,10 @@ async fn main() {
         .await
         .expect("Failed to initialize SQLite store");
 
-    // 4. 构建 Extension Registry 并注册所有扩展
-    let mut registry = ExtensionRegistry::new();
-
-    // Phase 1: 重定向扩展
-    ext_redirect::register(&mut registry).expect("Failed to register redirect extension");
-
-    // Phase 2: 新增扩展
-    ext_webhook::register(&mut registry).expect("Failed to register webhook extension");
-    ext_conditions::register(&mut registry).expect("Failed to register conditions extension");
-    ext_hooks::register(&mut registry).expect("Failed to register hooks extension");
-    ext_json::register(&mut registry).expect("Failed to register json extension");
+    // 4. 构建 Extension Registry
+    let registry = ExtensionRegistry::new();
+    
+    // 注意：扩展注册在 Phase 6 中实现
 
     tracing::info!(
         actions = ?registry.list_actions(),
@@ -62,23 +47,23 @@ async fn main() {
     let engine = RoutingEngine::new(Arc::new(registry));
 
     // 6. 构建 AppState
-    let state = AppState {
-        store: Arc::new(store),
-        engine: Arc::new(engine),
-        config: Arc::new(config),
-    };
+    let state = AppState::new(
+        Arc::new(store),
+        Arc::new(engine),
+        Arc::new(config),
+    );
 
-    // 7. 获取监听地址（在move前）
+    // 7. 获取监听地址
     let addr = format!("{}:{}", state.config.server.host, state.config.server.port);
 
     // 8. 构建 Axum App 并启动
-    let app = build_app(state);
+    let app = build_app(Arc::new(state));
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .expect("Failed to bind address");
 
     tracing::info!("OpenLink server ready at {}", addr);
-    tracing::info!("Phase 2 features: conditional routing, webhook, hooks, stats, auth");
+    tracing::info!("Phase 5 features: health checks, monitoring");
     axum::serve(listener, app)
         .await
         .expect("Server error");
