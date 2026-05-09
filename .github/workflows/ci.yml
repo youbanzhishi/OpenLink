@@ -1,17 +1,8 @@
 # ============================================================================
-# ci.yml - Rust 项目通用 CI 工作流
+# ci.yml - OpenLink CI 工作流
 #
-# 用途：PR/push 自动检查 — check + clippy + test + fmt
-# 适用项目：OpenLink / OpenVault / OpenDAW 等 Rust 项目
-#
-# 使用方式：
-#   1. 复制此文件到 <项目根目录>/.github/workflows/ci.yml
-#   2. 根据项目修改 env 部分的变量
-#
-# 关键优化：
-#   - Swatinem/rust-cache: 缓存依赖+编译产物，后续构建秒级
-#   - 分步执行: check → clippy → test → fmt，前一步的缓存给后一步用
-#   - CARGO_INCREMENTAL: 增量编译，改一个文件不全量重编
+# 参考: AudioFX 的变更检测 + OpenDAW 的 Docker 缓存
+# 优化: 分层验证(快速check→完整test) + rust-cache + 增量编译
 # ============================================================================
 
 name: CI
@@ -25,11 +16,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 1
-  # ---- 项目特定变量（复制后修改） ----
   RUST_TOOLCHAIN: stable
 
 jobs:
-  # ========== 快速检查 ==========
+  # ========== 快速检查（最快反馈） ==========
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -92,12 +82,6 @@ jobs:
       - name: Run tests
         run: cargo test --all-targets
 
-      # 如果安装了 nextest（更快），取消注释下行并注释上面 cargo test
-      # - name: Install nextest
-      #   uses: taiki-e/install-action@nextest
-      # - name: Run tests with nextest
-      #   run: cargo nextest run --all-targets
-
   # ========== 格式检查 ==========
   fmt:
     name: Formatting
@@ -114,3 +98,22 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  # ========== Docker 构建验证 ==========
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (smoke test)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
