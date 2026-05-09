@@ -1,0 +1,14 @@
+# OpenLink 默认配置
+# 优先级：环境变量 > 配置文件 > 默认值
+
+[server]
+host = "0.0.0.0"
+port = 3000
+
+[store]
+backend = "sqlite"       # 初期用 SQLite，后期可切 PG
+path = "./data/openlink.db"
+
+[shortcode]
+length = 6               # 6 位 Base62 = 568 亿组合
+charset = "base62"

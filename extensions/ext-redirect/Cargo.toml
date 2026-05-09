@@ -1,0 +1,13 @@
+[package]
+name = "ext-redirect"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../../crates/openlink-core" }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,7 @@
+[package]
+name = "openlink-edge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Phase 1: 空壳，Phase 5 将编译为 WASM

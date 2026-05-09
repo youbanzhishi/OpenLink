@@ -1,0 +1,10 @@
+[package]
+name = "openlink-sdk"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Phase 3 将实现 Agent SDK
+openlink-core = { path = "../openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }

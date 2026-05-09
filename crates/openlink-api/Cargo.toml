@@ -1,0 +1,28 @@
+[package]
+name = "openlink-api"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "openlink"
+path = "src/main.rs"
+
+[dependencies]
+openlink-core = { path = "../openlink-core" }
+openlink-store = { path = "../openlink-store" }
+ext-redirect = { path = "../../extensions/ext-redirect" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+toml = { workspace = true }
+
+# Axum + HTTP
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower = "0.4"

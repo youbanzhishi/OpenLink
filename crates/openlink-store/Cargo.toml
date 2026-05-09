@@ -1,0 +1,16 @@
+[package]
+name = "openlink-store"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }

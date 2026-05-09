@@ -1,0 +1,47 @@
+[workspace]
+members = [
+    "crates/openlink-core",
+    "crates/openlink-store",
+    "crates/openlink-api",
+    "crates/openlink-edge",
+    "crates/openlink-sdk",
+    "extensions/ext-redirect",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+[workspace.dependencies]
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Database
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "uuid", "macros"] }
+
+# Config
+toml = "0.8"
+
+# Random — short code generation
+rand = "0.8"
