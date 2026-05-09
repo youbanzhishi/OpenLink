@@ -1,5 +1,6 @@
 # OpenLink 默认配置
 # 优先级：环境变量 > 配置文件 > 默认值
+# Phase 2: 新增 auth 配置
 
 [server]
 host = "0.0.0.0"
@@ -12,3 +13,20 @@ path = "./data/openlink.db"
 [shortcode]
 length = 6               # 6 位 Base62 = 568 亿组合
 charset = "base62"
+
+# Phase 2: API Token 认证配置
+# enabled = false 时，管理API不需要认证
+# enabled = true 时，管理API需要 Bearer Token
+[auth]
+enabled = false
+
+# Token 列表（enabled = true 时生效）
+# [[auth.tokens]]
+# token = "ol-admin-secret-2026"
+# name = "admin"
+# scopes = ["read", "write", "admin"]
+#
+# [[auth.tokens]]
+# token = "ol-readonly-key"
+# name = "viewer"
+# scopes = ["read"]

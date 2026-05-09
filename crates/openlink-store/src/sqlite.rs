@@ -6,14 +6,20 @@
 //! - JSONB → TEXT (存储 JSON 字符串，查询时解析)
 //! - TIMESTAMPTZ → TEXT (ISO 8601 格式)
 //! - BOOLEAN → INTEGER (0/1)
+//!
+//! Phase 2 增强：
+//! - access_logs 表扩展字段（code, visitor_ip, identity_type, device_type）
+//! - 新增 list_links / count_links / count_active_links
+//! - 新增 get_overview_stats
+//! - 增强 get_link_stats（设备/身份分布）
 
 use async_trait::async_trait;
 use openlink_core::{
-    Link, Route, Extension, AccessLog, LinkStats,
-    Rule, Target, Condition, Action,
+    Link, Route, Extension, AccessLog, LinkStats, OverviewStats, TopLink,
+    Target, Action,
 };
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use crate::traits::Store;
 use crate::error::StoreError;
 
@@ -100,7 +106,11 @@ impl SqliteStore {
                 matched_rule      TEXT,
                 action_taken      TEXT NOT NULL,
                 response_time_ms  INTEGER,
-                created_at        TEXT NOT NULL
+                created_at        TEXT NOT NULL,
+                code              TEXT,
+                visitor_ip        TEXT,
+                identity_type     TEXT,
+                device_type       TEXT
             )
             "#,
         )
@@ -121,6 +131,18 @@ impl SqliteStore {
             .await?;
 
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_link_time ON access_logs(link_id, created_at)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_code ON access_logs(code)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_identity_type ON access_logs(identity_type)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_device_type ON access_logs(device_type)")
             .execute(&self.pool)
             .await?;
 
@@ -275,6 +297,36 @@ impl Store for SqliteStore {
         Ok(())
     }
 
+    async fn list_links(&self, offset: i64, limit: i64) -> Result<Vec<Link>, StoreError> {
+        let rows = sqlx::query_as::<_, LinkRow>(
+            "SELECT * FROM links WHERE is_active = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.into_iter().map(Link::from).collect())
+    }
+
+    async fn count_links(&self) -> Result<i64, StoreError> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM links",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
+    }
+
+    async fn count_active_links(&self) -> Result<i64, StoreError> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM links WHERE is_active = 1",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
+    }
+
     // ─── Route 操作 ──────────────────────────────────────────
 
     async fn create_route(&self, route: &Route) -> Result<Route, StoreError> {
@@ -405,8 +457,8 @@ impl Store for SqliteStore {
         let now = Utc::now().to_rfc3339();
         sqlx::query(
             r#"
-            INSERT INTO access_logs (id, link_id, context, matched_rule, action_taken, response_time_ms, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO access_logs (id, link_id, context, matched_rule, action_taken, response_time_ms, created_at, code, visitor_ip, identity_type, device_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(&log.id)
@@ -416,6 +468,10 @@ impl Store for SqliteStore {
         .bind(&log.action_taken)
         .bind(log.response_time_ms)
         .bind(&now)
+        .bind(&log.code)
+        .bind(&log.visitor_ip)
+        .bind(&log.identity_type)
+        .bind(&log.device_type)
         .execute(&self.pool)
         .await?;
 
@@ -444,9 +500,9 @@ impl Store for SqliteStore {
         .fetch_one(&self.pool)
         .await?;
 
-        // 唯一身份数
+        // 唯一访客数（按 visitor_ip 去重，回退到 context.identity.id）
         let unique: (i64,) = sqlx::query_as(
-            r#"SELECT COUNT(DISTINCT json_extract(context, '$.identity.id')) FROM access_logs WHERE link_id = ?"#,
+            r#"SELECT COUNT(DISTINCT COALESCE(visitor_ip, json_extract(context, '$.identity.id'))) FROM access_logs WHERE link_id = ?"#,
         )
         .bind(link_id)
         .fetch_one(&self.pool)
@@ -470,6 +526,32 @@ impl Store for SqliteStore {
         .fetch_one(&self.pool)
         .await?;
 
+        // Phase 2: 设备分布
+        let device_rows: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT COALESCE(device_type, 'unknown') as dt, COUNT(*) as cnt FROM access_logs WHERE link_id = ? GROUP BY device_type",
+        )
+        .bind(link_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut device_distribution = serde_json::Map::new();
+        for (dt, cnt) in device_rows {
+            device_distribution.insert(dt, serde_json::Value::Number(cnt.into()));
+        }
+
+        // Phase 2: 身份类型分布
+        let identity_rows: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT COALESCE(identity_type, 'unknown') as it, COUNT(*) as cnt FROM access_logs WHERE link_id = ? GROUP BY identity_type",
+        )
+        .bind(link_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut identity_distribution = serde_json::Map::new();
+        for (it, cnt) in identity_rows {
+            identity_distribution.insert(it, serde_json::Value::Number(cnt.into()));
+        }
+
         Ok(LinkStats {
             link_id: link_id.to_string(),
             code: link.code,
@@ -477,6 +559,67 @@ impl Store for SqliteStore {
             unique_identities: unique.0,
             accesses_24h: h24.0,
             accesses_7d: d7.0,
+            device_distribution: serde_json::Value::Object(device_distribution),
+            identity_distribution: serde_json::Value::Object(identity_distribution),
+        })
+    }
+
+    async fn get_overview_stats(&self) -> Result<OverviewStats, StoreError> {
+        let now = Utc::now();
+        let today_start = now.format("%Y-%m-%dT00:00:00+00:00").to_string();
+
+        // 总链接数
+        let total_links: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM links",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        // 活跃链接数
+        let active_links: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM links WHERE is_active = 1",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        // 总访问次数
+        let total_accesses: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM access_logs",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        // 今日访问次数
+        let accesses_today: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM access_logs WHERE created_at >= ?",
+        )
+        .bind(&today_start)
+        .fetch_one(&self.pool)
+        .await?;
+
+        // 热门链接 Top 5
+        let top_rows: Vec<(String, String, i64)> = sqlx::query_as(
+            r#"SELECT COALESCE(al.code, l.code) as code, al.link_id, COUNT(*) as cnt
+               FROM access_logs al
+               LEFT JOIN links l ON al.link_id = l.id
+               GROUP BY al.link_id
+               ORDER BY cnt DESC
+               LIMIT 5"#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let top_links: Vec<TopLink> = top_rows
+            .into_iter()
+            .map(|(code, link_id, access_count)| TopLink { code, link_id, access_count })
+            .collect();
+
+        Ok(OverviewStats {
+            total_links: total_links.0,
+            active_links: active_links.0,
+            total_accesses: total_accesses.0,
+            accesses_today: accesses_today.0,
+            top_links,
         })
     }
 }
@@ -609,5 +752,73 @@ mod tests {
         store.create_link(&link1).await.unwrap();
         let result = store.create_link(&link2).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_list_links() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+
+        for i in 0..5 {
+            let link = Link {
+                id: uuid::Uuid::new_v4().to_string(),
+                code: format!("list{}", i),
+                payload: serde_json::json!({}),
+                owner: "test-user".to_string(),
+                created_at: Utc::now(),
+                metadata: serde_json::json!({}),
+                is_active: true,
+            };
+            store.create_link(&link).await.unwrap();
+        }
+
+        let links = store.list_links(0, 3).await.unwrap();
+        assert_eq!(links.len(), 3);
+
+        let count = store.count_active_links().await.unwrap();
+        assert_eq!(count, 5);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_overview_stats() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+
+        let stats = store.get_overview_stats().await.unwrap();
+        assert_eq!(stats.total_links, 0);
+        assert_eq!(stats.total_accesses, 0);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_access_log_with_enhanced_fields() {
+        let store = SqliteStore::new("sqlite::memory:").await.unwrap();
+
+        let link = Link {
+            id: "link-alog".to_string(),
+            code: "alog01".to_string(),
+            payload: serde_json::json!({}),
+            owner: "test-user".to_string(),
+            created_at: Utc::now(),
+            metadata: serde_json::json!({}),
+            is_active: true,
+        };
+        store.create_link(&link).await.unwrap();
+
+        let log = AccessLog {
+            id: uuid::Uuid::new_v4().to_string(),
+            link_id: "link-alog".to_string(),
+            context: serde_json::json!({"code": "alog01"}),
+            matched_rule: None,
+            action_taken: "redirect".to_string(),
+            response_time_ms: Some(42),
+            created_at: Utc::now(),
+            code: Some("alog01".to_string()),
+            visitor_ip: Some("127.0.0.1".to_string()),
+            identity_type: Some("human".to_string()),
+            device_type: Some("desktop".to_string()),
+        };
+        store.log_access(&log).await.unwrap();
+
+        let stats = store.get_link_stats("link-alog").await.unwrap();
+        assert_eq!(stats.total_accesses, 1);
+        assert_eq!(stats.code, "alog01");
     }
 }

@@ -2,10 +2,12 @@
 //!
 //! 核心逻辑通过此 trait 访问数据，不绑定具体数据库实现。
 //! SQLite 和 PostgreSQL 分别实现此 trait。
+//!
+//! Phase 2: 新增 OverviewStats 和增强版 LinkStats
 
 use async_trait::async_trait;
 use openlink_core::{
-    Link, Route, Extension, AccessLog, LinkStats,
+    Link, Route, Extension, AccessLog, LinkStats, OverviewStats,
 };
 
 /// 统一存储接口 — 所有存储操作都通过此 trait
@@ -28,6 +30,15 @@ pub trait Store: Send + Sync {
 
     /// 删除链接（软删除：设 is_active = false）
     async fn delete_link(&self, code: &str) -> Result<(), crate::error::StoreError>;
+
+    /// 列出链接（Phase 2: 新增，支持分页）
+    async fn list_links(&self, offset: i64, limit: i64) -> Result<Vec<Link>, crate::error::StoreError>;
+
+    /// 统计总链接数（Phase 2: 新增）
+    async fn count_links(&self) -> Result<i64, crate::error::StoreError>;
+
+    /// 统计活跃链接数（Phase 2: 新增）
+    async fn count_active_links(&self) -> Result<i64, crate::error::StoreError>;
 
     // ─── Route 操作 ──────────────────────────────────────────
 
@@ -62,6 +73,9 @@ pub trait Store: Send + Sync {
     /// 记录访问日志
     async fn log_access(&self, log: &AccessLog) -> Result<(), crate::error::StoreError>;
 
-    /// 获取链接统计
+    /// 获取链接统计（Phase 2: 增强版，包含设备/身份分布）
     async fn get_link_stats(&self, link_id: &str) -> Result<LinkStats, crate::error::StoreError>;
+
+    /// 获取全局统计概览（Phase 2: 新增）
+    async fn get_overview_stats(&self) -> Result<OverviewStats, crate::error::StoreError>;
 }

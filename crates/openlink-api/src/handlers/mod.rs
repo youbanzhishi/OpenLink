@@ -6,3 +6,4 @@ pub mod link;
 pub mod route;
 pub mod extension;
 pub mod redirect;
+pub mod stats;

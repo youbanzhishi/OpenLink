@@ -2,8 +2,11 @@
 //!
 //! 配置来源：default.toml + 环境变量覆盖
 //! 优先级：环境变量 > 配置文件 > 默认值
+//!
+//! Phase 2: 新增 auth 配置（API Token 认证）
 
 use serde::Deserialize;
+use openlink_core::ApiToken;
 
 /// 应用配置根结构
 #[derive(Debug, Deserialize, Clone)]
@@ -12,6 +15,8 @@ pub struct AppConfig {
     pub store: StoreConfig,
     #[serde(default)]
     pub shortcode: ShortCodeConfig,
+    #[serde(default)]
+    pub auth: AuthConfig,
 }
 
 /// 服务器配置
@@ -85,6 +90,83 @@ fn default_charset() -> String {
     "base62".to_string()
 }
 
+/// 认证配置（Phase 2）
+#[derive(Debug, Deserialize, Clone)]
+pub struct AuthConfig {
+    /// 是否启用认证
+    #[serde(default = "default_auth_enabled")]
+    pub enabled: bool,
+    /// API Token 列表
+    #[serde(default)]
+    pub tokens: Vec<TokenConfig>,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            tokens: vec![],
+        }
+    }
+}
+
+fn default_auth_enabled() -> bool {
+    false
+}
+
+/// Token 配置
+#[derive(Debug, Deserialize, Clone)]
+pub struct TokenConfig {
+    /// Token 值
+    pub token: String,
+    /// Token 名称
+    pub name: String,
+    /// 权限范围：read / write / admin
+    #[serde(default = "default_token_scopes")]
+    pub scopes: Vec<String>,
+}
+
+fn default_token_scopes() -> Vec<String> {
+    vec!["read".to_string()]
+}
+
+impl AuthConfig {
+    /// 将配置转换为 ApiToken 列表
+    pub fn to_api_tokens(&self) -> Vec<ApiToken> {
+        use openlink_core::TokenScope;
+
+        self.tokens.iter().map(|tc| {
+            let scopes: Vec<TokenScope> = tc.scopes.iter().filter_map(|s| {
+                match s.as_str() {
+                    "read" => Some(TokenScope::Read),
+                    "write" => Some(TokenScope::Write),
+                    "admin" => Some(TokenScope::Admin),
+                    _ => None,
+                }
+            }).collect();
+
+            ApiToken {
+                token: tc.token.clone(),
+                name: tc.name.clone(),
+                scopes,
+            }
+        }).collect()
+    }
+
+    /// 验证 Token 是否有效，返回权限范围
+    pub fn validate_token(&self, token: &str) -> Option<Vec<openlink_core::TokenScope>> {
+        if !self.enabled {
+            // 认证未启用，返回 admin 权限
+            return Some(vec![openlink_core::TokenScope::Admin]);
+        }
+
+        self.to_api_tokens()
+            .iter()
+            .find(|t| t.token == token)
+            .map(|t| t.scopes.clone())
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -100,6 +182,7 @@ impl Default for AppConfig {
                 length: default_code_length(),
                 charset: default_charset(),
             },
+            auth: AuthConfig::default(),
         }
     }
 }
@@ -124,5 +207,64 @@ impl AppConfig {
 
         tracing::info!("No config file found, using defaults");
         Ok(Self::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let config = AppConfig::default();
+        assert_eq!(config.server.port, 3000);
+        assert!(!config.auth.enabled);
+    }
+
+    #[test]
+    fn test_auth_config_validate_token_disabled() {
+        let config = AuthConfig::default();
+        let result = config.validate_token("any-token");
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_auth_config_validate_token_enabled() {
+        let config = AuthConfig {
+            enabled: true,
+            tokens: vec![TokenConfig {
+                token: "test-secret".to_string(),
+                name: "test".to_string(),
+                scopes: vec!["read".to_string(), "write".to_string()],
+            }],
+        };
+
+        // 有效 token
+        let result = config.validate_token("test-secret");
+        assert!(result.is_some());
+        let scopes = result.unwrap();
+        assert!(scopes.contains(&openlink_core::TokenScope::Read));
+        assert!(scopes.contains(&openlink_core::TokenScope::Write));
+
+        // 无效 token
+        let result = config.validate_token("invalid-token");
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_to_api_tokens() {
+        let config = AuthConfig {
+            enabled: true,
+            tokens: vec![TokenConfig {
+                token: "admin-token".to_string(),
+                name: "admin".to_string(),
+                scopes: vec!["read".to_string(), "write".to_string(), "admin".to_string()],
+            }],
+        };
+
+        let tokens = config.to_api_tokens();
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token, "admin-token");
+        assert_eq!(tokens[0].scopes.len(), 3);
     }
 }

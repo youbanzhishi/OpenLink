@@ -10,7 +10,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use openlink_core::Extension;
-use openlink_store::Store;
+
 use crate::state::AppState;
 
 /// 注册扩展请求

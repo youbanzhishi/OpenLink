@@ -1,16 +1,18 @@
 //! # 短链 CRUD 处理器
 //!
 //! POST/GET/PUT/DELETE /v1/links
+//!
+//! Phase 2: list_links 使用 Store 实现分页
 
 use axum::{
-    extract::{State, Path},
+    extract::{State, Path, Query},
     http::StatusCode,
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use openlink_core::{Link, shortcode};
-use openlink_store::Store;
+
 use crate::state::AppState;
 
 /// 创建短链请求
@@ -61,6 +63,23 @@ pub struct UpdateLinkRequest {
     pub metadata: serde_json::Value,
 }
 
+/// 列出短链查询参数
+#[derive(Debug, Deserialize)]
+pub struct ListLinksQuery {
+    #[serde(default = "default_offset")]
+    pub offset: i64,
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+}
+
+fn default_offset() -> i64 {
+    0
+}
+
+fn default_limit() -> i64 {
+    20
+}
+
 /// 创建短链
 ///
 /// POST /v1/links
@@ -101,7 +120,7 @@ pub async fn create_link(
         id: uuid::Uuid::new_v4().to_string(),
         code: code.clone(),
         payload,
-        owner: "default".to_string(), // Phase 1: 无认证，默认 owner
+        owner: "default".to_string(), // Phase 2: 后续从 Token 中获取 owner
         created_at: chrono::Utc::now(),
         metadata: req.metadata,
         is_active: true,
@@ -140,16 +159,32 @@ pub async fn get_link(
     Ok(Json(LinkResponse::from(link)))
 }
 
-/// 列出短链（Phase 1 简化实现）
+/// 列出短链（Phase 2: 支持分页）
 ///
 /// GET /v1/links
 pub async fn list_links(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<ListLinksQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    // Phase 1: 返回空列表，后续实现分页查询
+    let links = state
+        .store
+        .list_links(query.offset, query.limit)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let total = state
+        .store
+        .count_active_links()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let link_responses: Vec<LinkResponse> = links.into_iter().map(LinkResponse::from).collect();
+
     Ok(Json(serde_json::json!({
-        "links": [],
-        "total": 0,
+        "links": link_responses,
+        "total": total,
+        "offset": query.offset,
+        "limit": query.limit,
     })))
 }
 
@@ -196,27 +231,4 @@ pub async fn delete_link(
 
     tracing::info!(code = %code, "Link deleted");
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// 获取链接访问统计
-///
-/// GET /v1/links/:code/stats
-pub async fn get_stats(
-    State(state): State<Arc<AppState>>,
-    Path(code): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let link = state
-        .store
-        .get_link_by_code(&code)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
-
-    let stats = state
-        .store
-        .get_link_stats(&link.id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(serde_json::to_value(stats).unwrap_or_default()))
 }

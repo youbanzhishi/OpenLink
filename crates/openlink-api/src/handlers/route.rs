@@ -1,6 +1,8 @@
 //! # 路由规则管理处理器
 //!
 //! POST/PUT/DELETE /v1/links/:code/routes
+//!
+//! Phase 2: 支持多条件组合（AND/OR）
 
 use axum::{
     extract::{State, Path},
@@ -9,8 +11,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use openlink_core::{Route, Rule, Target, Action, Condition};
-use openlink_store::Store;
+use openlink_core::{Route, Rule, Target, Action, Condition, ConditionLogic};
 use crate::state::AppState;
 
 /// 创建路由规则请求
@@ -26,7 +27,14 @@ pub struct CreateRouteRequest {
 /// 规则输入
 #[derive(Debug, Deserialize)]
 pub struct RuleInput {
-    pub condition: ConditionInput,
+    /// 单条件（向后兼容 Phase 1）
+    pub condition: Option<ConditionInput>,
+    /// 多条件列表（Phase 2: AND/OR 组合）
+    #[serde(default)]
+    pub conditions: Vec<ConditionInput>,
+    /// 条件组合逻辑（Phase 2: and/or）
+    #[serde(default)]
+    pub condition_logic: Option<String>,
     pub target: TargetInput,
     #[serde(default)]
     pub priority: i32,
@@ -41,12 +49,30 @@ pub struct ConditionInput {
     pub params: serde_json::Value,
 }
 
+impl From<ConditionInput> for Condition {
+    fn from(input: ConditionInput) -> Self {
+        Condition {
+            condition_type: input.condition_type,
+            params: input.params,
+        }
+    }
+}
+
 /// 目标输入
 #[derive(Debug, Deserialize)]
 pub struct TargetInput {
     pub action: Action,
     #[serde(default)]
     pub params: serde_json::Value,
+}
+
+impl From<TargetInput> for Target {
+    fn from(input: TargetInput) -> Self {
+        Target {
+            action: input.action,
+            params: input.params,
+        }
+    }
 }
 
 /// 路由响应
@@ -79,6 +105,31 @@ pub struct UpdateRouteRequest {
     pub default_target: Option<TargetInput>,
 }
 
+/// 将 RuleInput 转换为 Rule
+fn rule_input_to_rule(input: RuleInput) -> Rule {
+    let condition = input.condition
+        .map(Condition::from)
+        .unwrap_or_else(|| Condition {
+            condition_type: "always".to_string(),
+            params: serde_json::Value::Null,
+        });
+
+    let conditions: Vec<Condition> = input.conditions.into_iter().map(Condition::from).collect();
+
+    let condition_logic = match input.condition_logic.as_deref() {
+        Some("or") => ConditionLogic::Or,
+        _ => ConditionLogic::And,
+    };
+
+    Rule {
+        condition,
+        conditions,
+        condition_logic,
+        target: Target::from(input.target),
+        priority: input.priority,
+    }
+}
+
 /// 创建路由规则
 ///
 /// POST /v1/links/:code/routes
@@ -104,27 +155,14 @@ pub async fn create_route(
     let rules: Vec<Rule> = req
         .rules
         .into_iter()
-        .map(|r| Rule {
-            condition: Condition {
-                condition_type: r.condition.condition_type,
-                params: r.condition.params,
-            },
-            target: Target {
-                action: r.target.action,
-                params: r.target.params,
-            },
-            priority: r.priority,
-        })
+        .map(rule_input_to_rule)
         .collect();
 
     let route = Route {
         id: uuid::Uuid::new_v4().to_string(),
         link_id: link.id,
         rules,
-        default_target: Target {
-            action: req.default_target.action,
-            params: req.default_target.params,
-        },
+        default_target: Target::from(req.default_target),
         version: 1,
         created_at: chrono::Utc::now(),
     };
@@ -167,28 +205,12 @@ pub async fn update_route(
     let rules: Vec<Rule> = if req.rules.is_empty() {
         current.rules
     } else {
-        req.rules
-            .into_iter()
-            .map(|r| Rule {
-                condition: Condition {
-                    condition_type: r.condition.condition_type,
-                    params: r.condition.params,
-                },
-                target: Target {
-                    action: r.target.action,
-                    params: r.target.params,
-                },
-                priority: r.priority,
-            })
-            .collect()
+        req.rules.into_iter().map(rule_input_to_rule).collect()
     };
 
     let default_target = req
         .default_target
-        .map(|t| Target {
-            action: t.action,
-            params: t.params,
-        })
+        .map(Target::from)
         .unwrap_or(current.default_target);
 
     let updated = state
@@ -213,16 +235,8 @@ pub async fn update_route(
 /// DELETE /v1/links/:code/routes/:route_id
 pub async fn delete_route(
     State(state): State<Arc<AppState>>,
-    Path((code, route_id)): Path<(String, String)>,
+    Path((_code, route_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    // 验证链接存在
-    let _link = state
-        .store
-        .get_link_by_code(&code)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
-
     state
         .store
         .delete_route(&route_id)
@@ -234,6 +248,6 @@ pub async fn delete_route(
             }
         })?;
 
-    tracing::info!(code = %code, route_id = %route_id, "Route deleted");
+    tracing::info!(route_id = %route_id, "Route deleted");
     Ok(StatusCode::NO_CONTENT)
 }

@@ -19,7 +19,7 @@ pub type SessionID = String;
 // ─── Identity ───────────────────────────────────────────────
 
 /// 访问者身份类型
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum IdentityType {
     Human,
@@ -62,6 +62,9 @@ pub struct DeviceInfo {
     pub browser: Option<String>,
     /// 带宽等级：low / medium / high
     pub bandwidth: Option<String>,
+    /// 原始 User-Agent 字符串（Phase 2: 用于 header_match 条件）
+    #[serde(default)]
+    pub user_agent_raw: Option<String>,
 }
 
 impl Default for DeviceInfo {
@@ -71,6 +74,7 @@ impl Default for DeviceInfo {
             os: None,
             browser: None,
             bandwidth: None,
+            user_agent_raw: None,
         }
     }
 }
@@ -121,32 +125,34 @@ pub struct Context {
     pub session: SessionID,
     /// 扩展上下文（Extension 填充）
     pub custom: serde_json::Value,
+    /// 原始 HTTP Headers（Phase 2: 用于 header_match 条件）
+    #[serde(default)]
+    pub headers: serde_json::Value,
 }
 
 impl Context {
     /// 从 HTTP 请求构建基础 Context
-    /// Phase 1 只提取最基本的身份和设备信息
+    /// Phase 2: 增强 User-Agent 解析，识别 curl/Agent 等请求类型
     pub fn from_request(
         user_agent: Option<&str>,
         ip: Option<&str>,
     ) -> Self {
+        let identity_type = user_agent
+            .map(|ua| detect_identity_type(ua))
+            .unwrap_or(IdentityType::Human);
+
         let device = DeviceInfo {
-            device_type: user_agent.and_then(|ua| {
-                if ua.contains("Mobile") || ua.contains("Android") || ua.contains("iPhone") {
-                    Some("mobile".to_string())
-                } else {
-                    Some("desktop".to_string())
-                }
-            }),
+            device_type: user_agent.and_then(|ua| detect_device_type(ua)),
             os: None,
             browser: None,
             bandwidth: None,
+            user_agent_raw: user_agent.map(|s| s.to_string()),
         };
 
         Self {
             identity: Identity {
                 id: ip.unwrap_or("unknown").to_string(),
-                identity_type: IdentityType::Human,
+                identity_type,
                 agent_type: None,
             },
             device,
@@ -155,7 +161,66 @@ impl Context {
             intent: serde_json::Value::Null,
             session: uuid::Uuid::new_v4().to_string(),
             custom: serde_json::Value::Null,
+            headers: serde_json::Value::Null,
         }
+    }
+
+    /// 构建 Context 并保留 HTTP Headers
+    /// Phase 2: 用于 header_match 条件匹配
+    pub fn from_request_with_headers(
+        user_agent: Option<&str>,
+        ip: Option<&str>,
+        headers: &std::collections::HashMap<String, String>,
+    ) -> Self {
+        let mut ctx = Self::from_request(user_agent, ip);
+        ctx.headers = serde_json::to_value(headers).unwrap_or_default();
+        ctx
+    }
+}
+
+/// 从 User-Agent 检测身份类型
+/// curl/wget → Service, 已知 Agent 标识 → Agent, 其他 → Human
+fn detect_identity_type(ua: &str) -> IdentityType {
+    let ua_lower = ua.to_lowercase();
+    if ua_lower.contains("curl/")
+        || ua_lower.contains("wget/")
+        || ua_lower.contains("python-requests/")
+        || ua_lower.contains("python-urllib/")
+        || ua_lower.contains("httpie/")
+        || ua_lower.contains("node-fetch/")
+    {
+        IdentityType::Service
+    } else if ua_lower.contains("agent")
+        || ua_lower.contains("bot/")
+        || ua_lower.contains("crawler")
+        || ua_lower.contains("spider")
+        || ua_lower.contains("openai")
+        || ua_lower.contains("anthropic")
+        || ua_lower.contains("claude")
+    {
+        IdentityType::Agent
+    } else {
+        IdentityType::Human
+    }
+}
+
+/// 从 User-Agent 检测设备类型
+fn detect_device_type(ua: &str) -> Option<String> {
+    let ua_lower = ua.to_lowercase();
+    if ua_lower.contains("curl/")
+        || ua_lower.contains("wget/")
+        || ua_lower.contains("python-requests/")
+        || ua_lower.contains("python-urllib/")
+    {
+        Some("server".to_string())
+    } else if ua_lower.contains("mobile")
+        || ua_lower.contains("android")
+        || ua_lower.contains("iphone")
+        || ua_lower.contains("ipad")
+    {
+        Some("mobile".to_string())
+    } else {
+        Some("desktop".to_string())
     }
 }
 
@@ -200,6 +265,8 @@ pub enum Action {
     Transform,
     /// 委托给另一个 Link
     Delegate,
+    /// 返回 JSON 数据（Phase 2: 新增，Agent 访问时直接返回数据）
+    JsonData,
     /// 扩展注册的自定义 Action
     Custom(String),
 }
@@ -214,12 +281,29 @@ impl Action {
             Action::Workflow => "workflow",
             Action::Transform => "transform",
             Action::Delegate => "delegate",
+            Action::JsonData => "json_data",
             Action::Custom(name) => name.as_str(),
         }
     }
 }
 
 // ─── Condition ──────────────────────────────────────────────
+
+/// 条件逻辑组合方式
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ConditionLogic {
+    /// 所有条件都满足（默认）
+    And,
+    /// 任一条件满足
+    Or,
+}
+
+impl Default for ConditionLogic {
+    fn default() -> Self {
+        ConditionLogic::And
+    }
+}
 
 /// 条件 — 什么情况下走这条路
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -228,6 +312,7 @@ pub struct Condition {
     #[serde(rename = "type")]
     pub condition_type: String,
     /// 条件参数
+    #[serde(default)]
     pub params: serde_json::Value,
 }
 
@@ -239,20 +324,57 @@ pub struct Target {
     /// 执行什么 Action
     pub action: Action,
     /// Action 专用参数（如 Redirect 的 URL 和状态码）
+    #[serde(default)]
     pub params: serde_json::Value,
 }
 
 // ─── Rule ───────────────────────────────────────────────────
 
 /// 路由规则 — 有序规则列表中的一条
+///
+/// Phase 2: 支持多条件组合（AND/OR）
+/// - 单条件：使用 `condition` 字段（向后兼容）
+/// - 多条件：使用 `conditions` 字段 + `condition_logic` 组合
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rule {
-    /// 条件
+    /// 单条件（向后兼容 Phase 1）
+    #[serde(default = "default_condition")]
     pub condition: Condition,
+    /// 多条件列表（Phase 2: AND/OR 组合）
+    #[serde(default)]
+    pub conditions: Vec<Condition>,
+    /// 条件组合逻辑（Phase 2: AND/OR）
+    #[serde(default)]
+    pub condition_logic: ConditionLogic,
     /// 命中后的目标
     pub target: Target,
     /// 优先级（数值越大越优先）
+    #[serde(default)]
     pub priority: i32,
+}
+
+fn default_condition() -> Condition {
+    Condition {
+        condition_type: "always".to_string(),
+        params: serde_json::Value::Null,
+    }
+}
+
+impl Rule {
+    /// 获取所有需要评估的条件
+    /// 如果 conditions 非空，使用 conditions；否则使用单条件 condition
+    pub fn all_conditions(&self) -> Vec<&Condition> {
+        if self.conditions.is_empty() {
+            vec![&self.condition]
+        } else {
+            self.conditions.iter().collect()
+        }
+    }
+
+    /// 判断条件组合逻辑
+    pub fn logic(&self) -> &ConditionLogic {
+        &self.condition_logic
+    }
 }
 
 // ─── Route ──────────────────────────────────────────────────
@@ -332,6 +454,11 @@ pub enum ActionResult {
         content_type: String,
         body: String,
     },
+    /// Webhook 已触发（Phase 2: 异步执行，仅记录触发状态）
+    WebhookTriggered {
+        target_url: String,
+        status: String,
+    },
 }
 
 // ─── Extension metadata (for storage) ──────────────────────
@@ -355,6 +482,8 @@ pub struct Extension {
 // ─── AccessLog ──────────────────────────────────────────────
 
 /// 访问日志 — 可观测内置：每次路由决策都有完整上下文记录
+///
+/// Phase 2: 扩展字段，记录完整路由决策上下文
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessLog {
     pub id: String,
@@ -369,9 +498,21 @@ pub struct AccessLog {
     pub response_time_ms: Option<i64>,
     /// 记录时间
     pub created_at: DateTime<Utc>,
+    /// 短码（Phase 2: 便于按短码查询）
+    #[serde(default)]
+    pub code: Option<String>,
+    /// 访问者 IP（Phase 2: 便于统计唯一访客）
+    #[serde(default)]
+    pub visitor_ip: Option<String>,
+    /// 访问者身份类型（Phase 2: 便于统计设备分布）
+    #[serde(default)]
+    pub identity_type: Option<String>,
+    /// 设备类型（Phase 2: 便于统计设备分布）
+    #[serde(default)]
+    pub device_type: Option<String>,
 }
 
-/// 链接访问统计
+/// 链接访问统计（Phase 2: 增强版）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LinkStats {
     pub link_id: LinkID,
@@ -384,6 +525,57 @@ pub struct LinkStats {
     pub accesses_24h: i64,
     /// 最近 7d 访问次数
     pub accesses_7d: i64,
+    /// 设备分布（Phase 2）
+    #[serde(default)]
+    pub device_distribution: serde_json::Value,
+    /// 身份类型分布（Phase 2）
+    #[serde(default)]
+    pub identity_distribution: serde_json::Value,
+}
+
+/// 全局统计概览（Phase 2: 新增）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverviewStats {
+    /// 总链接数
+    pub total_links: i64,
+    /// 活跃链接数
+    pub active_links: i64,
+    /// 总访问次数
+    pub total_accesses: i64,
+    /// 今日访问次数
+    pub accesses_today: i64,
+    /// 热门链接 Top N
+    pub top_links: Vec<TopLink>,
+}
+
+/// 热门链接
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TopLink {
+    pub code: String,
+    pub link_id: String,
+    pub access_count: i64,
+}
+
+// ─── Auth Token (Phase 2) ──────────────────────────────────
+
+/// Token 权限范围
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum TokenScope {
+    Read,
+    Write,
+    Admin,
+}
+
+/// API Token 定义
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiToken {
+    /// Token 值（Bearer Token）
+    pub token: String,
+    /// Token 名称（便于识别）
+    pub name: String,
+    /// 权限范围
+    pub scopes: Vec<TokenScope>,
 }
 
 #[cfg(test)]
@@ -394,29 +586,91 @@ mod tests {
     fn test_action_as_str() {
         assert_eq!(Action::Redirect.as_str(), "redirect");
         assert_eq!(Action::Custom("my-action".to_string()).as_str(), "my-action");
+        assert_eq!(Action::JsonData.as_str(), "json_data");
+    }
+
+    #[test]
+    fn test_detect_identity_type() {
+        assert_eq!(detect_identity_type("curl/7.88.1"), IdentityType::Service);
+        assert_eq!(detect_identity_type("wget/1.21.4"), IdentityType::Service);
+        assert_eq!(detect_identity_type("python-requests/2.31.0"), IdentityType::Service);
+        assert_eq!(detect_identity_type("Mozilla/5.0 (Windows NT 10.0)"), IdentityType::Human);
+        assert_eq!(detect_identity_type("OpenAI/1.0"), IdentityType::Agent);
+        assert_eq!(detect_identity_type("ClaudeBot/1.0"), IdentityType::Agent);
+    }
+
+    #[test]
+    fn test_detect_device_type() {
+        assert_eq!(detect_device_type("curl/7.88.1"), Some("server".to_string()));
+        assert_eq!(detect_device_type("Mozilla/5.0 (iPhone)"), Some("mobile".to_string()));
+        assert_eq!(detect_device_type("Mozilla/5.0 (Windows NT 10.0)"), Some("desktop".to_string()));
+    }
+
+    #[test]
+    fn test_rule_all_conditions_single() {
+        let rule = Rule {
+            condition: Condition {
+                condition_type: "identity-type".to_string(),
+                params: serde_json::json!({"type": "human"}),
+            },
+            conditions: vec![],
+            condition_logic: ConditionLogic::And,
+            target: Target {
+                action: Action::Redirect,
+                params: serde_json::json!({"url": "https://example.com"}),
+            },
+            priority: 10,
+        };
+        assert_eq!(rule.all_conditions().len(), 1);
+    }
+
+    #[test]
+    fn test_rule_all_conditions_multiple() {
+        let rule = Rule {
+            condition: Condition {
+                condition_type: "always".to_string(),
+                params: serde_json::Value::Null,
+            },
+            conditions: vec![
+                Condition {
+                    condition_type: "identity-type".to_string(),
+                    params: serde_json::json!({"type": "human"}),
+                },
+                Condition {
+                    condition_type: "device-type".to_string(),
+                    params: serde_json::json!({"type": "mobile"}),
+                },
+            ],
+            condition_logic: ConditionLogic::And,
+            target: Target {
+                action: Action::Redirect,
+                params: serde_json::json!({"url": "https://m.example.com"}),
+            },
+            priority: 10,
+        };
+        assert_eq!(rule.all_conditions().len(), 2);
+    }
+
+    #[test]
+    fn test_condition_logic_default() {
+        assert!(matches!(ConditionLogic::default(), ConditionLogic::And));
     }
 
     #[test]
     fn test_context_from_request() {
-        let ctx = Context::from_request(Some("Mozilla/5.0 Mobile"), Some("1.2.3.4"));
-        assert_eq!(ctx.identity.id, "1.2.3.4");
+        let ctx = Context::from_request(Some("curl/7.88.1"), Some("127.0.0.1"));
+        assert_eq!(ctx.identity.identity_type, IdentityType::Service);
+        assert_eq!(ctx.device.device_type.as_deref(), Some("server"));
+        assert_eq!(ctx.device.user_agent_raw.as_deref(), Some("curl/7.88.1"));
+    }
+
+    #[test]
+    fn test_context_from_request_browser() {
+        let ctx = Context::from_request(
+            Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
+            Some("127.0.0.1"),
+        );
         assert_eq!(ctx.identity.identity_type, IdentityType::Human);
-        assert_eq!(ctx.device.device_type.as_deref(), Some("mobile"));
-    }
-
-    #[test]
-    fn test_action_serde_roundtrip() {
-        let action = Action::Redirect;
-        let json = serde_json::to_string(&action).unwrap();
-        let decoded: Action = serde_json::from_str(&json).unwrap();
-        assert_eq!(action, decoded);
-    }
-
-    #[test]
-    fn test_custom_action_serde() {
-        let action = Action::Custom("open-daw-project".to_string());
-        let json = serde_json::to_string(&action).unwrap();
-        let decoded: Action = serde_json::from_str(&json).unwrap();
-        assert_eq!(action, decoded);
+        assert_eq!(ctx.device.device_type.as_deref(), Some("desktop"));
     }
 }

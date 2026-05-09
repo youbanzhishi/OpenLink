@@ -6,11 +6,15 @@ members = [
     "crates/openlink-edge",
     "crates/openlink-sdk",
     "extensions/ext-redirect",
+    "extensions/ext-webhook",
+    "extensions/ext-conditions",
+    "extensions/ext-hooks",
+    "extensions/ext-json",
 ]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 rust-version = "1.82"
@@ -45,3 +49,6 @@ toml = "0.8"
 
 # Random — short code generation
 rand = "0.8"
+
+# HTTP client (webhook)
+reqwest = { version = "0.12", features = ["json"] }
