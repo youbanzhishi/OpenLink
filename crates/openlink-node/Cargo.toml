@@ -1,0 +1,34 @@
+[package]
+name = "openlink-node"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+# HTTP server for file service
+warp = "0.3"
+tokio-util = { workspace = true }
+bytes = "1"
+futures = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Configuration
+toml = { workspace = true }
+hostname = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

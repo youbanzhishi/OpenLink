@@ -5,6 +5,7 @@ members = [
     "crates/openlink-api",
     "crates/openlink-edge",
     "crates/openlink-sdk",
+    "crates/openlink-node",
     "extensions/ext-redirect",
     "extensions/ext-webhook",
     "extensions/ext-conditions",
@@ -12,6 +13,8 @@ members = [
     "extensions/ext-json",
     "extensions/ext-workflow",
     "extensions/ext-filetransfer",
+    "extensions/ext-direct-transfer",
+    "extensions/ext-daw-distribute",
 ]
 resolver = "2"
 
@@ -59,3 +62,13 @@ reqwest = { version = "0.12", features = ["json"] }
 hmac = "0.12"
 sha2 = "0.10"
 hex = "0.4"
+
+# Phase 4: LAN discovery & file transfer
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+warp = "0.3"            # Lightweight HTTP server for node file service
+bytes = "1"
+
+# Phase 4: URL encoding for DAW deeplinks
+urlencoding = "2"
+hostname = "0.4"

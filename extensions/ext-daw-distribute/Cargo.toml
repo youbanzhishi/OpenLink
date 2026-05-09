@@ -1,0 +1,17 @@
+[package]
+name = "ext-daw-distribute"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+openlink-core = { path = "../../crates/openlink-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }
+urlencoding = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
