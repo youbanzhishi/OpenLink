@@ -29,12 +29,5 @@ uuid = { workspace = true }
 # 时间
 chrono = { workspace = true }
 
-[profile.release]
-opt-level = "z"      # 极致优化大小
-lto = true          # Link Time Optimization
-codegen-units = 1
-strip = true        # 自动 strip
-panic = "abort"      # 减少 panic 展开代码
-
 [dev-dependencies]
 tempfile = "3.27.0"

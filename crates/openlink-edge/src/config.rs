@@ -1,6 +1,7 @@
-//! # 边缘配置
+//! # 边缘配置（Phase 5 增强）
 //!
 //! 精简配置，从文件读取，不依赖数据库。
+//! Phase 5：增加地理路由配置。
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -11,20 +12,24 @@ use std::path::Path;
 pub struct EdgeConfig {
     /// 节点 ID
     pub node_id: String,
-    
+
     /// HTTP 服务地址
     pub listen_addr: String,
-    
+
     /// 文件存储目录
     pub storage_path: String,
-    
+
     /// 缓存配置
     pub cache: CacheConfig,
-    
+
+    /// 地理路由配置（Phase 5）
+    #[serde(default)]
+    pub geo_route: Option<crate::geo::GeoRouteConfig>,
+
     /// 日志级别
     #[serde(default = "default_log_level")]
     pub log_level: String,
-    
+
     /// 设备密钥（用于节点认证）
     pub device_key: Option<String>,
 }
@@ -38,11 +43,11 @@ impl EdgeConfig {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
         let content = fs::read_to_string(path)
             .map_err(|e| ConfigError::Io(e.to_string()))?;
-        
+
         toml::from_str(&content)
             .map_err(|e| ConfigError::Parse(e.to_string()))
     }
-    
+
     /// 创建默认配置
     pub fn default_config() -> Self {
         Self {
@@ -50,6 +55,7 @@ impl EdgeConfig {
             listen_addr: "0.0.0.0:8080".to_string(),
             storage_path: "./edge-storage".to_string(),
             cache: CacheConfig::default(),
+            geo_route: Some(crate::geo::GeoRouteConfig::default()),
             log_level: "info".to_string(),
             device_key: None,
         }
@@ -61,14 +67,22 @@ impl EdgeConfig {
 pub struct CacheConfig {
     /// 是否启用缓存
     pub enabled: bool,
-    
+
     /// 最大缓存条目数
     #[serde(default = "default_cache_size")]
     pub max_entries: usize,
-    
+
     /// 缓存 TTL（秒）
     #[serde(default = "default_cache_ttl")]
     pub ttl_secs: u64,
+
+    /// 热链阈值（Phase 5）
+    #[serde(default = "default_hot_threshold")]
+    pub hot_threshold: u64,
+
+    /// 热链 TTL 倍数（Phase 5）
+    #[serde(default = "default_hot_ttl_multiplier")]
+    pub hot_ttl_multiplier: u64,
 }
 
 fn default_cache_size() -> usize {
@@ -79,12 +93,22 @@ fn default_cache_ttl() -> u64 {
     3600
 }
 
+fn default_hot_threshold() -> u64 {
+    10
+}
+
+fn default_hot_ttl_multiplier() -> u64 {
+    3
+}
+
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {
             enabled: true,
             max_entries: default_cache_size(),
             ttl_secs: default_cache_ttl(),
+            hot_threshold: default_hot_threshold(),
+            hot_ttl_multiplier: default_hot_ttl_multiplier(),
         }
     }
 }
@@ -94,7 +118,7 @@ impl Default for CacheConfig {
 pub enum ConfigError {
     #[error("IO error: {0}")]
     Io(String),
-    
+
     #[error("Parse error: {0}")]
     Parse(String),
 }
