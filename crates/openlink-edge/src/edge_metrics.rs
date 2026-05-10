@@ -341,4 +341,46 @@ mod tests {
         assert_eq!(snapshot.total_requests, 0);
         assert_eq!(snapshot.error_requests, 0);
     }
+
+    #[tokio::test]
+    async fn test_latency_percentiles() {
+        let collector = EdgeMetricsCollector::with_max_samples(100);
+        for i in 1..=100 {
+            collector.record_request();
+            collector.record_success(i as f64);
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        let snapshot = collector.snapshot().await;
+        assert!(snapshot.latency.p50_ms > 0.0);
+        assert!(snapshot.latency.p95_ms >= snapshot.latency.p50_ms);
+        assert!(snapshot.latency.p99_ms >= snapshot.latency.p95_ms);
+    }
+
+    #[tokio::test]
+    async fn test_error_rate_calculation() {
+        let collector = EdgeMetricsCollector::new();
+        for _ in 0..8 {
+            collector.record_request();
+            collector.record_success(10.0);
+        }
+        for _ in 0..2 {
+            collector.record_request();
+            collector.record_error();
+        }
+
+        let snapshot = collector.snapshot().await;
+        assert!((snapshot.error_rate - 0.2).abs() < 0.01);
+        assert_eq!(snapshot.success_requests, 8);
+        assert_eq!(snapshot.error_requests, 2);
+    }
+
+    #[tokio::test]
+    async fn test_metrics_snapshot_timestamp() {
+        let collector = EdgeMetricsCollector::new();
+        collector.record_request();
+        let snapshot = collector.snapshot().await;
+        assert!(snapshot.timestamp > 0);
+    }
 }

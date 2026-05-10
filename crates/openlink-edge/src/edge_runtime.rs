@@ -303,4 +303,51 @@ mod tests {
         assert_eq!(stats.active_requests, 0);
         assert_eq!(stats.max_concurrency, 100);
     }
+
+    #[tokio::test]
+    async fn test_runtime_concurrency_limit() {
+        let config = RuntimeConfig {
+            max_concurrency: 2,
+            default_timeout_secs: 5,
+            queue_size: 100,
+        };
+        let edge_config = EdgeConfig::default_config();
+        let router = Arc::new(EdgeRouter::new(edge_config));
+        let runtime = EdgeRuntime::new(config, router);
+
+        let stats = runtime.runtime_stats();
+        assert_eq!(stats.max_concurrency, 2);
+    }
+
+    #[test]
+    fn test_pipeline_stage_values() {
+        assert_ne!(PipelineStage::Receive, PipelineStage::Route);
+        assert_ne!(PipelineStage::Execute, PipelineStage::Respond);
+    }
+
+    #[tokio::test]
+    async fn test_runtime_timeout_handling() {
+        let config = RuntimeConfig {
+            max_concurrency: 1,
+            default_timeout_secs: 1,
+            queue_size: 10,
+        };
+        let edge_config = EdgeConfig::default_config();
+        let router = Arc::new(EdgeRouter::new(edge_config));
+        let runtime = EdgeRuntime::new(config, router);
+
+        let request = RuntimeRequest {
+            id: "req-timeout".to_string(),
+            code: "nonexistent".to_string(),
+            client_ip: None,
+            user_agent: None,
+            priority: RequestPriority::High,
+            created_at: chrono::Utc::now().timestamp(),
+            timeout_secs: 1,
+        };
+
+        let response = runtime.handle_request(request).await;
+        // Should still respond (404 not timeout for this simple case)
+        assert!(response.status_code == 404 || response.status_code == 504);
+    }
 }
