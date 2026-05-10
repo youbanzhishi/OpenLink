@@ -151,25 +151,25 @@ impl Dag {
 
     /// 检测是否有环（Kahn 算法拓扑排序）
     fn has_cycle(&self) -> bool {
-        let in_degree = self.compute_in_degree();
+        let mut in_degree = self.compute_in_degree();
         let adjacency = self.build_adjacency();
 
-        let mut queue: VecDeque<&str> = VecDeque::new();
+        let mut queue: VecDeque<String> = VecDeque::new();
         for (node_id, &deg) in &in_degree {
             if deg == 0 {
-                queue.push_back(node_id);
+                queue.push_back(node_id.clone());
             }
         }
 
         let mut visited = 0;
         while let Some(node_id) = queue.pop_front() {
             visited += 1;
-            if let Some(neighbors) = adjacency.get(node_id) {
+            if let Some(neighbors) = adjacency.get(&node_id) {
                 for neighbor in neighbors {
-                    if let Some(deg) = in_degree.get(neighbor.as_str()) {
-                        let new_deg = deg - 1;
-                        if new_deg == 0 {
-                            queue.push_back(neighbor.as_str());
+                    if let Some(deg) = in_degree.get_mut(neighbor.as_str()) {
+                        *deg -= 1;
+                        if *deg == 0 {
+                            queue.push_back(neighbor.clone());
                         }
                     }
                 }
@@ -181,7 +181,7 @@ impl Dag {
 
     /// 拓扑排序
     pub fn topological_sort(&self) -> Vec<NodeId> {
-        let in_degree = self.compute_in_degree();
+        let mut in_degree = self.compute_in_degree();
         let adjacency = self.build_adjacency();
 
         let mut queue: VecDeque<String> = VecDeque::new();
@@ -196,8 +196,9 @@ impl Dag {
             result.push(node_id.clone());
             if let Some(neighbors) = adjacency.get(&node_id) {
                 for neighbor in neighbors {
-                    if let Some(deg) = in_degree.get(neighbor.as_str()) {
-                        if *deg <= 1 {
+                    if let Some(deg) = in_degree.get_mut(neighbor.as_str()) {
+                        *deg -= 1;
+                        if *deg == 0 {
                             queue.push_back(neighbor.clone());
                         }
                     }

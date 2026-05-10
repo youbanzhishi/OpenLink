@@ -64,7 +64,7 @@ impl ParallelDagExecutor {
     ///
     /// 同一层级的节点没有相互依赖，可以并行执行。
     fn compute_levels(dag: &Dag) -> HashMap<NodeId, Level> {
-        let in_degree = dag.compute_in_degree();
+        let mut in_degree = dag.compute_in_degree();
         let adjacency = dag.build_adjacency();
 
         let mut levels: HashMap<NodeId, Level> = HashMap::new();
@@ -78,27 +78,24 @@ impl ParallelDagExecutor {
             }
         }
 
-        // BFS 计算层级
+        // BFS 计算层级（Kahn 算法）
         while let Some(node_id) = queue.pop_front() {
             let current_level = levels[&node_id];
 
             if let Some(neighbors) = adjacency.get(&node_id) {
                 for neighbor in neighbors {
-                    let neighbor_level = levels.get(neighbor).copied().unwrap_or(0);
+                    // 取最大前驱层级 + 1
                     let new_level = current_level + 1;
-                    if new_level > neighbor_level {
-                        levels.insert(neighbor.clone(), new_level);
-                    }
+                    let prev_level = levels.get(neighbor).copied().unwrap_or(0);
+                    let level = new_level.max(prev_level);
+                    levels.insert(neighbor.clone(), level);
 
-                    // 重新检查入度
-                    let new_in_degree: usize = dag
-                        .edges
-                        .iter()
-                        .filter(|e| e.to == *neighbor && !levels.contains_key(&e.from))
-                        .count();
-
-                    if new_in_degree == 0 && !levels.contains_key(neighbor) {
-                        queue.push_back(neighbor.clone());
+                    // 递减入度
+                    if let Some(deg) = in_degree.get_mut(neighbor) {
+                        *deg -= 1;
+                        if *deg == 0 {
+                            queue.push_back(neighbor.clone());
+                        }
                     }
                 }
             }
