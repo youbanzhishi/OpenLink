@@ -7,6 +7,10 @@
 //! - WASM 沙箱执行环境（trait + Mock）
 //! - 健康检查：节点和缓存健康状态监测
 //!
+//! Phase 9 增强：
+//! - `edge_runtime`: 边缘运行时（请求管道/优先级队列/并发限制/超时）
+//! - `edge_metrics`: 边缘指标（请求量/延迟/错误率/缓存命中率/资源使用）
+//!
 //! ## 精简策略
 //! - 仅保留核心路由 + 文件传输功能
 //! - 去掉 API Server（独立部署）
@@ -26,6 +30,8 @@ pub mod geo;
 pub mod wasm_redirect;
 pub mod sandbox;
 pub mod health_check;
+pub mod edge_runtime;
+pub mod edge_metrics;
 
 pub use router::EdgeRouter;
 pub use config::EdgeConfig;
@@ -35,3 +41,11 @@ pub use geo::{GeoRouter, GeoRouteConfig, NodeEndpoint};
 pub use wasm_redirect::{EdgeRedirectEngine, EdgeRedirectRule, EdgeRequest, RedirectDecision};
 pub use sandbox::{WasmSandbox, MockSandbox, SandboxConfig, SandboxError, WasmModuleInfo};
 pub use health_check::{HealthChecker, HealthCheckConfig, HealthReport, HealthStatus, NodeHealthInfo};
+pub use edge_runtime::{
+    EdgeRuntime, RuntimeConfig, RuntimeStats,
+    RuntimeRequest, EdgeResponse, RequestPriority, PipelineStage,
+};
+pub use edge_metrics::{
+    EdgeMetricsCollector, EdgeMetricsSnapshot, LatencyStats, ResourceUsage,
+    RequestTimer,
+};

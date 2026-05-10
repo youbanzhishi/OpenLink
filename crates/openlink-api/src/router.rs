@@ -56,5 +56,14 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/share/project", post(handlers::plugin::share_project))
         .route("/api/v1/share/:id", get(handlers::plugin::get_shared_project))
         
+        // API v1 - P2P (Phase 9)
+        .route("/api/v1/p2p/peers", get(handlers::p2p::list_peers))
+        .route("/api/v1/p2p/status", get(handlers::p2p::get_status))
+        .route("/api/v1/p2p/connect", post(handlers::p2p::connect))
+        
+        // API v1 - Edge (Phase 9)
+        .route("/api/v1/edge/metrics", get(handlers::edge::get_metrics))
+        .route("/api/v1/edge/cache", get(handlers::edge::get_cache))
+        
         .with_state(state)
 }

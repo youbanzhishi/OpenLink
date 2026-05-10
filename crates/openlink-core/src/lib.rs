@@ -13,6 +13,10 @@
 //! - `rate_limit`: 限流器（令牌桶/滑动窗口）
 //! - `auth`: 认证增强（API Key/JWT）
 //! - `health`: 组件级健康检查（Readiness/Liveness）
+//!
+//! ## Phase 9 模块
+//! - `gossip`: Gossip 协议（节点发现/链路状态/成员管理/故障检测）
+//! - `decentralized`: 去中心化路由引擎（最短路径/多路径冗余/降级策略）
 
 pub mod primitives;
 pub mod engine;
@@ -25,6 +29,10 @@ pub mod metrics;
 pub mod rate_limit;
 pub mod auth;
 pub mod health;
+
+// Phase 9: Decentralized Routing
+pub mod gossip;
+pub mod decentralized;
 
 pub use primitives::*;
 pub use engine::RoutingEngine;
@@ -58,4 +66,16 @@ pub use health::{
     OverallHealth,
     DatabaseHealthCheck, CacheHealthCheck, UpstreamHealthCheck,
     HealthEndpoint,
+};
+
+// Phase 9: Re-export decentralized routing types
+pub use gossip::{
+    GossipMessage, GossipMembership, GossipConfig,
+    NodeId, NodeInfo, NodeStatus,
+    LinkStateEntry,
+};
+pub use decentralized::{
+    DecentralizedRouter, RoutingTable, RoutingTableEntry,
+    RouteStrategy, RouteResult, RoutePath,
+    DegradationStrategy,
 };
