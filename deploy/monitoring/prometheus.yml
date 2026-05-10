@@ -1,0 +1,69 @@
+# ============================================================================
+# Prometheus Configuration for OpenLink
+#
+# Scrape targets:
+#   - OpenLink API (via Nginx /metrics)
+#   - Nginx stub_status (optional)
+#   - Redis exporter
+#   - PostgreSQL exporter
+# ============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: openlink-prod
+    environment: production
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # --- OpenLink API ---
+  - job_name: openlink-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - nginx:80
+        labels:
+          service: openlink-api
+          component: api
+
+  # --- Prometheus self-monitoring ---
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # --- Redis (via redis_exporter) ---
+  - job_name: redis
+    static_configs:
+      - targets:
+          - redis-exporter:9121
+        labels:
+          service: openlink-redis
+          component: cache
+
+  # --- PostgreSQL (via postgres_exporter) ---
+  - job_name: postgres
+    static_configs:
+      - targets:
+          - postgres-exporter:9187
+        labels:
+          service: openlink-postgres
+          component: database
+
+  # --- Nginx (via nginx-prometheus-exporter) ---
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - nginx-exporter:9113
+        labels:
+          service: openlink-nginx
+          component: proxy

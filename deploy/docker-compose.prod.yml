@@ -1,0 +1,165 @@
+# ============================================================================
+# OpenLink Production Docker Compose
+#
+# Services:
+#   - openlink-api (2 replicas + Nginx load balancing)
+#   - PostgreSQL (persistent volume + health check)
+#   - Redis (persistence + AOF)
+#   - Nginx (SSL termination + rate limiting + WebSocket upgrade)
+#   - Prometheus (metrics collection)
+#   - Grafana (dashboards)
+# ============================================================================
+
+version: "3.8"
+
+x-openlink-env: &openlink-env
+  RUST_LOG: openlink=info,tower_http=debug
+  DATABASE_URL: postgres://openlink:${DB_PASSWORD:-openlink_secure_2024}@postgres:5432/openlink
+  REDIS_URL: redis://redis:6379
+  OPENLINK_HOST: 0.0.0.0
+  OPENLINK_PORT: "3000"
+
+services:
+  # --- OpenLink API (2 replicas) ---
+  openlink-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    environment:
+      <<: *openlink-env
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - backend
+
+  # --- PostgreSQL ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: openlink-postgres
+    environment:
+      POSTGRES_USER: openlink
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-openlink_secure_2024}
+      POSTGRES_DB: openlink
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openlink -d openlink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # --- Redis ---
+  redis:
+    image: redis:7-alpine
+    container_name: openlink-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # --- Nginx (Reverse Proxy + SSL + Rate Limiting) ---
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: openlink-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/openlink.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - openlink-api
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # --- Prometheus ---
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: openlink-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=10GB"
+    ports:
+      - "9090:9090"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # --- Grafana ---
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: openlink-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  nginx-logs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge

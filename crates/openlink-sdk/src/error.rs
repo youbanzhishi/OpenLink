@@ -3,11 +3,11 @@
 use thiserror::Error;
 
 /// SDK 错误类型
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum SdkError {
     /// 网络错误
     #[error("Network error: {0}")]
-    Network(#[from] reqwest::Error),
+    Network(String),
 
     /// HTTP 错误
     #[error("HTTP error: {status} - {message}")]
@@ -30,11 +30,11 @@ pub enum SdkError {
 
     /// 序列化错误
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde_json::Error),
+    Serialization(String),
 
     /// IO 错误
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(String),
 
     /// 其他错误
     #[error("{0}")]
@@ -50,5 +50,23 @@ impl SdkError {
     /// 判断是否是 404 错误
     pub fn is_not_found(&self) -> bool {
         matches!(self, SdkError::Http { status: 404, .. })
+    }
+}
+
+impl From<reqwest::Error> for SdkError {
+    fn from(err: reqwest::Error) -> Self {
+        SdkError::Network(err.to_string())
+    }
+}
+
+impl From<serde_json::Error> for SdkError {
+    fn from(err: serde_json::Error) -> Self {
+        SdkError::Serialization(err.to_string())
+    }
+}
+
+impl From<std::io::Error> for SdkError {
+    fn from(err: std::io::Error) -> Self {
+        SdkError::Io(err.to_string())
     }
 }

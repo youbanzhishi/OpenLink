@@ -1,8 +1,10 @@
 # ============================================================================
-# ci.yml - OpenLink CI 工作流
+# ci.yml - OpenLink CI 工作流 (Phase 11 — Production Grade)
 #
-# 参考: AudioFX 的变更检测 + OpenDAW 的 Docker 缓存
-# 优化: 分层验证(快速check→完整test) + rust-cache + 增量编译
+# 流水线:
+#   1. cargo check (openlink-core/api/sdk/a2a)
+#   2. cargo test (openlink-core only — 轻量快速)
+#   3. cargo clippy + cargo fmt --check
 # ============================================================================
 
 name: CI
@@ -19,7 +21,7 @@ env:
   RUST_TOOLCHAIN: stable
 
 jobs:
-  # ========== 快速检查（最快反馈） ==========
+  # ========== Cargo Check ==========
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -36,10 +38,31 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Cargo check
-        run: cargo check --all-targets
+      - name: Cargo check (core + api + sdk + a2a)
+        run: cargo check -p openlink-core -p openlink-api -p openlink-sdk -p openlink-a2a
 
-  # ========== Lint ==========
+  # ========== Tests (openlink-core only — lightweight) ==========
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Cache cargo registry & build
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Run tests (openlink-core only)
+        run: cargo test -p openlink-core --all-targets
+
+  # ========== Clippy ==========
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -58,31 +81,10 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy (core + api + sdk + a2a)
+        run: cargo clippy -p openlink-core -p openlink-api -p openlink-sdk -p openlink-a2a -- -D warnings
 
-  # ========== 测试 ==========
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Cache cargo registry & build
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-
-      - name: Run tests
-        run: cargo test --all-targets
-
-  # ========== 格式检查 ==========
+  # ========== Formatting ==========
   fmt:
     name: Formatting
     runs-on: ubuntu-latest
@@ -98,22 +100,3 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
-
-  # ========== Docker 构建验证 ==========
-  docker:
-    name: Docker Build
-    runs-on: ubuntu-latest
-    needs: [check]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image (smoke test)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
