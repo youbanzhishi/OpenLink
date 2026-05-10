@@ -51,19 +51,20 @@ impl DawDeeplink {
 
                 Ok(Self {
                     deeplink_type: DawDeeplinkType::OpenProject,
-                    project_url: params.and_then(|p| p.get("url").map(|s| urlencoding::decode(s).unwrap().to_string())),
+                    project_url: params.and_then(|p| {
+                        p.get("url")
+                            .map(|s| urlencoding::decode(s).unwrap().to_string())
+                    }),
                     plugin_id: None,
                     script: None,
                 })
             }
-            "plugin" => {
-                Ok(Self {
-                    deeplink_type: DawDeeplinkType::OpenPlugin,
-                    project_url: None,
-                    plugin_id: parts.get(1).map(|s| s.to_string()),
-                    script: None,
-                })
-            }
+            "plugin" => Ok(Self {
+                deeplink_type: DawDeeplinkType::OpenPlugin,
+                project_url: None,
+                plugin_id: parts.get(1).map(|s| s.to_string()),
+                script: None,
+            }),
             _ => Err(DeeplinkError::UnknownAction(action.to_string())),
         }
     }
@@ -85,12 +86,8 @@ impl DawDeeplink {
                     "opendaw://new_project".to_string()
                 }
             }
-            DawDeeplinkType::RunScript => {
-                "opendaw://run_script".to_string()
-            }
-            DawDeeplinkType::NewProject => {
-                "opendaw://new_project".to_string()
-            }
+            DawDeeplinkType::RunScript => "opendaw://run_script".to_string(),
+            DawDeeplinkType::NewProject => "opendaw://new_project".to_string(),
         }
     }
 }
@@ -112,7 +109,10 @@ mod tests {
     fn test_deeplink_from_url() {
         let url = "opendaw://project?url=https%3A%2F%2Fexample.com%2Fproj.opendaw";
         let deeplink = DawDeeplink::from_url(url).unwrap();
-        assert!(matches!(deeplink.deeplink_type, DawDeeplinkType::OpenProject));
+        assert!(matches!(
+            deeplink.deeplink_type,
+            DawDeeplinkType::OpenProject
+        ));
     }
 
     #[test]

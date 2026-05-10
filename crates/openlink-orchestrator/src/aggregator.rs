@@ -2,8 +2,8 @@
 //!
 //! Phase 6: 聚合多 Agent 的执行结果，支持回调通知。
 
-use crate::executor::{ExecutionResult, NodeResult, ExecutionStatus};
 use crate::dag::NodeId;
+use crate::executor::{ExecutionResult, ExecutionStatus, NodeResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -192,8 +192,8 @@ impl ResultAggregator {
         event: &CallbackEvent,
     ) -> Result<(), String> {
         let client = reqwest::Client::new();
-        let body = serde_json::to_string(event)
-            .map_err(|e| format!("Serialization error: {}", e))?;
+        let body =
+            serde_json::to_string(event).map_err(|e| format!("Serialization error: {}", e))?;
 
         let request = match callback.method.to_uppercase().as_str() {
             "POST" => client.post(&callback.url),
@@ -242,10 +242,7 @@ impl ResultAggregator {
         let mut merged = serde_json::Map::new();
         for (node_id, node_result) in results {
             if node_result.status == ExecutionStatus::Success {
-                merged.insert(
-                    node_id.clone(),
-                    node_result.output.clone(),
-                );
+                merged.insert(node_id.clone(), node_result.output.clone());
             }
         }
         serde_json::Value::Object(merged)
@@ -275,10 +272,7 @@ impl ResultAggregator {
         serde_json::Value::Array(collected)
     }
 
-    fn count_results(
-        &self,
-        results: &HashMap<NodeId, NodeResult>,
-    ) -> (usize, usize, usize) {
+    fn count_results(&self, results: &HashMap<NodeId, NodeResult>) -> (usize, usize, usize) {
         let mut success = 0;
         let mut failure = 0;
         let mut skipped = 0;
@@ -376,7 +370,10 @@ mod tests {
             &result,
             &AggregationStrategy::Custom("my-aggregator".to_string()),
         );
-        assert_eq!(aggregated.strategy, AggregationStrategy::Custom("my-aggregator".to_string()));
+        assert_eq!(
+            aggregated.strategy,
+            AggregationStrategy::Custom("my-aggregator".to_string())
+        );
     }
 
     #[test]

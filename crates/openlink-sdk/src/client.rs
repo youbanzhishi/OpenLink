@@ -1,10 +1,10 @@
 //! # SDK Client 实现
 
-use std::sync::Arc;
 use reqwest::Client;
 use serde_json::json;
+use std::sync::Arc;
 
-use crate::config::{Config, CircuitBreaker};
+use crate::config::{CircuitBreaker, Config};
 use crate::error::SdkError;
 use crate::models::*;
 
@@ -124,34 +124,35 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let body = body.clone();
             async move {
-                let req = self.client
+                let req = self
+                    .client
                     .post(self.config.api_url("/api/v1/links"))
                     .json(&body);
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
             }
-        }).await
+        })
+        .await
     }
 
     /// 创建短链（带完整参数）
-    pub async fn create_full(
-        &self,
-        request: CreateLinkRequest,
-    ) -> Result<LinkResponse, SdkError> {
+    pub async fn create_full(&self, request: CreateLinkRequest) -> Result<LinkResponse, SdkError> {
         let request_json = serde_json::to_value(&request)?;
 
         self.execute_with_resilience(|| {
             let request_json = request_json.clone();
             async move {
-                let req = self.client
+                let req = self
+                    .client
                     .post(self.config.api_url("/api/v1/links"))
                     .json(&request_json);
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
             }
-        }).await
+        })
+        .await
     }
 
     /// 获取链接
@@ -160,13 +161,15 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let code = code.clone();
             async move {
-                let req = self.client
+                let req = self
+                    .client
                     .get(self.config.api_url(&format!("/api/v1/links/{}", code)));
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
             }
-        }).await
+        })
+        .await
     }
 
     /// 查询链接列表
@@ -200,7 +203,8 @@ impl LinkClient {
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
             }
-        }).await
+        })
+        .await
     }
 
     /// 删除链接
@@ -209,7 +213,8 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let code = code.clone();
             async move {
-                let req = self.client
+                let req = self
+                    .client
                     .delete(self.config.api_url(&format!("/api/v1/links/{}", code)));
 
                 let resp = self.auth_headers(req).send().await?;
@@ -222,7 +227,8 @@ impl LinkClient {
                     })
                 }
             }
-        }).await
+        })
+        .await
     }
 
     /// 解析短链（获取目标 URL）
@@ -231,13 +237,15 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let code = code.clone();
             async move {
-                let req = self.client
+                let req = self
+                    .client
                     .get(self.config.api_url(&format!("/api/v1/resolve/{}", code)));
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
             }
-        }).await
+        })
+        .await
     }
 
     /// 批量解析短链
@@ -246,7 +254,8 @@ impl LinkClient {
         codes: Vec<String>,
     ) -> Result<BatchResolveResponse, SdkError> {
         let body = BatchResolveRequest { codes };
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/agent/resolve"))
             .json(&body);
 
@@ -267,7 +276,8 @@ impl LinkClient {
             limit: limit.unwrap_or(20),
         };
 
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/agent/discover"))
             .json(&request);
 
@@ -282,7 +292,8 @@ impl LinkClient {
         &self,
         request: CreateRouteRequest,
     ) -> Result<RouteResponse, SdkError> {
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/routes"))
             .json(&request);
 
@@ -293,7 +304,8 @@ impl LinkClient {
     /// 获取路由规则
     pub async fn get_route(&self, link_id: impl Into<String>) -> Result<RouteResponse, SdkError> {
         let link_id = link_id.into();
-        let req = self.client
+        let req = self
+            .client
             .get(self.config.api_url(&format!("/api/v1/routes/{}", link_id)));
 
         let resp = self.auth_headers(req).send().await?;
@@ -369,7 +381,8 @@ impl FileClient {
         &self,
         request: FileUploadRequest,
     ) -> Result<FileUploadResponse, SdkError> {
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/files/upload"))
             .json(&request);
 
@@ -401,7 +414,8 @@ impl FileClient {
         let upload_resp = self.request_upload(upload_req).await?;
 
         // 2. 使用预签名 URL 上传
-        let put_resp = self.client
+        let put_resp = self
+            .client
             .put(&upload_resp.upload_url)
             .header("Content-Type", &content_type)
             .header("Content-Length", size)
@@ -420,10 +434,15 @@ impl FileClient {
     }
 
     /// 下载文件
-    pub async fn download(&self, file_id: impl Into<String>) -> Result<FileDownloadResponse, SdkError> {
+    pub async fn download(
+        &self,
+        file_id: impl Into<String>,
+    ) -> Result<FileDownloadResponse, SdkError> {
         let file_id = file_id.into();
-        let req = self.client
-            .get(self.config.api_url(&format!("/api/v1/files/{}/download", file_id)));
+        let req = self.client.get(
+            self.config
+                .api_url(&format!("/api/v1/files/{}/download", file_id)),
+        );
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -435,13 +454,13 @@ impl FileClient {
         share_code: impl Into<String>,
     ) -> Result<Vec<u8>, SdkError> {
         let share_code = share_code.into();
-        
+
         // 先获取下载 URL
         let dl_resp: FileDownloadResponse = self.get_by_share_code_url(&share_code).await?;
-        
+
         // 下载内容
         let resp = self.client.get(&dl_resp.download_url).send().await?;
-        
+
         if !resp.status().is_success() {
             return Err(SdkError::Other(format!(
                 "Download failed: {}",
@@ -453,9 +472,14 @@ impl FileClient {
         Ok(bytes)
     }
 
-    async fn get_by_share_code_url(&self, share_code: &str) -> Result<FileDownloadResponse, SdkError> {
-        let req = self.client
-            .get(self.config.api_url(&format!("/api/v1/files/share/{}", share_code)));
+    async fn get_by_share_code_url(
+        &self,
+        share_code: &str,
+    ) -> Result<FileDownloadResponse, SdkError> {
+        let req = self.client.get(
+            self.config
+                .api_url(&format!("/api/v1/files/share/{}", share_code)),
+        );
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -473,7 +497,8 @@ impl FileClient {
             "ttl_secs": ttl_secs.unwrap_or(3600 * 24 * 7)
         });
 
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/files/share"))
             .json(&body);
 
@@ -484,7 +509,8 @@ impl FileClient {
     /// 获取文件信息
     pub async fn info(&self, file_id: impl Into<String>) -> Result<FileInfo, SdkError> {
         let file_id = file_id.into();
-        let req = self.client
+        let req = self
+            .client
             .get(self.config.api_url(&format!("/api/v1/files/{}", file_id)));
 
         let resp = self.auth_headers(req).send().await?;
@@ -494,7 +520,8 @@ impl FileClient {
     /// 删除文件
     pub async fn delete(&self, file_id: impl Into<String>) -> Result<(), SdkError> {
         let file_id = file_id.into();
-        let req = self.client
+        let req = self
+            .client
             .delete(self.config.api_url(&format!("/api/v1/files/{}", file_id)));
 
         let resp = self.auth_headers(req).send().await?;
@@ -653,9 +680,7 @@ mod tests {
 
     #[test]
     fn test_client_builder_with_timeout() {
-        let (link, _file) = ClientBuilder::new()
-            .timeout(120)
-            .build();
+        let (link, _file) = ClientBuilder::new().timeout(120).build();
 
         assert_eq!(link.config.timeout_secs, 120);
     }
@@ -663,8 +688,14 @@ mod tests {
     #[test]
     fn test_config_api_url() {
         let config = Config::new("https://api.openlink.dev");
-        assert_eq!(config.api_url("/api/v1/links"), "https://api.openlink.dev/api/v1/links");
-        assert_eq!(config.api_url("api/v1/links"), "https://api.openlink.dev/api/v1/links");
+        assert_eq!(
+            config.api_url("/api/v1/links"),
+            "https://api.openlink.dev/api/v1/links"
+        );
+        assert_eq!(
+            config.api_url("api/v1/links"),
+            "https://api.openlink.dev/api/v1/links"
+        );
     }
 
     #[test]

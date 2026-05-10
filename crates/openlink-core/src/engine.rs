@@ -18,13 +18,10 @@
 //!
 //! 设计铁律：核心层零业务逻辑 — 路由引擎不知道"短链"是什么，只知道 Context→Action
 
-use std::sync::Arc;
-use crate::primitives::{
-    Context, Route, Target, ActionResult, Rule,
-    ConditionLogic, Condition,
-};
-use crate::registry::ExtensionRegistry;
 use crate::error::CoreError;
+use crate::primitives::{ActionResult, Condition, ConditionLogic, Context, Route, Rule, Target};
+use crate::registry::ExtensionRegistry;
+use std::sync::Arc;
 
 /// 路由引擎 — 核心调度器
 ///
@@ -128,11 +125,7 @@ impl RoutingEngine {
     }
 
     /// 评估单条规则 — 支持多条件 AND/OR 组合（Phase 2）
-    async fn evaluate_rule(
-        &self,
-        ctx: &Context,
-        rule: &Rule,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate_rule(&self, ctx: &Context, rule: &Rule) -> Result<bool, CoreError> {
         let conditions = rule.all_conditions();
         let logic = rule.logic();
 
@@ -205,7 +198,10 @@ impl RoutingEngine {
         }
 
         // 查找注册的 Condition Handler
-        if let Some(handler) = self.registry.get_condition_handler(&condition.condition_type) {
+        if let Some(handler) = self
+            .registry
+            .get_condition_handler(&condition.condition_type)
+        {
             return handler.evaluate(ctx, &condition.params).await;
         }
 
@@ -230,10 +226,7 @@ impl RoutingEngine {
             .unwrap_or("")
             .to_lowercase();
 
-        let pattern = params
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let pattern = params.get("pattern").and_then(|v| v.as_str()).unwrap_or("");
 
         if header_name.is_empty() || pattern.is_empty() {
             return Ok(false);
@@ -365,9 +358,13 @@ pub struct RouteResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::{Identity, IdentityType, DeviceInfo, Action};
+    use crate::primitives::{Action, DeviceInfo, Identity, IdentityType};
 
-    fn make_test_ctx(identity_type: IdentityType, device_type: Option<&str>, ua: Option<&str>) -> Context {
+    fn make_test_ctx(
+        identity_type: IdentityType,
+        device_type: Option<&str>,
+        ua: Option<&str>,
+    ) -> Context {
         Context {
             identity: Identity {
                 id: "test".to_string(),

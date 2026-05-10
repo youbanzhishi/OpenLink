@@ -154,7 +154,12 @@ fn parse_ipv4(s: &str) -> Option<u32> {
     if octets.len() != 4 {
         return None;
     }
-    Some(((octets[0] as u32) << 24) | ((octets[1] as u32) << 16) | ((octets[2] as u32) << 8) | (octets[3] as u32))
+    Some(
+        ((octets[0] as u32) << 24)
+            | ((octets[1] as u32) << 16)
+            | ((octets[2] as u32) << 8)
+            | (octets[3] as u32),
+    )
 }
 
 /// 将 IpAddr 转为 u32（仅支持 IPv4）
@@ -162,7 +167,12 @@ fn ip_to_u32(ip: &IpAddr) -> Option<u32> {
     match ip {
         IpAddr::V4(v4) => {
             let octets = v4.octets();
-            Some(((octets[0] as u32) << 24) | ((octets[1] as u32) << 16) | ((octets[2] as u32) << 8) | (octets[3] as u32))
+            Some(
+                ((octets[0] as u32) << 24)
+                    | ((octets[1] as u32) << 16)
+                    | ((octets[2] as u32) << 8)
+                    | (octets[3] as u32),
+            )
         }
         IpAddr::V6(_) => None, // IPv6 简化版暂不支持
     }
@@ -231,12 +241,7 @@ impl GeoRouter {
         self.config
             .region_nodes
             .get(region)
-            .map(|nodes| {
-                nodes
-                    .iter()
-                    .filter(|n| n.is_online)
-                    .collect()
-            })
+            .map(|nodes| nodes.iter().filter(|n| n.is_online).collect())
             .unwrap_or_default()
     }
 

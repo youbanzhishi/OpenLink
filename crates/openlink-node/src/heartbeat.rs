@@ -90,7 +90,10 @@ impl HeartbeatClient {
 
         let resp = self
             .client
-            .post(format!("{}/api/v1/node/heartbeat", self.server_url.trim_end_matches('/')))
+            .post(format!(
+                "{}/api/v1/node/heartbeat",
+                self.server_url.trim_end_matches('/')
+            ))
             .json(&status)
             .send()
             .await

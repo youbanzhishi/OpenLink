@@ -8,10 +8,10 @@
 //!
 //! 当前为 trait + Mock 实现，未来可接入 wasmtime/wasmer。
 
+use crate::wasm_redirect::{EdgeRequest, RedirectDecision};
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use async_trait::async_trait;
-use crate::wasm_redirect::{EdgeRequest, RedirectDecision};
 
 /// 沙箱执行错误
 #[derive(Debug, thiserror::Error)]
@@ -65,9 +65,15 @@ pub struct SandboxConfig {
     pub allowed_imports: Vec<String>,
 }
 
-fn default_max_memory() -> usize { 16 * 1024 * 1024 }
-fn default_execution_timeout() -> u64 { 100 }
-fn default_max_stack_depth() -> u32 { 1024 }
+fn default_max_memory() -> usize {
+    16 * 1024 * 1024
+}
+fn default_execution_timeout() -> u64 {
+    100
+}
+fn default_max_stack_depth() -> u32 {
+    1024
+}
 
 impl Default for SandboxConfig {
     fn default() -> Self {
@@ -241,7 +247,8 @@ impl WasmSandbox for MockSandbox {
         let mut modules = self.modules.write().await;
         let mut rules = self.rules.write().await;
 
-        modules.remove(module_id)
+        modules
+            .remove(module_id)
             .ok_or_else(|| SandboxError::ImportNotFound(module_id.to_string()))?;
         rules.remove(module_id);
 
@@ -267,7 +274,10 @@ mod tests {
         let sandbox = MockSandbox::default();
         let wasm_bytes = b"WASM_BINARY_PLACEHOLDER";
 
-        let info = sandbox.compile_module("test-module", wasm_bytes).await.unwrap();
+        let info = sandbox
+            .compile_module("test-module", wasm_bytes)
+            .await
+            .unwrap();
         assert_eq!(info.id, "test-module");
         assert_eq!(info.size_bytes, wasm_bytes.len());
         assert!(info.exports.contains(&"redirect".to_string()));
@@ -276,8 +286,13 @@ mod tests {
     #[tokio::test]
     async fn test_mock_sandbox_execute() {
         let sandbox = MockSandbox::default();
-        sandbox.compile_module("test-module", b"fake").await.unwrap();
-        sandbox.add_mock_rule("test-module", "abc", "https://example.com").await;
+        sandbox
+            .compile_module("test-module", b"fake")
+            .await
+            .unwrap();
+        sandbox
+            .add_mock_rule("test-module", "abc", "https://example.com")
+            .await;
 
         let request = EdgeRequest {
             code: "abc".to_string(),
@@ -289,7 +304,10 @@ mod tests {
             headers: HashMap::new(),
         };
 
-        let decision = sandbox.execute_redirect("test-module", &request).await.unwrap();
+        let decision = sandbox
+            .execute_redirect("test-module", &request)
+            .await
+            .unwrap();
         assert!(decision.is_some());
         assert_eq!(decision.unwrap().target_url, "https://example.com");
     }
@@ -297,7 +315,10 @@ mod tests {
     #[tokio::test]
     async fn test_mock_sandbox_unload() {
         let sandbox = MockSandbox::default();
-        sandbox.compile_module("test-module", b"fake").await.unwrap();
+        sandbox
+            .compile_module("test-module", b"fake")
+            .await
+            .unwrap();
 
         assert!(sandbox.unload_module("test-module").await.is_ok());
         assert!(sandbox.unload_module("nonexistent").await.is_err());

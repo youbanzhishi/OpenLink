@@ -134,7 +134,9 @@ impl NatTraversal {
             (NatType::FullCone, NatType::RestrictedCone)
             | (NatType::RestrictedCone, NatType::FullCone) => TraversalStrategy::UdpHolePunching,
             // 限制性对限制性，尝试 UDP 打洞（成功率较低）
-            (NatType::RestrictedCone, NatType::RestrictedCone) => TraversalStrategy::UdpHolePunching,
+            (NatType::RestrictedCone, NatType::RestrictedCone) => {
+                TraversalStrategy::UdpHolePunching
+            }
             // 端口限制性，TCP 回退
             (NatType::PortRestrictedCone, _) | (_, NatType::PortRestrictedCone) => {
                 TraversalStrategy::TcpFallback
@@ -145,7 +147,10 @@ impl NatTraversal {
     }
 
     /// 评估穿透成功率
-    pub fn evaluate_success_rate(local_nat: &NatType, remote_nat: &NatType) -> TraversalSuccessRate {
+    pub fn evaluate_success_rate(
+        local_nat: &NatType,
+        remote_nat: &NatType,
+    ) -> TraversalSuccessRate {
         let strategy = Self::select_strategy(local_nat, remote_nat);
         let success_rate = match (local_nat, remote_nat) {
             (NatType::Open, NatType::Open) => 1.0,
@@ -185,7 +190,11 @@ impl NatTraversal {
             local_public_addr: Some(local_public_addr),
             remote_public_addr: Some(remote_public_addr),
             elapsed_ms: start.elapsed().as_millis() as u64,
-            failure_reason: if success { None } else { Some("Hole punching failed".to_string()) },
+            failure_reason: if success {
+                None
+            } else {
+                Some("Hole punching failed".to_string())
+            },
         }
     }
 
@@ -203,7 +212,11 @@ impl NatTraversal {
             local_public_addr: Some(local_public_addr),
             remote_public_addr: Some(remote_public_addr),
             elapsed_ms: start.elapsed().as_millis() as u64,
-            failure_reason: if success { None } else { Some("TCP fallback failed".to_string()) },
+            failure_reason: if success {
+                None
+            } else {
+                Some("TCP fallback failed".to_string())
+            },
         }
     }
 
@@ -218,7 +231,11 @@ impl NatTraversal {
             local_public_addr: None,
             remote_public_addr: None,
             elapsed_ms: start.elapsed().as_millis() as u64,
-            failure_reason: if success { None } else { Some("Relay failed".to_string()) },
+            failure_reason: if success {
+                None
+            } else {
+                Some("Relay failed".to_string())
+            },
         }
     }
 }
@@ -247,7 +264,8 @@ mod tests {
 
     #[test]
     fn test_select_strategy_port_restricted() {
-        let strategy = NatTraversal::select_strategy(&NatType::PortRestrictedCone, &NatType::FullCone);
+        let strategy =
+            NatTraversal::select_strategy(&NatType::PortRestrictedCone, &NatType::FullCone);
         assert_eq!(strategy, TraversalStrategy::TcpFallback);
     }
 
@@ -255,7 +273,10 @@ mod tests {
     fn test_evaluate_success_rate() {
         let rate = NatTraversal::evaluate_success_rate(&NatType::Open, &NatType::Open);
         assert!((rate.success_rate - 1.0).abs() < 0.01);
-        assert_eq!(rate.recommended_strategy, TraversalStrategy::UdpHolePunching);
+        assert_eq!(
+            rate.recommended_strategy,
+            TraversalStrategy::UdpHolePunching
+        );
     }
 
     #[test]

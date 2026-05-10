@@ -1,11 +1,11 @@
 //! # FileTransfer Action 实现
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, Context, CoreError, ActionResult, Target};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, Target};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use uuid::Uuid;
 
 use super::storage::StorageRouter;
 
@@ -88,18 +88,18 @@ impl FileTransferAction {
     pub fn new(storage_router: Arc<StorageRouter>) -> Self {
         Self { storage_router }
     }
-    
+
     /// 解析参数
     fn parse_params(params: &serde_json::Value) -> Result<FileTransferParams, CoreError> {
         serde_json::from_value(params.clone())
             .map_err(|e| CoreError::ExtensionError(format!("Invalid file transfer params: {}", e)))
     }
-    
+
     /// 生成文件 ID
     fn generate_file_id() -> String {
         Uuid::new_v4().to_string()
     }
-    
+
     /// 生成分享码
     fn generate_share_code() -> String {
         use rand::Rng;
@@ -113,20 +113,20 @@ impl FileTransferAction {
             .collect();
         code
     }
-    
+
     /// 处理上传操作
     async fn handle_upload(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
-        let file_id = params.file_id.clone().unwrap_or_else(Self::generate_file_id);
-        
+        let file_id = params
+            .file_id
+            .clone()
+            .unwrap_or_else(Self::generate_file_id);
+
         // 如果需要返回上传 URL
         if params.upload_url.unwrap_or(false) {
             // 在实际实现中，这里应该先生成预签名上传 URL
             // 但由于我们需要先调用后端 API，这里简化处理
-            let upload_url = format!(
-                "https://api.openlink.dev/api/v1/files/{}/upload",
-                file_id
-            );
-            
+            let upload_url = format!("https://api.openlink.dev/api/v1/files/{}/upload", file_id);
+
             return Ok(ActionResult::Json(serde_json::json!({
                 "type": "file_upload_initiated",
                 "file_id": file_id,
@@ -134,7 +134,7 @@ impl FileTransferAction {
                 "expires_in": 3600
             })));
         }
-        
+
         Ok(ActionResult::Json(serde_json::json!({
             "type": "file_upload_ready",
             "file_id": file_id,
@@ -143,19 +143,24 @@ impl FileTransferAction {
             "size": params.size
         })))
     }
-    
+
     /// 处理下载操作
-    async fn handle_download(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
-        let file_id = params.file_id.as_ref()
-            .ok_or_else(|| CoreError::ExtensionError("file_id required for download".to_string()))?;
-        
+    async fn handle_download(
+        &self,
+        params: &FileTransferParams,
+    ) -> Result<ActionResult, CoreError> {
+        let file_id = params.file_id.as_ref().ok_or_else(|| {
+            CoreError::ExtensionError("file_id required for download".to_string())
+        })?;
+
         // 生成预签名下载 URL
         let ttl = params.share_ttl.unwrap_or(3600);
-        let download_url = self.storage_router
+        let download_url = self
+            .storage_router
             .presigned_url(file_id, ttl)
             .await
             .map_err(|e| CoreError::ExtensionError(format!("Storage error: {}", e)))?;
-        
+
         Ok(ActionResult::Json(serde_json::json!({
             "type": "file_download",
             "file_id": file_id,
@@ -163,18 +168,23 @@ impl FileTransferAction {
             "expires_in": ttl
         })))
     }
-    
+
     /// 处理分享操作
     async fn handle_share(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
-        let file_id = params.file_id.as_ref()
+        let file_id = params
+            .file_id
+            .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("file_id required for share".to_string()))?;
-        
-        let share_code = params.share_code.clone().unwrap_or_else(Self::generate_share_code);
+
+        let share_code = params
+            .share_code
+            .clone()
+            .unwrap_or_else(Self::generate_share_code);
         let ttl = params.share_ttl.unwrap_or(3600 * 24 * 7); // 默认 7 天
-        
+
         // 生成分享 URL
         let share_url = format!("https://openlink.dev/s/{}", share_code);
-        
+
         Ok(ActionResult::Json(serde_json::json!({
             "type": "file_share",
             "file_id": file_id,
@@ -183,21 +193,24 @@ impl FileTransferAction {
             "expires_at": (Utc::now() + chrono::Duration::seconds(ttl as i64)).to_rfc3339()
         })))
     }
-    
+
     /// 处理信息查询
     async fn handle_info(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
-        let file_id = params.file_id.as_ref()
+        let file_id = params
+            .file_id
+            .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("file_id required for info".to_string()))?;
-        
+
         // 检查文件是否存在
         let exists = self.storage_router.download(file_id).await.is_ok();
-        
+
         if !exists {
             return Err(CoreError::ExtensionError(format!(
-                "File not found: {}", file_id
+                "File not found: {}",
+                file_id
             )));
         }
-        
+
         Ok(ActionResult::Json(serde_json::json!({
             "type": "file_info",
             "file_id": file_id,
@@ -210,15 +223,11 @@ impl FileTransferAction {
 
 #[async_trait]
 impl ActionHandler for FileTransferAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let params = Self::parse_params(&target.params)?;
-        
+
         tracing::info!(operation = ?params.operation, "FileTransfer action");
-        
+
         match params.operation {
             FileTransferOperation::Upload => self.handle_upload(&params).await,
             FileTransferOperation::Download => self.handle_download(&params).await,
@@ -226,7 +235,7 @@ impl ActionHandler for FileTransferAction {
             FileTransferOperation::Info => self.handle_info(&params).await,
         }
     }
-    
+
     fn name(&self) -> &str {
         "file_transfer"
     }
@@ -246,7 +255,7 @@ mod tests {
             "content_type": "application/pdf",
             "size": 1024
         });
-        
+
         let parsed: FileTransferParams = serde_json::from_value(params).unwrap();
         assert_eq!(parsed.operation, FileTransferOperation::Upload);
         assert_eq!(parsed.filename.as_deref(), Some("test.pdf"));
@@ -258,7 +267,7 @@ mod tests {
             "operation": "download",
             "file_id": "abc123"
         });
-        
+
         let parsed: FileTransferParams = serde_json::from_value(params).unwrap();
         assert_eq!(parsed.operation, FileTransferOperation::Download);
         assert_eq!(parsed.file_id.as_deref(), Some("abc123"));
@@ -268,7 +277,7 @@ mod tests {
     fn test_generate_share_code() {
         let code1 = FileTransferAction::generate_share_code();
         let code2 = FileTransferAction::generate_share_code();
-        
+
         assert_eq!(code1.len(), 8);
         assert_eq!(code2.len(), 8);
         assert_ne!(code1, code2);
@@ -287,10 +296,10 @@ mod tests {
             share_code: None,
             upload_url: Some(true),
         };
-        
+
         let json = serde_json::to_string(&params).unwrap();
         assert!(json.contains("\"operation\":\"upload\""));
-        
+
         let parsed: FileTransferParams = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.operation, FileTransferOperation::Upload);
     }

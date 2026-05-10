@@ -104,7 +104,10 @@ impl ProjectShareManager {
 
         // Build DAW deep link
         let deeplink = if request.project_url.starts_with("http") {
-            format!("opendaw://project?url={}", urlencoding::encode(&request.project_url))
+            format!(
+                "opendaw://project?url={}",
+                urlencoding::encode(&request.project_url)
+            )
         } else {
             format!("opendaw://project/{}", request.project_id)
         };
@@ -133,7 +136,9 @@ impl ProjectShareManager {
 
     /// 获取分享的项目
     pub fn get_share(&self, share_id: &str) -> Option<SharedProject> {
-        self.shares.lock().unwrap()
+        self.shares
+            .lock()
+            .unwrap()
             .iter()
             .find(|s| s.id == share_id || s.share_code == share_id)
             .cloned()

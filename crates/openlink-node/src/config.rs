@@ -52,14 +52,13 @@ impl NodeConfig {
             .await
             .map_err(|e| ConfigError::IoError(e.to_string()))?;
 
-        toml::from_str(&content)
-            .map_err(|e| ConfigError::ParseError(e.to_string()))
+        toml::from_str(&content).map_err(|e| ConfigError::ParseError(e.to_string()))
     }
 
     /// 保存配置到 TOML 文件
     pub async fn save(&self, path: &str) -> Result<(), ConfigError> {
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| ConfigError::SerializeError(e.to_string()))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| ConfigError::SerializeError(e.to_string()))?;
 
         tokio::fs::write(path, content)
             .await

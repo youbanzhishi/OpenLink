@@ -1,9 +1,9 @@
 //! # mDNS 节点发现模块
 //!
 //! 使用 DNS-SD / mDNS 自动发现同 LAN 的 OpenLink 节点。
-//! 
+//!
 //! 服务类型：`_openlink._tcp.local.`
-//! 
+//!
 //! 每个节点广播以下 TXT 记录：
 //! - `node_id`: 节点唯一标识
 //! - `version`: 节点软件版本
@@ -98,7 +98,11 @@ impl NodeDiscovery {
     }
 
     /// 等待发现至少 N 个节点
-    pub async fn discover_at_least(&self, min_count: usize, timeout: Duration) -> Result<Vec<DiscoveredNode>, DiscoveryError> {
+    pub async fn discover_at_least(
+        &self,
+        min_count: usize,
+        timeout: Duration,
+    ) -> Result<Vec<DiscoveredNode>, DiscoveryError> {
         let start = std::time::Instant::now();
         loop {
             let peers = self.discover().await?;
@@ -171,7 +175,10 @@ mod tests {
             discovered_at: chrono::Utc::now(),
             latency_ms: Some(5),
         };
-        assert_eq!(node.file_service_url(), "http://192.168.1.100:8080/openlink/files");
+        assert_eq!(
+            node.file_service_url(),
+            "http://192.168.1.100:8080/openlink/files"
+        );
     }
 
     #[test]

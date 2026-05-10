@@ -141,7 +141,9 @@ impl Dag {
 
         // 检查是否有环（拓扑排序）
         if self.has_cycle() {
-            return Err(DagError::ValidationError("DAG contains a cycle".to_string()));
+            return Err(DagError::ValidationError(
+                "DAG contains a cycle".to_string(),
+            ));
         }
 
         Ok(())
@@ -233,7 +235,10 @@ impl Dag {
             .map(|e| e.from.as_str())
             .collect();
 
-        self.nodes.iter().filter(|n| pred_ids.contains(n.id.as_str())).collect()
+        self.nodes
+            .iter()
+            .filter(|n| pred_ids.contains(n.id.as_str()))
+            .collect()
     }
 
     /// 获取节点的直接后继
@@ -245,7 +250,10 @@ impl Dag {
             .map(|e| e.to.as_str())
             .collect();
 
-        self.nodes.iter().filter(|n| succ_ids.contains(n.id.as_str())).collect()
+        self.nodes
+            .iter()
+            .filter(|n| succ_ids.contains(n.id.as_str()))
+            .collect()
     }
 
     /// 获取节点
@@ -254,11 +262,8 @@ impl Dag {
     }
 
     pub fn compute_in_degree(&self) -> HashMap<String, usize> {
-        let mut in_degree: HashMap<String, usize> = self
-            .nodes
-            .iter()
-            .map(|n| (n.id.clone(), 0))
-            .collect();
+        let mut in_degree: HashMap<String, usize> =
+            self.nodes.iter().map(|n| (n.id.clone(), 0)).collect();
 
         for edge in &self.edges {
             *in_degree.entry(edge.to.clone()).or_insert(0) += 1;

@@ -9,25 +9,27 @@
 //! - 核心层零业务逻辑，所有功能作为扩展注册
 //! - 设备节点是 OpenLink 网络的边缘节点
 
+pub mod config;
 pub mod discovery;
 pub mod file_service;
 pub mod heartbeat;
-pub mod config;
 
-pub use discovery::{NodeDiscovery, DiscoveredNode};
-pub use file_service::{FileServer, FileRequest};
-pub use heartbeat::{HeartbeatClient, NodeStatus};
 pub use config::NodeConfig;
+pub use discovery::{DiscoveredNode, NodeDiscovery};
+pub use file_service::{FileRequest, FileServer};
+pub use heartbeat::{HeartbeatClient, NodeStatus};
 
 // ─── Re-exports ──────────────────────────────────────────────
 
-use std::sync::Arc;
 use openlink_core::ExtensionRegistry;
+use std::sync::Arc;
 
 /// 注册 Node 扩展到 Extension Registry
-pub fn register(registry: &mut openlink_core::ExtensionRegistry) -> Result<(), openlink_core::CoreError> {
-    use std::sync::Arc;
+pub fn register(
+    registry: &mut openlink_core::ExtensionRegistry,
+) -> Result<(), openlink_core::CoreError> {
     use openlink_core::CoreError;
+    use std::sync::Arc;
 
     // 注册 direct_transfer action（节点间的 P2P 文件传输）
     let direct_transfer = ext_direct_transfer();
@@ -46,7 +48,7 @@ fn ext_direct_transfer() -> impl openlink_core::ActionHandler {
 }
 
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, Context, CoreError, ActionResult, Target};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, Target};
 use serde::{Deserialize, Serialize};
 
 /// DirectTransfer Action — 局域网直传
@@ -111,13 +113,11 @@ pub struct TransferRoute {
 
 #[async_trait]
 impl ActionHandler for DirectTransferAction {
-    async fn execute(
-        &self,
-        ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let params: DirectTransferParams = serde_json::from_value(target.params.clone())
-            .map_err(|e| CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e)))?;
+    async fn execute(&self, ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let params: DirectTransferParams =
+            serde_json::from_value(target.params.clone()).map_err(|e| {
+                CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e))
+            })?;
 
         tracing::info!(
             file_id = ?params.file_id,
@@ -182,7 +182,9 @@ async fn select_transfer_route(
     match params.mode.as_str() {
         "force_lan" => {
             // 强制 LAN，查找最近节点
-            let best = peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
+            let best = peers
+                .iter()
+                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
             TransferRoute {
                 mode: "lan".to_string(),
                 peer: best.cloned(),
@@ -190,17 +192,17 @@ async fn select_transfer_route(
                 estimated_speed_mbps: best.map(|p| 100.0),
             }
         }
-        "force_cloud" => {
-            TransferRoute {
-                mode: "cloud".to_string(),
-                peer: None,
-                cloud_fallback: false,
-                estimated_speed_mbps: None,
-            }
-        }
+        "force_cloud" => TransferRoute {
+            mode: "cloud".to_string(),
+            peer: None,
+            cloud_fallback: false,
+            estimated_speed_mbps: None,
+        },
         _ => {
             // lan_first: 优先 LAN，无节点则云
-            let best = peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
+            let best = peers
+                .iter()
+                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
             TransferRoute {
                 mode: "lan_first".to_string(),
                 peer: best.cloned(),
@@ -216,11 +218,7 @@ pub struct LanConditionHandler;
 
 #[async_trait]
 impl openlink_core::ConditionHandler for LanConditionHandler {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 检查请求是否来自已知的 LAN 节点
         let require_encrypted = params
             .get("require_encrypted")

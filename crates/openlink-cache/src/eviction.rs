@@ -73,10 +73,7 @@ impl BackgroundEviction {
     async fn run_loop(&self, interval_secs: u64) {
         let mut interval = time::interval(Duration::from_secs(interval_secs));
 
-        tracing::info!(
-            interval_secs,
-            "Background eviction task started"
-        );
+        tracing::info!(interval_secs, "Background eviction task started");
 
         loop {
             interval.tick().await;
@@ -125,10 +122,7 @@ mod tests {
         let cache = Arc::new(MemoryCache::new(100));
         cache.set("key1", "value1", 3600).await.unwrap();
 
-        let eviction = BackgroundEviction::new(
-            cache.clone(),
-            EvictionConfig::default(),
-        );
+        let eviction = BackgroundEviction::new(cache.clone(), EvictionConfig::default());
 
         let result = eviction.evict_once().await.unwrap();
         assert_eq!(result.entries_before, 1);

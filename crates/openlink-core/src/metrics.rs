@@ -7,10 +7,10 @@
 //! - 内置指标：请求总数、延迟分布(P50/P95/P99)、缓存命中率、活跃链接数、错误率
 //! - `MetricsMiddleware`: HTTP 中间件自动收集指标
 
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, AtomicI64, Ordering};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,11 @@ pub trait MetricsCollector: Send + Sync {
         let mut latency_labels = HashMap::new();
         latency_labels.insert("method", method);
         latency_labels.insert("endpoint", endpoint);
-        self.observe_histogram("request_duration_seconds", &latency_labels, duration.as_secs_f64());
+        self.observe_histogram(
+            "request_duration_seconds",
+            &latency_labels,
+            duration.as_secs_f64(),
+        );
     }
 
     /// 记录错误（便捷方法）
@@ -117,9 +121,7 @@ impl InMemoryMetrics {
 
     /// 生成指标键
     fn metric_key(name: &str, labels: &HashMap<&str, &str>) -> String {
-        let mut parts: Vec<String> = labels.iter()
-            .map(|(k, v)| format!("{}={}", k, v))
-            .collect();
+        let mut parts: Vec<String> = labels.iter().map(|(k, v)| format!("{}={}", k, v)).collect();
         parts.sort();
         if parts.is_empty() {
             name.to_string()
@@ -156,7 +158,8 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.counters.write();
-            map.entry(key).or_insert_with(|| AtomicU64::new(0))
+            map.entry(key)
+                .or_insert_with(|| AtomicU64::new(0))
                 .fetch_add(delta as u64, Ordering::Relaxed);
         }
     }
@@ -169,7 +172,8 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.gauges.write();
-            map.entry(key).or_insert_with(|| AtomicI64::new(value as i64));
+            map.entry(key)
+                .or_insert_with(|| AtomicI64::new(value as i64));
         }
     }
 
@@ -181,7 +185,8 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.gauges.write();
-            map.entry(key).or_insert_with(|| AtomicI64::new(0))
+            map.entry(key)
+                .or_insert_with(|| AtomicI64::new(0))
                 .fetch_add(delta as i64, Ordering::Relaxed);
         }
     }
@@ -194,7 +199,8 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.gauges.write();
-            map.entry(key).or_insert_with(|| AtomicI64::new(0))
+            map.entry(key)
+                .or_insert_with(|| AtomicI64::new(0))
                 .fetch_sub(delta as i64, Ordering::Relaxed);
         }
     }
@@ -207,8 +213,10 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.histograms.write();
-            map.entry(key).or_insert_with(|| parking_lot::Mutex::new(Vec::new()))
-                .lock().push(value);
+            map.entry(key)
+                .or_insert_with(|| parking_lot::Mutex::new(Vec::new()))
+                .lock()
+                .push(value);
         }
     }
 
@@ -239,7 +247,10 @@ impl MetricsCollector for InMemoryMetrics {
             }
         }
 
-        lines.push(format!("uptime_seconds {}", self.start_time.elapsed().as_secs()));
+        lines.push(format!(
+            "uptime_seconds {}",
+            self.start_time.elapsed().as_secs()
+        ));
 
         lines.join("\n")
     }
@@ -309,10 +320,13 @@ impl PrometheusExporter {
                             "openlink_{}{{quantile=\"{}\",{}}}",
                             name,
                             quantile,
-                            &labels[1..labels.len()-1] // strip { }
+                            &labels[1..labels.len() - 1] // strip { }
                         ));
                     } else {
-                        output.push(format!("openlink_{}{{quantile=\"{}\"}} {}", base, quantile, value));
+                        output.push(format!(
+                            "openlink_{}{{quantile=\"{}\"}} {}",
+                            base, quantile, value
+                        ));
                     }
                 }
             } else if line.contains("uptime_seconds") {
@@ -436,14 +450,16 @@ impl RequestMetricsTimer {
     /// 手动结束计时并记录指标
     pub fn finish(self, status: u16) {
         let duration = self.start.elapsed();
-        self.collector.record_request(&self.method, &self.endpoint, status, duration);
+        self.collector
+            .record_request(&self.method, &self.endpoint, status, duration);
         self.collector.request_finished();
     }
 
     /// 手动结束计时并记录错误
     pub fn finish_with_error(self, status: u16, error_type: &str) {
         let duration = self.start.elapsed();
-        self.collector.record_request(&self.method, &self.endpoint, status, duration);
+        self.collector
+            .record_request(&self.method, &self.endpoint, status, duration);
         self.collector.record_error(error_type, &self.endpoint);
         self.collector.request_finished();
     }

@@ -4,15 +4,15 @@
 //!
 //! Phase 2: 支持多条件组合（AND/OR）
 
+use crate::state::AppState;
 use axum::{
-    extract::{State, Path},
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
+use openlink_core::{Action, Condition, ConditionLogic, Route, Rule, Target};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use openlink_core::{Route, Rule, Target, Action, Condition, ConditionLogic};
-use crate::state::AppState;
 
 /// 创建路由规则请求
 #[derive(Debug, Deserialize)]
@@ -107,7 +107,8 @@ pub struct UpdateRouteRequest {
 
 /// 将 RuleInput 转换为 Rule
 fn rule_input_to_rule(input: RuleInput) -> Rule {
-    let condition = input.condition
+    let condition = input
+        .condition
         .map(Condition::from)
         .unwrap_or_else(|| Condition {
             condition_type: "always".to_string(),
@@ -138,9 +139,17 @@ pub async fn create_route(
     Json(req): Json<CreateRouteRequest>,
 ) -> Result<(StatusCode, Json<RouteResponse>), (StatusCode, String)> {
     // 获取 link_id 从请求中（假设必填）
-    let link_id = req.default_target.params.get("link_id")
+    let link_id = req
+        .default_target
+        .params
+        .get("link_id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Missing link_id in default_target".to_string()))?
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                "Missing link_id in default_target".to_string(),
+            )
+        })?
         .to_string();
 
     // 验证链接存在
@@ -149,19 +158,29 @@ pub async fn create_route(
         .get_link(&link_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", link_id)))?;
+        .ok_or_else(|| {
+            (
+                StatusCode::NOT_FOUND,
+                format!("Link '{}' not found", link_id),
+            )
+        })?;
 
     // 检查是否已有路由
-    if state.store.get_route_by_link_id(&link_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.is_some() {
-        return Err((StatusCode::CONFLICT, "Route already exists for this link".to_string()));
+    if state
+        .store
+        .get_route_by_link_id(&link_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .is_some()
+    {
+        return Err((
+            StatusCode::CONFLICT,
+            "Route already exists for this link".to_string(),
+        ));
     }
 
     // 构建路由
-    let rules: Vec<Rule> = req
-        .rules
-        .into_iter()
-        .map(rule_input_to_rule)
-        .collect();
+    let rules: Vec<Rule> = req.rules.into_iter().map(rule_input_to_rule).collect();
 
     let route = Route {
         id: uuid::Uuid::new_v4().to_string(),
@@ -238,11 +257,9 @@ pub async fn delete_route(
         .store
         .delete_route(&route_id)
         .await
-        .map_err(|e| {
-            match e {
-                openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            }
+        .map_err(|e| match e {
+            openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
     tracing::info!(route_id = %route_id, "Route deleted");

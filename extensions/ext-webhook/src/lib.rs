@@ -9,9 +9,9 @@
 //! - 异步执行，不阻塞路由响应
 //! - 结果可选：忽略 / 记录 / 作为响应返回
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, ExtensionRegistry, Context, Target, ActionResult, CoreError};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use std::sync::Arc;
 
 /// Webhook Action Handler
 ///
@@ -26,7 +26,9 @@ impl ActionHandler for WebhookHandler {
             .params
             .get("url")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| CoreError::InvalidInput("Webhook action requires 'url' parameter".to_string()))?
+            .ok_or_else(|| {
+                CoreError::InvalidInput("Webhook action requires 'url' parameter".to_string())
+            })?
             .to_string();
 
         let method = target
@@ -63,13 +65,8 @@ impl ActionHandler for WebhookHandler {
         let webhook_method = method.clone();
         tokio::spawn(async move {
             let client = reqwest_client();
-            let result = send_webhook(
-                &client,
-                &webhook_url,
-                &webhook_method,
-                &body,
-                timeout_secs,
-            ).await;
+            let result =
+                send_webhook(&client, &webhook_url, &webhook_method, &body, timeout_secs).await;
 
             match result {
                 Ok(status) => {
@@ -91,12 +88,10 @@ impl ActionHandler for WebhookHandler {
 
         // 根据 result_mode 决定返回
         match result_mode.as_str() {
-            "return" => {
-                Ok(ActionResult::WebhookTriggered {
-                    target_url: url,
-                    status: "triggered".to_string(),
-                })
-            }
+            "return" => Ok(ActionResult::WebhookTriggered {
+                target_url: url,
+                status: "triggered".to_string(),
+            }),
             _ => {
                 // ignore / record: 返回触发状态
                 Ok(ActionResult::WebhookTriggered {
@@ -168,7 +163,10 @@ async fn send_webhook(
     };
 
     let req = request.map_err(|e| format!("Failed to build request: {}", e))?;
-    let resp = client.execute(req).await.map_err(|e| format!("Request failed: {}", e))?;
+    let resp = client
+        .execute(req)
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
     Ok(resp.status().as_u16())
 }
 
@@ -210,7 +208,7 @@ mod tests {
         let ctx = Context::from_request(None, None);
         let target = Target {
             action: Action::Webhook,
-            params: serde_json::json!({}),  // 没有 url
+            params: serde_json::json!({}), // 没有 url
         };
 
         let result = handler.execute(&ctx, &target).await;

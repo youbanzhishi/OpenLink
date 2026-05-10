@@ -5,13 +5,13 @@
 //! Phase 2: list_links 使用 Store 实现分页
 
 use axum::{
-    extract::{State, Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
+use openlink_core::{shortcode, Link};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use openlink_core::{Link, shortcode};
 
 use crate::state::AppState;
 
@@ -91,7 +91,10 @@ pub async fn create_link(
     let code = match req.code {
         Some(ref c) => {
             if !shortcode::is_valid(c) {
-                return Err((StatusCode::BAD_REQUEST, "Invalid short code: must be base62".to_string()));
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "Invalid short code: must be base62".to_string(),
+                ));
             }
             c.clone()
         }
@@ -99,9 +102,18 @@ pub async fn create_link(
             // 生成唯一短码（简单重试）
             let mut code = shortcode::generate(state.config.shortcode.length);
             let mut attempts = 0;
-            while state.store.get_link_by_code(&code).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?.is_some() {
+            while state
+                .store
+                .get_link_by_code(&code)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+                .is_some()
+            {
                 if attempts > 10 {
-                    return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate unique code".to_string()));
+                    return Err((
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to generate unique code".to_string(),
+                    ));
                 }
                 code = shortcode::generate(state.config.shortcode.length);
                 attempts += 1;
@@ -126,16 +138,10 @@ pub async fn create_link(
         is_active: true,
     };
 
-    let created = state
-        .store
-        .create_link(&link)
-        .await
-        .map_err(|e| {
-            match e {
-                openlink_store::StoreError::Duplicate(_) => (StatusCode::CONFLICT, e.to_string()),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            }
-        })?;
+    let created = state.store.create_link(&link).await.map_err(|e| match e {
+        openlink_store::StoreError::Duplicate(_) => (StatusCode::CONFLICT, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    })?;
 
     tracing::info!(code = %code, "Link created");
 
@@ -221,11 +227,9 @@ pub async fn update_link(
         .store
         .update_link(&updated_link)
         .await
-        .map_err(|e| {
-            match e {
-                openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            }
+        .map_err(|e| match e {
+            openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
     tracing::info!(id = %id, "Link updated");
@@ -239,16 +243,10 @@ pub async fn delete_link(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state
-        .store
-        .delete_link(&id)
-        .await
-        .map_err(|e| {
-            match e {
-                openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-                _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-            }
-        })?;
+    state.store.delete_link(&id).await.map_err(|e| match e {
+        openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    })?;
 
     tracing::info!(id = %id, "Link deleted");
     Ok(StatusCode::NO_CONTENT)

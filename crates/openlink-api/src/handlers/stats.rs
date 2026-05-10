@@ -6,7 +6,7 @@
 //! Phase 2: 增强版统计，包含设备分布、身份分布
 
 use axum::{
-    extract::{State, Path},
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };

@@ -19,7 +19,11 @@ pub struct SemVer {
 
 impl SemVer {
     pub fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 
     pub fn parse(s: &str) -> Option<Self> {
@@ -125,8 +129,10 @@ impl PluginRegistry {
             // Check if new version is higher
             if let Some(existing) = plugins.get(&plugin.id) {
                 if plugin.version <= existing.version {
-                    return Err(format!("Plugin {} already registered with version {} (>= {})",
-                        plugin.id, existing.version, plugin.version));
+                    return Err(format!(
+                        "Plugin {} already registered with version {} (>= {})",
+                        plugin.id, existing.version, plugin.version
+                    ));
                 }
             }
         }
@@ -142,7 +148,8 @@ impl PluginRegistry {
     /// 搜索插件
     pub fn search(&self, query: &PluginSearchQuery) -> Vec<PluginRegistration> {
         let plugins = self.plugins.read();
-        plugins.values()
+        plugins
+            .values()
             .filter(|p| {
                 // Filter by type
                 if let Some(ref pt) = query.plugin_type {
@@ -193,7 +200,8 @@ impl PluginRegistry {
     /// 检查插件依赖是否满足
     pub fn check_dependencies(&self, plugin_id: &str) -> Result<Vec<String>, String> {
         let plugins = self.plugins.read();
-        let plugin = plugins.get(plugin_id)
+        let plugin = plugins
+            .get(plugin_id)
             .ok_or_else(|| format!("Plugin {} not found", plugin_id))?;
 
         let mut missing = Vec::new();
@@ -208,7 +216,10 @@ impl PluginRegistry {
                     }
                 }
                 None => {
-                    missing.push(format!("{}: not installed (need >= {})", dep.plugin_id, dep.min_version));
+                    missing.push(format!(
+                        "{}: not installed (need >= {})",
+                        dep.plugin_id, dep.min_version
+                    ));
                 }
             }
         }
@@ -306,8 +317,12 @@ mod tests {
     #[test]
     fn test_registry_search_by_keyword() {
         let registry = PluginRegistry::new();
-        registry.register(make_plugin("eq-1", "Parametric EQ", "1.0.0")).unwrap();
-        registry.register(make_plugin("comp-1", "Compressor", "1.0.0")).unwrap();
+        registry
+            .register(make_plugin("eq-1", "Parametric EQ", "1.0.0"))
+            .unwrap();
+        registry
+            .register(make_plugin("comp-1", "Compressor", "1.0.0"))
+            .unwrap();
 
         let query = PluginSearchQuery {
             keyword: Some("parametric".to_string()),
@@ -353,7 +368,9 @@ mod tests {
     #[test]
     fn test_registry_version_upgrade() {
         let registry = PluginRegistry::new();
-        registry.register(make_plugin("eq-1", "EQ", "1.0.0")).unwrap();
+        registry
+            .register(make_plugin("eq-1", "EQ", "1.0.0"))
+            .unwrap();
         let v2 = make_plugin("eq-1", "EQ", "2.0.0");
         registry.register(v2).unwrap();
 
@@ -364,7 +381,9 @@ mod tests {
     #[test]
     fn test_registry_version_downgrade_rejected() {
         let registry = PluginRegistry::new();
-        registry.register(make_plugin("eq-1", "EQ", "2.0.0")).unwrap();
+        registry
+            .register(make_plugin("eq-1", "EQ", "2.0.0"))
+            .unwrap();
         let result = registry.register(make_plugin("eq-1", "EQ", "1.0.0"));
         assert!(result.is_err());
     }
@@ -372,7 +391,9 @@ mod tests {
     #[test]
     fn test_registry_unregister() {
         let registry = PluginRegistry::new();
-        registry.register(make_plugin("eq-1", "EQ", "1.0.0")).unwrap();
+        registry
+            .register(make_plugin("eq-1", "EQ", "1.0.0"))
+            .unwrap();
         let removed = registry.unregister("eq-1").unwrap();
         assert_eq!(removed.name, "EQ");
         assert!(registry.get("eq-1").is_none());

@@ -6,9 +6,9 @@
 
 use crate::cache::EdgeCache;
 use crate::geo::GeoRouter;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 /// 健康状态
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -74,10 +74,18 @@ pub struct HealthCheckConfig {
     pub cache_hit_degraded_threshold: f64,
 }
 
-fn default_interval() -> u64 { 30 }
-fn default_timeout() -> u64 { 5000 }
-fn default_failure_threshold() -> u32 { 3 }
-fn default_cache_hit_threshold() -> f64 { 0.3 }
+fn default_interval() -> u64 {
+    30
+}
+fn default_timeout() -> u64 {
+    5000
+}
+fn default_failure_threshold() -> u32 {
+    3
+}
+fn default_cache_hit_threshold() -> f64 {
+    0.3
+}
 
 impl Default for HealthCheckConfig {
     fn default() -> Self {
@@ -130,20 +138,32 @@ impl HealthChecker {
         for node in &online_nodes {
             node_health_list.push(NodeHealthInfo {
                 node_id: node.node_id.clone(),
-                status: if node.is_online { HealthStatus::Healthy } else { HealthStatus::Unhealthy },
+                status: if node.is_online {
+                    HealthStatus::Healthy
+                } else {
+                    HealthStatus::Unhealthy
+                },
                 latency_ms: None, // 实际应通过 ping 测量
                 last_check: now,
                 consecutive_failures: 0,
             });
         }
 
-        let online_count = node_health_list.iter().filter(|h| h.status == HealthStatus::Healthy).count();
+        let online_count = node_health_list
+            .iter()
+            .filter(|h| h.status == HealthStatus::Healthy)
+            .count();
         let total_count = node_health_list.len();
 
         // 计算整体健康状态
-        let status = if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold && total_count > 0 && online_count == 0 {
+        let status = if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold
+            && total_count > 0
+            && online_count == 0
+        {
             HealthStatus::Unhealthy
-        } else if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold || online_count < total_count {
+        } else if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold
+            || online_count < total_count
+        {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
@@ -182,7 +202,10 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() {
         let config = EdgeConfig::default_config();
-        let cache = Arc::new(EdgeCache::new(config.cache.max_entries, config.cache.ttl_secs));
+        let cache = Arc::new(EdgeCache::new(
+            config.cache.max_entries,
+            config.cache.ttl_secs,
+        ));
         let geo_router = Arc::new(RwLock::new(GeoRouter::new(GeoRouteConfig::default())));
 
         let checker = HealthChecker::new(
@@ -200,7 +223,10 @@ mod tests {
     #[tokio::test]
     async fn test_health_status_calculation() {
         let config = EdgeConfig::default_config();
-        let cache = Arc::new(EdgeCache::new(config.cache.max_entries, config.cache.ttl_secs));
+        let cache = Arc::new(EdgeCache::new(
+            config.cache.max_entries,
+            config.cache.ttl_secs,
+        ));
         let geo_router = Arc::new(RwLock::new(GeoRouter::new(GeoRouteConfig::default())));
 
         let checker = HealthChecker::new(

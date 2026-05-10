@@ -11,10 +11,7 @@ pub enum SdkError {
 
     /// HTTP 错误
     #[error("HTTP error: {status} - {message}")]
-    Http {
-        status: u16,
-        message: String,
-    },
+    Http { status: u16, message: String },
 
     /// API 错误
     #[error("API error: {0}")]

@@ -3,8 +3,8 @@
 //! 增强版 DAG 执行引擎，支持并行执行无依赖节点。
 //! 使用拓扑层级（level）来识别可并行的节点。
 
-use crate::dag::{Dag, DagNode, EdgeCondition, DagError, NodeId};
-use crate::executor::{TaskExecutor, ExecutionStatus, NodeResult, ExecutionResult};
+use crate::dag::{Dag, DagError, DagNode, EdgeCondition, NodeId};
+use crate::executor::{ExecutionResult, ExecutionStatus, NodeResult, TaskExecutor};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
@@ -25,8 +25,12 @@ pub struct ParallelConfig {
     pub fail_fast: bool,
 }
 
-fn default_max_parallelism() -> usize { 8 }
-fn default_true() -> bool { true }
+fn default_max_parallelism() -> usize {
+    8
+}
+fn default_true() -> bool {
+    true
+}
 
 impl Default for ParallelConfig {
     fn default() -> Self {
@@ -87,7 +91,9 @@ impl ParallelDagExecutor {
                     }
 
                     // 重新检查入度
-                    let new_in_degree: usize = dag.edges.iter()
+                    let new_in_degree: usize = dag
+                        .edges
+                        .iter()
                         .filter(|e| e.to == *neighbor && !levels.contains_key(&e.from))
                         .count();
 
@@ -162,7 +168,9 @@ impl ParallelDagExecutor {
                         .predecessors(node_id)
                         .iter()
                         .filter_map(|pred| {
-                            node_outputs.get(&pred.id).map(|v| (pred.id.clone(), v.clone()))
+                            node_outputs
+                                .get(&pred.id)
+                                .map(|v| (pred.id.clone(), v.clone()))
                         })
                         .collect();
 
@@ -171,18 +179,27 @@ impl ParallelDagExecutor {
 
                     let handle = tokio::spawn(async move {
                         let node_start = std::time::Instant::now();
-                        let result = executor.execute_task(
-                            &node.agent_id,
-                            &node.task_type,
-                            &node.params,
-                            &inputs,
-                        ).await;
+                        let result = executor
+                            .execute_task(&node.agent_id, &node.task_type, &node.params, &inputs)
+                            .await;
 
                         let elapsed = node_start.elapsed().as_millis() as u64;
 
                         match result {
-                            Ok(output) => (node_id_clone, ExecutionStatus::Success, output, elapsed, 0u32),
-                            Err(e) => (node_id_clone, ExecutionStatus::Failed(e), serde_json::Value::Null, elapsed, 0),
+                            Ok(output) => (
+                                node_id_clone,
+                                ExecutionStatus::Success,
+                                output,
+                                elapsed,
+                                0u32,
+                            ),
+                            Err(e) => (
+                                node_id_clone,
+                                ExecutionStatus::Failed(e),
+                                serde_json::Value::Null,
+                                elapsed,
+                                0,
+                            ),
                         }
                     });
 
@@ -282,9 +299,7 @@ impl ParallelDagExecutor {
             return true;
         }
 
-        let incoming_edges: Vec<_> = dag.edges.iter()
-            .filter(|e| e.to == node_id)
-            .collect();
+        let incoming_edges: Vec<_> = dag.edges.iter().filter(|e| e.to == node_id).collect();
 
         for edge in &incoming_edges {
             let pred_completed = completed.contains(&edge.from);
@@ -325,7 +340,12 @@ mod tests {
 
     fn make_diamond_dag() -> Dag {
         let mut dag = Dag::new("diamond", "Diamond DAG");
-        for (id, name) in [("a", "Start"), ("b", "Branch B"), ("c", "Branch C"), ("d", "End")] {
+        for (id, name) in [
+            ("a", "Start"),
+            ("b", "Branch B"),
+            ("c", "Branch C"),
+            ("d", "End"),
+        ] {
             dag.add_node(DagNode {
                 id: id.to_string(),
                 name: name.to_string(),

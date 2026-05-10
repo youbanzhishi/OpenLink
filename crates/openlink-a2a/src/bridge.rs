@@ -2,14 +2,14 @@
 //!
 //! 统一 MCP/A2A/HTTP 三种协议的接口，支持自动协商和消息格式转换。
 
+use crate::mcp::{McpParser, McpRequest};
 use crate::types::*;
-use crate::mcp::{McpRequest, McpParser};
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing;
-use async_trait::async_trait;
 
 /// 支持的协议类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -86,7 +86,10 @@ pub enum BridgeError {
     NegotiationFailed(String),
 
     #[error("Protocol mismatch: expected {expected:?}, got {actual:?}")]
-    ProtocolMismatch { expected: ProtocolType, actual: ProtocolType },
+    ProtocolMismatch {
+        expected: ProtocolType,
+        actual: ProtocolType,
+    },
 }
 
 /// 协议桥接 trait
@@ -125,8 +128,7 @@ impl ProtocolBridge for A2ABridge {
             payload: message.payload.clone(),
             timestamp: message.timestamp,
         };
-        serde_json::to_vec(&a2a_msg)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))
+        serde_json::to_vec(&a2a_msg).map_err(|e| BridgeError::ConversionError(e.to_string()))
     }
 
     async fn decode(&self, data: &[u8]) -> Result<UnifiedMessage, BridgeError> {
@@ -233,31 +235,53 @@ impl ProtocolBridge for HttpBridge {
             },
             "headers": message.metadata,
         });
-        serde_json::to_vec(&http_msg)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))
+        serde_json::to_vec(&http_msg).map_err(|e| BridgeError::ConversionError(e.to_string()))
     }
 
     async fn decode(&self, data: &[u8]) -> Result<UnifiedMessage, BridgeError> {
         let http_msg: serde_json::Value = serde_json::from_slice(data)
             .map_err(|e| BridgeError::ConversionError(e.to_string()))?;
 
-        let body = http_msg.get("body").ok_or_else(|| BridgeError::ConversionError("Missing body".to_string()))?;
+        let body = http_msg
+            .get("body")
+            .ok_or_else(|| BridgeError::ConversionError("Missing body".to_string()))?;
 
         Ok(UnifiedMessage {
-            id: body.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            id: body
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
             source_protocol: ProtocolType::Http,
             target_protocol: ProtocolType::Http,
-            from: body.get("from").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            to: body.get("to").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            method: http_msg.get("path")
+            from: body
+                .get("from")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            to: body
+                .get("to")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            method: http_msg
+                .get("path")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .trim_start_matches("/api/")
                 .to_string(),
-            payload: body.get("payload").cloned().unwrap_or(serde_json::Value::Null),
-            metadata: http_msg.get("headers")
+            payload: body
+                .get("payload")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+            metadata: http_msg
+                .get("headers")
                 .and_then(|v| v.as_object())
-                .map(|obj| obj.iter().filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string()))).collect())
+                .map(|obj| {
+                    obj.iter()
+                        .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                        .collect()
+                })
                 .unwrap_or_default(),
             timestamp: body.get("timestamp").and_then(|v| v.as_i64()).unwrap_or(0),
         })
@@ -288,9 +312,9 @@ impl ProtocolNegotiator {
     pub fn new() -> Self {
         Self {
             priority: vec![
-                (ProtocolType::A2A, 1.0),   // 原生协议最高优先
-                (ProtocolType::Mcp, 0.8),    // MCP 次之
-                (ProtocolType::Http, 0.5),   // HTTP 兜底
+                (ProtocolType::A2A, 1.0),  // 原生协议最高优先
+                (ProtocolType::Mcp, 0.8),  // MCP 次之
+                (ProtocolType::Http, 0.5), // HTTP 兜底
             ],
         }
     }
@@ -302,7 +326,9 @@ impl ProtocolNegotiator {
         remote: &ProtocolCapabilities,
     ) -> NegotiatedProtocol {
         // 找到双方都支持的协议
-        let common: Vec<&ProtocolType> = local.supported_protocols.iter()
+        let common: Vec<&ProtocolType> = local
+            .supported_protocols
+            .iter()
             .filter(|p| remote.supported_protocols.contains(p))
             .collect();
 
@@ -319,7 +345,9 @@ impl ProtocolNegotiator {
 
         for (proto, weight) in &self.priority {
             if common.iter().any(|p| *p == proto) {
-                let version = local.versions.get(proto)
+                let version = local
+                    .versions
+                    .get(proto)
                     .or_else(|| remote.versions.get(proto))
                     .cloned()
                     .unwrap_or_else(|| "1.0".to_string());
@@ -396,9 +424,11 @@ impl ProtocolGateway {
 
         let bridges = self.bridges.read().await;
 
-        let source_bridge = bridges.get(source_protocol)
+        let source_bridge = bridges
+            .get(source_protocol)
             .ok_or_else(|| BridgeError::UnsupportedProtocol(source_protocol.clone()))?;
-        let target_bridge = bridges.get(target_protocol)
+        let target_bridge = bridges
+            .get(target_protocol)
             .ok_or_else(|| BridgeError::UnsupportedProtocol(target_protocol.clone()))?;
 
         // 源协议解码为统一消息
@@ -557,7 +587,10 @@ mod tests {
         let a2a_data = serde_json::to_vec(&a2a_msg).unwrap();
 
         // Convert A2A -> MCP
-        let mcp_data = gateway.convert(&ProtocolType::A2A, &ProtocolType::Mcp, &a2a_data).await.unwrap();
+        let mcp_data = gateway
+            .convert(&ProtocolType::A2A, &ProtocolType::Mcp, &a2a_data)
+            .await
+            .unwrap();
 
         // Verify it's valid MCP
         let mcp_req = McpParser::parse_request(&mcp_data).unwrap();
@@ -569,7 +602,10 @@ mod tests {
         let gateway = ProtocolGateway::new();
         let data = b"test data".to_vec();
 
-        let result = gateway.convert(&ProtocolType::A2A, &ProtocolType::A2A, &data).await.unwrap();
+        let result = gateway
+            .convert(&ProtocolType::A2A, &ProtocolType::A2A, &data)
+            .await
+            .unwrap();
         assert_eq!(result, data);
     }
 }

@@ -4,8 +4,8 @@
 //! 支持从文件、HTTP API 等数据源预热缓存。
 
 use super::traits::{Cache, CacheError};
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing;
 
 /// 预热条目
@@ -66,8 +66,8 @@ impl PreloadSource for FilePreloadSource {
             .await
             .map_err(|e| PreloadError::Io(e.to_string()))?;
 
-        let entries: Vec<PreloadEntry> = serde_json::from_str(&content)
-            .map_err(|e| PreloadError::Parse(e.to_string()))?;
+        let entries: Vec<PreloadEntry> =
+            serde_json::from_str(&content).map_err(|e| PreloadError::Parse(e.to_string()))?;
 
         tracing::info!(
             path = %self.path,
@@ -119,14 +119,17 @@ impl CachePreloader {
 
     /// 从数据源预热缓存
     pub async fn preload(&self, source: &dyn PreloadSource) -> Result<PreloadResult, CacheError> {
-        let entries = source.load().await
+        let entries = source
+            .load()
+            .await
             .map_err(|e| CacheError::Backend(format!("Preload source error: {}", e)))?;
 
         let total = entries.len();
         let mut loaded = 0;
         let mut failed = 0;
 
-        let warmup_entries: Vec<(&str, &str, u64)> = entries.iter()
+        let warmup_entries: Vec<(&str, &str, u64)> = entries
+            .iter()
             .map(|e| (e.key.as_str(), e.value.as_str(), e.ttl_secs))
             .collect();
 
@@ -136,7 +139,11 @@ impl CachePreloader {
                 tracing::error!(error = %e, "Batch warmup failed, falling back to individual sets");
                 // 逐个加载
                 for entry in &entries {
-                    match self.cache.set(&entry.key, &entry.value, entry.ttl_secs).await {
+                    match self
+                        .cache
+                        .set(&entry.key, &entry.value, entry.ttl_secs)
+                        .await
+                    {
                         Ok(()) => loaded += 1,
                         Err(e) => {
                             tracing::warn!(key = %entry.key, error = %e, "Failed to preload entry");

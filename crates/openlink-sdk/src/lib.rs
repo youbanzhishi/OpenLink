@@ -24,25 +24,25 @@
 //!     .expect("Failed to build client");
 //! ```
 
+pub mod batch;
+pub mod builder;
 pub mod client;
 pub mod config;
 pub mod error;
-pub mod models;
-pub mod batch;
 pub mod event;
-pub mod builder;
-pub mod retry;
 pub mod middleware;
+pub mod models;
+pub mod retry;
 
-pub use client::{LinkClient, FileClient, ClientBuilder};
-pub use config::{Config, RetryConfig, CircuitBreakerConfig, CircuitBreaker, CircuitState};
-pub use error::SdkError;
-pub use models::*;
 pub use batch::BatchClient;
-pub use event::{EventClient, EventFilter, EventType, Event, SubscribeResponse};
 pub use builder::LinkClientBuilder;
-pub use retry::{RetryPolicy, RetryCondition};
+pub use client::{ClientBuilder, FileClient, LinkClient};
+pub use config::{CircuitBreaker, CircuitBreakerConfig, CircuitState, Config, RetryConfig};
+pub use error::SdkError;
+pub use event::{Event, EventClient, EventFilter, EventType, SubscribeResponse};
 pub use middleware::{
-    Middleware, MiddlewareChain, AuthMiddleware, LoggingMiddleware,
-    MetricsMiddleware, RequestMetrics, RequestContext, ResponseContext,
+    AuthMiddleware, LoggingMiddleware, MetricsMiddleware, Middleware, MiddlewareChain,
+    RequestContext, RequestMetrics, ResponseContext,
 };
+pub use models::*;
+pub use retry::{RetryCondition, RetryPolicy};

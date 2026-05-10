@@ -23,10 +23,7 @@ pub enum GossipMessage {
         timestamp: i64,
     },
     /// 节点离开网络
-    Leave {
-        node_id: NodeId,
-        timestamp: i64,
-    },
+    Leave { node_id: NodeId, timestamp: i64 },
     /// 心跳
     Heartbeat {
         node_id: NodeId,
@@ -140,21 +137,38 @@ impl GossipMembership {
     /// 处理 Gossip 消息
     pub fn handle_message(&mut self, msg: &GossipMessage) -> Vec<GossipMessage> {
         match msg {
-            GossipMessage::Join { node_id, addr, capabilities, timestamp } => {
-                self.handle_join(node_id, *addr, capabilities.clone(), *timestamp)
-            }
-            GossipMessage::Leave { node_id, timestamp } => {
-                self.handle_leave(node_id, *timestamp)
-            }
-            GossipMessage::Heartbeat { node_id, seq, timestamp } => {
-                self.handle_heartbeat(node_id, *seq, *timestamp)
-            }
-            GossipMessage::LinkState { from, to, latency_ms, available, bandwidth_mbps, timestamp } => {
-                self.handle_link_state(from, to, *latency_ms, *available, *bandwidth_mbps, *timestamp)
-            }
-            GossipMessage::FullSync { nodes, links, timestamp: _ } => {
-                self.handle_full_sync(nodes.clone(), links.clone())
-            }
+            GossipMessage::Join {
+                node_id,
+                addr,
+                capabilities,
+                timestamp,
+            } => self.handle_join(node_id, *addr, capabilities.clone(), *timestamp),
+            GossipMessage::Leave { node_id, timestamp } => self.handle_leave(node_id, *timestamp),
+            GossipMessage::Heartbeat {
+                node_id,
+                seq,
+                timestamp,
+            } => self.handle_heartbeat(node_id, *seq, *timestamp),
+            GossipMessage::LinkState {
+                from,
+                to,
+                latency_ms,
+                available,
+                bandwidth_mbps,
+                timestamp,
+            } => self.handle_link_state(
+                from,
+                to,
+                *latency_ms,
+                *available,
+                *bandwidth_mbps,
+                *timestamp,
+            ),
+            GossipMessage::FullSync {
+                nodes,
+                links,
+                timestamp: _,
+            } => self.handle_full_sync(nodes.clone(), links.clone()),
         }
     }
 
@@ -196,7 +210,11 @@ impl GossipMembership {
         vec![GossipMessage::Join {
             node_id: node_id.clone(),
             addr,
-            capabilities: self.nodes.get(node_id).map(|n| n.capabilities.clone()).unwrap_or_default(),
+            capabilities: self
+                .nodes
+                .get(node_id)
+                .map(|n| n.capabilities.clone())
+                .unwrap_or_default(),
             timestamp,
         }]
     }
@@ -215,7 +233,12 @@ impl GossipMembership {
     }
 
     /// 处理心跳
-    fn handle_heartbeat(&mut self, node_id: &NodeId, _seq: u64, _timestamp: i64) -> Vec<GossipMessage> {
+    fn handle_heartbeat(
+        &mut self,
+        node_id: &NodeId,
+        _seq: u64,
+        _timestamp: i64,
+    ) -> Vec<GossipMessage> {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.last_heartbeat = chrono::Utc::now().timestamp();
             node.status = NodeStatus::Alive;
@@ -243,14 +266,17 @@ impl GossipMembership {
         };
 
         if should_update {
-            self.links.insert(key, LinkStateEntry {
-                from: from.clone(),
-                to: to.clone(),
-                latency_ms,
-                available,
-                bandwidth_mbps,
-                updated_at: now,
-            });
+            self.links.insert(
+                key,
+                LinkStateEntry {
+                    from: from.clone(),
+                    to: to.clone(),
+                    latency_ms,
+                    available,
+                    bandwidth_mbps,
+                    updated_at: now,
+                },
+            );
         }
 
         // 传播链路状态
@@ -338,7 +364,8 @@ impl GossipMembership {
 
     /// 获取存活节点列表
     pub fn alive_nodes(&self) -> Vec<&NodeInfo> {
-        self.nodes.values()
+        self.nodes
+            .values()
             .filter(|n| n.status == NodeStatus::Alive)
             .collect()
     }
@@ -489,7 +516,10 @@ mod tests {
         let hb2 = membership.generate_heartbeat();
 
         match (&hb1, &hb2) {
-            (GossipMessage::Heartbeat { seq: s1, .. }, GossipMessage::Heartbeat { seq: s2, .. }) => {
+            (
+                GossipMessage::Heartbeat { seq: s1, .. },
+                GossipMessage::Heartbeat { seq: s2, .. },
+            ) => {
                 assert_eq!(*s2, *s1 + 1);
             }
             _ => panic!("Expected Heartbeat messages"),

@@ -12,9 +12,9 @@
 //! register(&mut registry).unwrap();
 //! ```
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, ExtensionRegistry, Context, Target, ActionResult, CoreError};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use std::sync::Arc;
 
 /// 重定向 Action Handler
 ///
@@ -29,7 +29,9 @@ impl ActionHandler for RedirectHandler {
             .params
             .get("url")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| CoreError::InvalidInput("Redirect action requires 'url' parameter".to_string()))?
+            .ok_or_else(|| {
+                CoreError::InvalidInput("Redirect action requires 'url' parameter".to_string())
+            })?
             .to_string();
 
         let status_code = target

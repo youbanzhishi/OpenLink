@@ -133,8 +133,8 @@ impl Default for RetryConfig {
 impl RetryConfig {
     /// 计算第 N 次重试的等待时间
     pub fn backoff_duration(&self, attempt: u32) -> Duration {
-        let backoff_ms = (self.initial_backoff_ms as f64
-            * self.backoff_multiplier.powi(attempt as i32)) as u64;
+        let backoff_ms =
+            (self.initial_backoff_ms as f64 * self.backoff_multiplier.powi(attempt as i32)) as u64;
         let clamped = backoff_ms.min(self.max_backoff_ms);
         Duration::from_millis(clamped)
     }
@@ -213,7 +213,8 @@ impl CircuitBreaker {
             CircuitState::Open => {
                 // Check if reset timeout has elapsed
                 if let Some(last_failure) = inner.last_failure_time {
-                    if last_failure.elapsed() >= Duration::from_secs(self.config.reset_timeout_secs) {
+                    if last_failure.elapsed() >= Duration::from_secs(self.config.reset_timeout_secs)
+                    {
                         inner.state = CircuitState::HalfOpen;
                         inner.success_count = 0;
                         true

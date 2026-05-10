@@ -93,7 +93,9 @@ impl MarketplaceRegistry {
     pub async fn register(&self, profile: AgentProfile) -> Result<(), MarketplaceError> {
         let mut profiles = self.profiles.write().await;
         if profiles.contains_key(&profile.agent_id) {
-            return Err(MarketplaceError::AlreadyRegistered(profile.agent_id.clone()));
+            return Err(MarketplaceError::AlreadyRegistered(
+                profile.agent_id.clone(),
+            ));
         }
         tracing::info!(
             agent_id = %profile.agent_id,
@@ -108,13 +110,20 @@ impl MarketplaceRegistry {
     /// 注销 Agent 档案
     pub async fn deregister(&self, agent_id: &str) -> Result<AgentProfile, MarketplaceError> {
         let mut profiles = self.profiles.write().await;
-        profiles.remove(agent_id).ok_or_else(|| MarketplaceError::NotFound(agent_id.to_string()))
+        profiles
+            .remove(agent_id)
+            .ok_or_else(|| MarketplaceError::NotFound(agent_id.to_string()))
     }
 
     /// 更新 Agent 档案
-    pub async fn update(&self, agent_id: &str, update_fn: impl FnOnce(&mut AgentProfile)) -> Result<(), MarketplaceError> {
+    pub async fn update(
+        &self,
+        agent_id: &str,
+        update_fn: impl FnOnce(&mut AgentProfile),
+    ) -> Result<(), MarketplaceError> {
         let mut profiles = self.profiles.write().await;
-        let profile = profiles.get_mut(agent_id)
+        let profile = profiles
+            .get_mut(agent_id)
             .ok_or_else(|| MarketplaceError::NotFound(agent_id.to_string()))?;
         update_fn(profile);
         Ok(())
@@ -130,21 +139,32 @@ impl MarketplaceRegistry {
     pub async fn search(&self, query: &MarketplaceQuery) -> Vec<AgentProfile> {
         let profiles = self.profiles.read().await;
 
-        let mut results: Vec<AgentProfile> = profiles.values()
+        let mut results: Vec<AgentProfile> = profiles
+            .values()
             .filter(|p| {
                 // 按能力关键词过滤
                 if let Some(ref cap) = query.capability {
                     let cap_lower = cap.to_lowercase();
-                    let matches_provided = p.provided_capabilities.iter()
+                    let matches_provided = p
+                        .provided_capabilities
+                        .iter()
                         .any(|c| c.to_lowercase().contains(&cap_lower));
-                    let matches_needed = p.needed_capabilities.iter()
+                    let matches_needed = p
+                        .needed_capabilities
+                        .iter()
                         .any(|c| c.to_lowercase().contains(&cap_lower));
                     let matches_desc = p.description.to_lowercase().contains(&cap_lower);
 
                     match query.capability_type {
-                        Some(CapabilityType::Provided) if !matches_provided && !matches_desc => return false,
-                        Some(CapabilityType::Needed) if !matches_needed && !matches_desc => return false,
-                        None if !matches_provided && !matches_needed && !matches_desc => return false,
+                        Some(CapabilityType::Provided) if !matches_provided && !matches_desc => {
+                            return false
+                        }
+                        Some(CapabilityType::Needed) if !matches_needed && !matches_desc => {
+                            return false
+                        }
+                        None if !matches_provided && !matches_needed && !matches_desc => {
+                            return false
+                        }
                         _ => {}
                     }
                 }
@@ -169,7 +189,11 @@ impl MarketplaceRegistry {
             .collect();
 
         // 按评分降序排列
-        results.sort_by(|a, b| b.rating.partial_cmp(&a.rating).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.rating
+                .partial_cmp(&a.rating)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results
     }
 
@@ -184,26 +208,37 @@ impl MarketplaceRegistry {
             None => return vec![],
         };
 
-        let mut recommendations: Vec<Recommendation> = profiles.values()
+        let mut recommendations: Vec<Recommendation> = profiles
+            .values()
             .filter(|p| p.agent_id != agent_id)
             .filter_map(|p| {
                 // 计算互补度：我需要的 / 对方提供的 + 对方需要的 / 我提供的
-                let my_needs_met = my_profile.needed_capabilities.iter()
+                let my_needs_met = my_profile
+                    .needed_capabilities
+                    .iter()
                     .filter(|need| p.provided_capabilities.iter().any(|prov| prov == *need))
                     .count();
 
-                let their_needs_met = p.needed_capabilities.iter()
-                    .filter(|need| my_profile.provided_capabilities.iter().any(|prov| prov == *need))
+                let their_needs_met = p
+                    .needed_capabilities
+                    .iter()
+                    .filter(|need| {
+                        my_profile
+                            .provided_capabilities
+                            .iter()
+                            .any(|prov| prov == *need)
+                    })
                     .count();
 
-                let total_possible = my_profile.needed_capabilities.len()
-                    + p.needed_capabilities.len();
+                let total_possible =
+                    my_profile.needed_capabilities.len() + p.needed_capabilities.len();
 
                 if total_possible == 0 {
                     return None;
                 }
 
-                let complementarity = (my_needs_met + their_needs_met) as f64 / total_possible as f64;
+                let complementarity =
+                    (my_needs_met + their_needs_met) as f64 / total_possible as f64;
 
                 // 额外考虑评分和成功率
                 let rating_factor = p.rating / 5.0;
@@ -228,15 +263,24 @@ impl MarketplaceRegistry {
             .collect();
 
         // 按推荐分数降序排列
-        recommendations.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        recommendations.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         recommendations.truncate(limit);
         recommendations
     }
 
     /// 记录使用（更新使用统计）
-    pub async fn record_usage(&self, agent_id: &str, success: bool) -> Result<(), MarketplaceError> {
+    pub async fn record_usage(
+        &self,
+        agent_id: &str,
+        success: bool,
+    ) -> Result<(), MarketplaceError> {
         let mut profiles = self.profiles.write().await;
-        let profile = profiles.get_mut(agent_id)
+        let profile = profiles
+            .get_mut(agent_id)
             .ok_or_else(|| MarketplaceError::NotFound(agent_id.to_string()))?;
 
         profile.usage_count += 1;
@@ -254,13 +298,18 @@ impl MarketplaceRegistry {
     }
 
     /// 更新评分
-    pub async fn update_rating(&self, agent_id: &str, new_rating: f64) -> Result<(), MarketplaceError> {
+    pub async fn update_rating(
+        &self,
+        agent_id: &str,
+        new_rating: f64,
+    ) -> Result<(), MarketplaceError> {
         if new_rating < 0.0 || new_rating > 5.0 {
             return Err(MarketplaceError::InvalidRating(new_rating));
         }
 
         let mut profiles = self.profiles.write().await;
-        let profile = profiles.get_mut(agent_id)
+        let profile = profiles
+            .get_mut(agent_id)
             .ok_or_else(|| MarketplaceError::NotFound(agent_id.to_string()))?;
         profile.rating = new_rating;
         Ok(())

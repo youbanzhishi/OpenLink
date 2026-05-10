@@ -65,9 +65,9 @@ mod tests {
     #[test]
     fn test_is_valid_rejects_invalid() {
         assert!(!is_valid(""));
-        assert!(!is_valid("abc-def"));  // 含短横线
-        assert!(!is_valid("abc def"));  // 含空格
-        assert!(!is_valid("abc/123"));  // 含斜杠
+        assert!(!is_valid("abc-def")); // 含短横线
+        assert!(!is_valid("abc def")); // 含空格
+        assert!(!is_valid("abc/123")); // 含斜杠
     }
 
     #[test]

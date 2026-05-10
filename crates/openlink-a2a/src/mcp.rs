@@ -106,8 +106,12 @@ pub struct McpClientConfig {
     pub max_retries: u32,
 }
 
-fn default_timeout_ms() -> u64 { 30000 }
-fn default_max_retries() -> u32 { 3 }
+fn default_timeout_ms() -> u64 {
+    30000
+}
+fn default_max_retries() -> u32 {
+    3
+}
 
 impl Default for McpClientConfig {
     fn default() -> Self {
@@ -204,7 +208,8 @@ impl McpParser {
 
     /// 序列化响应
     pub fn serialize_response(response: &McpResponse) -> Result<Vec<u8>, McpProtocolError> {
-        serde_json::to_vec(response).map_err(|e| McpProtocolError::SerializationError(e.to_string()))
+        serde_json::to_vec(response)
+            .map_err(|e| McpProtocolError::SerializationError(e.to_string()))
     }
 }
 
@@ -246,7 +251,9 @@ impl McpServer {
         let builtin_tools = vec![
             McpTool {
                 name: "openlink.route".to_string(),
-                description: "Route a request through the OpenLink network to the best available agent".to_string(),
+                description:
+                    "Route a request through the OpenLink network to the best available agent"
+                        .to_string(),
                 input_schema: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -308,7 +315,9 @@ impl McpServer {
     /// 注销 Tool
     pub async fn deregister_tool(&self, name: &str) -> Result<McpTool, McpProtocolError> {
         let mut tools = self.tools.write().await;
-        tools.remove(name).ok_or_else(|| McpProtocolError::ToolNotFound(name.to_string()))
+        tools
+            .remove(name)
+            .ok_or_else(|| McpProtocolError::ToolNotFound(name.to_string()))
     }
 
     /// 列出所有 Tools
@@ -344,19 +353,17 @@ impl McpServer {
     /// 处理 MCP 请求
     pub async fn handle_request(&self, request: &McpRequest) -> McpResponse {
         match request.method.as_str() {
-            "initialize" => {
-                McpParser::build_success_response(
-                    request.id.clone(),
-                    serde_json::json!({
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": { "tools": { "listChanged": true } },
-                        "serverInfo": {
-                            "name": self.info.name,
-                            "version": self.info.version,
-                        }
-                    }),
-                )
-            }
+            "initialize" => McpParser::build_success_response(
+                request.id.clone(),
+                serde_json::json!({
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": { "tools": { "listChanged": true } },
+                    "serverInfo": {
+                        "name": self.info.name,
+                        "version": self.info.version,
+                    }
+                }),
+            ),
             "tools/list" => {
                 let tools = self.list_tools().await;
                 McpParser::build_success_response(
@@ -367,7 +374,9 @@ impl McpServer {
                 )
             }
             "tools/call" => {
-                let tool_name = request.params.get("name")
+                let tool_name = request
+                    .params
+                    .get("name")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
                 let tools = self.tools.read().await;
@@ -389,13 +398,11 @@ impl McpServer {
                     )
                 }
             }
-            _ => {
-                McpParser::build_error_response(
-                    request.id.clone(),
-                    -32601,
-                    &format!("Method not found: {}", request.method),
-                )
-            }
+            _ => McpParser::build_error_response(
+                request.id.clone(),
+                -32601,
+                &format!("Method not found: {}", request.method),
+            ),
         }
     }
 
@@ -433,7 +440,10 @@ impl McpClient {
     }
 
     /// 注册外部 MCP Server
-    pub async fn register_server(&self, server_info: McpServerInfo) -> Result<(), McpProtocolError> {
+    pub async fn register_server(
+        &self,
+        server_info: McpServerInfo,
+    ) -> Result<(), McpProtocolError> {
         let name = server_info.name.clone();
         tracing::info!(server = %name, transport = ?server_info.transport, "MCP Server registered");
         let mut servers = self.servers.write().await;
@@ -446,7 +456,9 @@ impl McpClient {
         let mut servers = self.servers.write().await;
         let mut cached = self.cached_tools.write().await;
         cached.remove(name);
-        servers.remove(name).ok_or_else(|| McpProtocolError::ServerNotFound(name.to_string()))
+        servers
+            .remove(name)
+            .ok_or_else(|| McpProtocolError::ServerNotFound(name.to_string()))
     }
 
     /// 列出已注册 Server
@@ -689,11 +701,7 @@ mod tests {
 
     #[test]
     fn test_mcp_error_response() {
-        let resp = McpParser::build_error_response(
-            serde_json::json!(1),
-            -32600,
-            "Invalid Request",
-        );
+        let resp = McpParser::build_error_response(serde_json::json!(1), -32600, "Invalid Request");
         assert!(resp.error.is_some());
         assert_eq!(resp.error.unwrap().code, -32600);
     }

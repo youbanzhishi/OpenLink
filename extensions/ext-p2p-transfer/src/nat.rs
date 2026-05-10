@@ -31,7 +31,7 @@ impl NatType {
             NatType::Symmetric => false, // 对称型 NAT 需要中继
         }
     }
-    
+
     /// 穿透难度评分（越低越容易）
     pub fn difficulty_score(&self) -> u8 {
         match self {
@@ -42,7 +42,7 @@ impl NatType {
             NatType::Symmetric => 10, // 需要中继
         }
     }
-    
+
     pub fn as_str(&self) -> &'static str {
         match self {
             NatType::Open => "open",
@@ -89,7 +89,7 @@ impl NatInfo {
             is_complete: true,
         }
     }
-    
+
     /// 创建未检测的 NAT 信息
     pub fn unknown(local_ip: &str, local_port: u16) -> Self {
         Self {
@@ -106,14 +106,14 @@ impl NatInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_nat_traversable() {
         assert!(NatType::Open.is_traversable());
         assert!(NatType::FullCone.is_traversable());
         assert!(NatType::Symmetric.is_traversable() == false);
     }
-    
+
     #[test]
     fn test_difficulty_score() {
         assert_eq!(NatType::Open.difficulty_score(), 0);

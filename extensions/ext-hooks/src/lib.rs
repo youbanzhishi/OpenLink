@@ -7,10 +7,10 @@
 //!
 //! 设计验证：Hook 通过 Extension Registry 注册，核心不改。
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{HookHandler, ExtensionRegistry, Context, HookPhase, CoreError};
 use openlink_core::primitives::IdentityType;
+use openlink_core::{Context, CoreError, ExtensionRegistry, HookHandler, HookPhase};
+use std::sync::Arc;
 
 // ─── Identity Inject Hook (BeforeRoute) ────────────────────
 
@@ -50,7 +50,9 @@ impl HookHandler for IdentityInjectHook {
             ctx.identity.identity_type = new_identity_type.clone();
 
             // 同时更新 device_type
-            if new_identity_type == IdentityType::Service && ctx.device.device_type.as_deref() != Some("server") {
+            if new_identity_type == IdentityType::Service
+                && ctx.device.device_type.as_deref() != Some("server")
+            {
                 ctx.device.device_type = Some("server".to_string());
             }
         }
@@ -73,7 +75,7 @@ impl HookHandler for IdentityInjectHook {
     }
 
     fn priority(&self) -> i32 {
-        100  // 高优先级：在其他 Hook 之前执行
+        100 // 高优先级：在其他 Hook 之前执行
     }
 }
 
@@ -107,7 +109,7 @@ impl HookHandler for AccessLogHook {
     }
 
     fn priority(&self) -> i32 {
-        0  // 低优先级：最后执行
+        0 // 低优先级：最后执行
     }
 }
 
@@ -140,7 +142,7 @@ impl HookHandler for ErrorFallbackHook {
     }
 
     fn priority(&self) -> i32 {
-        100  // 高优先级
+        100 // 高优先级
     }
 }
 
@@ -194,7 +196,7 @@ mod tests {
     async fn test_identity_inject_hook_skip_non_default() {
         let hook = IdentityInjectHook;
         let mut ctx = Context::from_request(None, None);
-        ctx.identity.identity_type = IdentityType::Service;  // 已经非默认
+        ctx.identity.identity_type = IdentityType::Service; // 已经非默认
         ctx.device.user_agent_raw = Some("curl/7.88".to_string());
 
         let result = hook.handle(ctx).await.unwrap();

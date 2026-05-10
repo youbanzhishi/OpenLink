@@ -187,11 +187,7 @@ impl EdgeRedirectEngine {
     }
 
     /// 评估条件
-    fn evaluate_condition(
-        &self,
-        condition: &Option<EdgeCondition>,
-        request: &EdgeRequest,
-    ) -> bool {
+    fn evaluate_condition(&self, condition: &Option<EdgeCondition>, request: &EdgeRequest) -> bool {
         match condition {
             None => true, // 无条件 = 始终匹配
             Some(cond) => match cond.condition_type {
@@ -226,13 +222,10 @@ impl EdgeRedirectEngine {
                     if header_name.is_empty() || pattern.is_empty() {
                         return false;
                     }
-                    request
-                        .headers
-                        .iter()
-                        .any(|(k, v)| {
-                            k.eq_ignore_ascii_case(header_name)
-                                && v.to_lowercase().contains(&pattern.to_lowercase())
-                        })
+                    request.headers.iter().any(|(k, v)| {
+                        k.eq_ignore_ascii_case(header_name)
+                            && v.to_lowercase().contains(&pattern.to_lowercase())
+                    })
                 }
             },
         }
@@ -452,7 +445,8 @@ mod tests {
         let engine = EdgeRedirectEngine::from_rules(rules);
 
         let mut req = make_request("api");
-        req.headers.insert("X-Agent".to_string(), "OpenAI/1.0".to_string());
+        req.headers
+            .insert("X-Agent".to_string(), "OpenAI/1.0".to_string());
         let decision = engine.resolve(&req).unwrap();
         assert_eq!(decision.target_url, "https://ai.example.com");
     }

@@ -2,9 +2,9 @@
 //!
 //! 支持订阅链接访问、Webhook 回调、文件变化等事件。
 
-use std::sync::Arc;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::config::Config;
 use crate::error::SdkError;
@@ -126,7 +126,8 @@ impl EventClient {
             filter,
             callback_url,
         };
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/events/subscribe"))
             .json(&body);
 
@@ -136,8 +137,10 @@ impl EventClient {
 
     /// 取消订阅
     pub async fn unsubscribe(&self, subscription_id: &str) -> Result<(), SdkError> {
-        let req = self.client
-            .delete(self.config.api_url(&format!("/api/v1/events/subscriptions/{}", subscription_id)));
+        let req = self.client.delete(
+            self.config
+                .api_url(&format!("/api/v1/events/subscriptions/{}", subscription_id)),
+        );
 
         let resp = self.auth_headers(req).send().await?;
         if resp.status().is_success() || resp.status().as_u16() == 404 {
@@ -268,10 +271,8 @@ mod tests {
     fn test_subscribe_with_callback() {
         let config = Config::new("https://api.example.com");
         let client = EventClient::new(config);
-        let result = client.subscribe_with_callback(
-            EventFilter::default(),
-            |_event| { /* callback */ },
-        );
+        let result =
+            client.subscribe_with_callback(EventFilter::default(), |_event| { /* callback */ });
         assert!(result.is_ok());
         let sub_id = result.unwrap();
         assert!(!sub_id.is_empty());

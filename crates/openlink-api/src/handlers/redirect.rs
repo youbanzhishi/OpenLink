@@ -11,12 +11,12 @@
 //! 6. 记录访问日志（Phase 2: 增强字段）
 
 use axum::{
-    extract::{State, Path},
-    http::{StatusCode, HeaderMap},
-    response::{IntoResponse, Redirect, Json},
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Json, Redirect},
 };
+use openlink_core::{AccessLog, ActionResult, Context};
 use std::sync::Arc;
-use openlink_core::{Context, AccessLog, ActionResult};
 
 use crate::state::AppState;
 
@@ -53,10 +53,21 @@ pub async fn redirect(
             // 这是传统短链的最简形态
             if let Some(url) = link.payload.get("target_url").and_then(|v| v.as_str()) {
                 // 记录访问日志（增强版）
-                let _ = log_redirect_access(&state, &link, &headers, url, start.elapsed().as_millis() as i64).await;
+                let _ = log_redirect_access(
+                    &state,
+                    &link,
+                    &headers,
+                    url,
+                    start.elapsed().as_millis() as i64,
+                )
+                .await;
                 return Redirect::temporary(url).into_response();
             }
-            return (StatusCode::NOT_FOUND, "No route or target_url for this link").into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                "No route or target_url for this link",
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!(link_id = %link.id, error = %e, "Failed to lookup route");
@@ -82,17 +93,22 @@ pub async fn redirect(
         }
     }
 
-    let mut ctx = Context::from_request_with_headers(
-        user_agent.as_deref(),
-        ip,
-        &headers_map,
-    );
+    let mut ctx = Context::from_request_with_headers(user_agent.as_deref(), ip, &headers_map);
 
     // 4. 调用路由引擎解析
     match state.engine.resolve(&mut ctx, &route).await {
         Ok(result) => {
             // 5. 记录访问日志（增强版）
-            let _ = log_access(&state, &link, &ctx, &headers, &result.matched_rule, &result.action_taken, result.response_time_ms).await;
+            let _ = log_access(
+                &state,
+                &link,
+                &ctx,
+                &headers,
+                &result.matched_rule,
+                &result.action_taken,
+                result.response_time_ms,
+            )
+            .await;
 
             // 6. 转换为 HTTP 响应
             match result.action_result {
@@ -109,13 +125,16 @@ pub async fn redirect(
                 ActionResult::Custom { content_type, body } => {
                     ([("content-type", content_type.as_str())], body).into_response()
                 }
-                ActionResult::WebhookTriggered { target_url, status } => {
-                    ([("content-type", "application/json")], serde_json::json!({
+                ActionResult::WebhookTriggered { target_url, status } => (
+                    [("content-type", "application/json")],
+                    serde_json::json!({
                         "type": "webhook_triggered",
                         "target_url": target_url,
                         "status": status,
-                    }).to_string()).into_response()
-                }
+                    })
+                    .to_string(),
+                )
+                    .into_response(),
             }
         }
         Err(e) => {
@@ -200,18 +219,18 @@ pub async fn share_redirect(
 ) -> impl IntoResponse {
     // 在实际实现中，应该查询 share_code 对应的文件
     // 这里简化处理，返回一个 JSON 响应告知客户端调用下载 API
-    
+
     tracing::info!(share_code = %share_code, "Share code accessed");
-    
+
     // 查找分享记录
     // 这里应该调用 state.store.get_file_by_share_code(&share_code)
     // 简化处理，返回元信息
-    
+
     let response = serde_json::json!({
         "type": "share_access",
         "share_code": share_code,
         "message": "Use /api/v1/files/download endpoint with this share_code"
     });
-    
+
     (StatusCode::OK, Json(response)).into_response()
 }

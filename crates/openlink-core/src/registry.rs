@@ -8,11 +8,11 @@
 //!
 //! 设计铁律：新功能 = 注册扩展，架构本身永远不需要改。
 
+use crate::error::CoreError;
+use crate::primitives::{ActionResult, Context, HookPhase, Target};
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
-use async_trait::async_trait;
-use crate::primitives::{Context, Target, ActionResult, HookPhase};
-use crate::error::CoreError;
 
 // ─── Action Handler ─────────────────────────────────────────
 
@@ -46,11 +46,7 @@ pub trait ConditionHandler: Send + Sync {
     ///
     /// # Returns
     /// 条件是否满足
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError>;
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError>;
 
     /// 返回此 Handler 对应的 Condition 名称
     fn name(&self) -> &str;
@@ -116,10 +112,7 @@ impl ExtensionRegistry {
     /// 注册 Action 处理器
     ///
     /// 如果同名 Action 已注册，返回错误。
-    pub fn register_action(
-        &mut self,
-        handler: Arc<dyn ActionHandler>,
-    ) -> Result<(), CoreError> {
+    pub fn register_action(&mut self, handler: Arc<dyn ActionHandler>) -> Result<(), CoreError> {
         let name = handler.name().to_string();
         if self.action_handlers.contains_key(&name) {
             return Err(CoreError::ExtensionError(format!(
@@ -162,20 +155,14 @@ impl ExtensionRegistry {
     }
 
     /// 查询 Condition 处理器
-    pub fn get_condition_handler(
-        &self,
-        condition_name: &str,
-    ) -> Option<Arc<dyn ConditionHandler>> {
+    pub fn get_condition_handler(&self, condition_name: &str) -> Option<Arc<dyn ConditionHandler>> {
         self.condition_handlers.get(condition_name).cloned()
     }
 
     // ─── Hook 注册与查询 ────────────────────────────────────
 
     /// 注册 Hook 处理器
-    pub fn register_hook(
-        &mut self,
-        handler: Arc<dyn HookHandler>,
-    ) -> Result<(), CoreError> {
+    pub fn register_hook(&mut self, handler: Arc<dyn HookHandler>) -> Result<(), CoreError> {
         let name = handler.name().to_string();
         tracing::info!(hook = %name, phase = ?handler.phase(), priority = handler.priority(), "Registered hook handler");
         match handler.phase() {
@@ -239,7 +226,11 @@ mod tests {
 
     #[async_trait]
     impl ActionHandler for TestActionHandler {
-        async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        async fn execute(
+            &self,
+            _ctx: &Context,
+            target: &Target,
+        ) -> Result<ActionResult, CoreError> {
             Ok(ActionResult::Json(serde_json::json!({
                 "action": self.name,
                 "params": target.params,

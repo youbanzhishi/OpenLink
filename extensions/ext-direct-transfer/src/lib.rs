@@ -1,7 +1,7 @@
 //! # ext-direct-transfer — 局域网直传 Action 扩展
 //!
 //! 当检测到同 LAN 的 OpenLink 节点时，文件直接 P2P 传输，不走云端。
-//! 
+//!
 //! 传输路由策略：
 //! - `lan_first`（默认）：优先 LAN 直传，无节点则走云中转
 //! - `force_lan`：强制 LAN，节点不可达则失败
@@ -21,12 +21,12 @@
 pub mod discovery;
 pub mod transfer;
 
-pub use discovery::{LanPeer, LanDiscovery};
+pub use discovery::{LanDiscovery, LanPeer};
 
 // ─── Re-exports ─────────────────────────────────────────────
 
+use openlink_core::{CoreError, ExtensionRegistry};
 use std::sync::Arc;
-use openlink_core::{ExtensionRegistry, CoreError};
 
 /// 注册直传扩展到 Extension Registry
 pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
@@ -45,7 +45,7 @@ pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
 }
 
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, ConditionHandler, Context, ActionResult, Target};
+use openlink_core::{ActionHandler, ActionResult, ConditionHandler, Context, Target};
 use serde::{Deserialize, Serialize};
 
 // ─── Transfer 参数 ───────────────────────────────────────────
@@ -136,8 +136,9 @@ impl DirectTransferAction {
     }
 
     fn parse_params(params: &serde_json::Value) -> Result<DirectTransferParams, CoreError> {
-        serde_json::from_value(params.clone())
-            .map_err(|e| CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e)))
+        serde_json::from_value(params.clone()).map_err(|e| {
+            CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e))
+        })
     }
 
     /// 执行 LAN 发现
@@ -153,7 +154,9 @@ impl DirectTransferAction {
         if let Some(ref target_id) = params.target_node_id {
             peers.iter().find(|p| p.node_id.as_str() == target_id)
         } else {
-            peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX))
+            peers
+                .iter()
+                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX))
         }
     }
 
@@ -177,10 +180,20 @@ impl DirectTransferAction {
                 }),
                 cloud_fallback: false,
                 estimated_speed_mbps: Some(100.0), // LAN 典型速度
-                transfer_url: Some(format!("http://{}:{}/openlink/files/{}", p.ip, p.port, params.file_id.as_deref().unwrap_or(""))),
+                transfer_url: Some(format!(
+                    "http://{}:{}/openlink/files/{}",
+                    p.ip,
+                    p.port,
+                    params.file_id.as_deref().unwrap_or("")
+                )),
             },
             None => TransferResponse {
-                response_type: if cloud_fallback { "cloud_transfer" } else { "transfer_unavailable" }.to_string(),
+                response_type: if cloud_fallback {
+                    "cloud_transfer"
+                } else {
+                    "transfer_unavailable"
+                }
+                .to_string(),
                 file_id: params.file_id.clone(),
                 direction: params.direction.clone(),
                 mode: params.mode.clone(),
@@ -227,11 +240,12 @@ impl DirectTransferAction {
                     "file_id": params.file_id,
                     "encrypted": params.encrypted,
                     "estimated_speed_mbps": 100.0,
-                }).to_string(),
+                })
+                .to_string(),
             })
         } else {
             Err(CoreError::ExtensionError(
-                "No LAN peer available and cloud fallback disabled".to_string()
+                "No LAN peer available and cloud fallback disabled".to_string(),
             ))
         }
     }
@@ -245,11 +259,7 @@ impl Default for DirectTransferAction {
 
 #[async_trait]
 impl ActionHandler for DirectTransferAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let params = Self::parse_params(&target.params)?;
 
         tracing::info!(
@@ -265,22 +275,25 @@ impl ActionHandler for DirectTransferAction {
         // 阶段 2：选择最优传输路径
         match params.mode.as_str() {
             "force_cloud" => {
-                return Ok(ActionResult::Json(serde_json::to_value(TransferResponse {
-                    response_type: "cloud_transfer".to_string(),
-                    file_id: params.file_id.clone(),
-                    direction: params.direction.clone(),
-                    mode: "cloud".to_string(),
-                    peer: None,
-                    cloud_fallback: false,
-                    estimated_speed_mbps: None,
-                    transfer_url: None,
-                }).unwrap()));
+                return Ok(ActionResult::Json(
+                    serde_json::to_value(TransferResponse {
+                        response_type: "cloud_transfer".to_string(),
+                        file_id: params.file_id.clone(),
+                        direction: params.direction.clone(),
+                        mode: "cloud".to_string(),
+                        peer: None,
+                        cloud_fallback: false,
+                        estimated_speed_mbps: None,
+                        transfer_url: None,
+                    })
+                    .unwrap(),
+                ));
             }
             "force_lan" => {
                 let peer = Self::select_best_peer(&params, &peers);
                 if peer.is_none() && peers.is_empty() {
                     return Err(CoreError::ExtensionError(
-                        "No LAN peer available (force_lan mode)".to_string()
+                        "No LAN peer available (force_lan mode)".to_string(),
                     ));
                 }
                 self.execute_transfer(&params, peer).await
@@ -293,19 +306,22 @@ impl ActionHandler for DirectTransferAction {
                 } else {
                     // 云中转
                     tracing::info!("No LAN peer, falling back to cloud transfer");
-                    Ok(ActionResult::Json(serde_json::to_value(TransferResponse {
-                        response_type: "cloud_transfer".to_string(),
-                        file_id: params.file_id.clone(),
-                        direction: params.direction.clone(),
-                        mode: "cloud".to_string(),
-                        peer: None,
-                        cloud_fallback: true,
-                        estimated_speed_mbps: None,
-                        transfer_url: Some(format!(
-                            "https://api.openlink.dev/api/v1/files/transfer/{}",
-                            params.file_id.as_deref().unwrap_or("")
-                        )),
-                    }).unwrap()))
+                    Ok(ActionResult::Json(
+                        serde_json::to_value(TransferResponse {
+                            response_type: "cloud_transfer".to_string(),
+                            file_id: params.file_id.clone(),
+                            direction: params.direction.clone(),
+                            mode: "cloud".to_string(),
+                            peer: None,
+                            cloud_fallback: true,
+                            estimated_speed_mbps: None,
+                            transfer_url: Some(format!(
+                                "https://api.openlink.dev/api/v1/files/transfer/{}",
+                                params.file_id.as_deref().unwrap_or("")
+                            )),
+                        })
+                        .unwrap(),
+                    ))
                 }
             }
         }
@@ -331,14 +347,9 @@ pub struct LanPeerCondition;
 
 #[async_trait]
 impl ConditionHandler for LanPeerCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 检查请求是否标记为来自 LAN peer
-        let lan_peer_id = ctx.custom.get("lan_peer_node_id")
-            .and_then(|v| v.as_str());
+        let lan_peer_id = ctx.custom.get("lan_peer_node_id").and_then(|v| v.as_str());
 
         let require_encrypted = params
             .get("require_encrypted")
@@ -349,7 +360,8 @@ impl ConditionHandler for LanPeerCondition {
 
         // 如果要求加密但节点不支持，跳过
         if has_lan_peer && require_encrypted {
-            let supports_encryption = ctx.custom
+            let supports_encryption = ctx
+                .custom
                 .get("lan_peer_encrypted")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
@@ -400,9 +412,27 @@ mod tests {
     #[test]
     fn test_select_best_peer_by_latency() {
         let peers = vec![
-            LanPeer { node_id: "a".into(), ip: "192.168.1.10".into(), port: 8080, latency_ms: Some(10), supports_encryption: true },
-            LanPeer { node_id: "b".into(), ip: "192.168.1.11".into(), port: 8080, latency_ms: Some(5), supports_encryption: true },
-            LanPeer { node_id: "c".into(), ip: "192.168.1.12".into(), port: 8080, latency_ms: Some(20), supports_encryption: false },
+            LanPeer {
+                node_id: "a".into(),
+                ip: "192.168.1.10".into(),
+                port: 8080,
+                latency_ms: Some(10),
+                supports_encryption: true,
+            },
+            LanPeer {
+                node_id: "b".into(),
+                ip: "192.168.1.11".into(),
+                port: 8080,
+                latency_ms: Some(5),
+                supports_encryption: true,
+            },
+            LanPeer {
+                node_id: "c".into(),
+                ip: "192.168.1.12".into(),
+                port: 8080,
+                latency_ms: Some(20),
+                supports_encryption: false,
+            },
         ];
 
         let params = DirectTransferParams {
@@ -423,8 +453,20 @@ mod tests {
     #[test]
     fn test_select_specific_peer() {
         let peers = vec![
-            LanPeer { node_id: "a".into(), ip: "192.168.1.10".into(), port: 8080, latency_ms: Some(10), supports_encryption: true },
-            LanPeer { node_id: "b".into(), ip: "192.168.1.11".into(), port: 8080, latency_ms: Some(5), supports_encryption: true },
+            LanPeer {
+                node_id: "a".into(),
+                ip: "192.168.1.10".into(),
+                port: 8080,
+                latency_ms: Some(10),
+                supports_encryption: true,
+            },
+            LanPeer {
+                node_id: "b".into(),
+                ip: "192.168.1.11".into(),
+                port: 8080,
+                latency_ms: Some(5),
+                supports_encryption: true,
+            },
         ];
 
         let params = DirectTransferParams {

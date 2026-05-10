@@ -203,7 +203,9 @@ impl HealthChecker {
             match component.status {
                 ComponentStatus::Unhealthy => {
                     // Check if this component is critical
-                    let is_critical = self.checks.iter()
+                    let is_critical = self
+                        .checks
+                        .iter()
                         .find(|c| c.name() == component.name)
                         .map(|c| c.is_critical())
                         .unwrap_or(true);
@@ -641,8 +643,12 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_all_healthy() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "cache".to_string() }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "db".to_string(),
+        }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "cache".to_string(),
+        }));
 
         let health = checker.check_all().await;
         assert_eq!(health.status, ComponentStatus::Healthy);
@@ -652,7 +658,9 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_critical_unhealthy() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "cache".to_string() }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "cache".to_string(),
+        }));
         checker.register(Arc::new(AlwaysUnhealthyCheck {
             name: "db".to_string(),
             critical: true,
@@ -665,7 +673,9 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_non_critical_unhealthy() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "db".to_string(),
+        }));
         checker.register(Arc::new(AlwaysUnhealthyCheck {
             name: "cache".to_string(),
             critical: false,
@@ -678,7 +688,9 @@ mod tests {
     #[tokio::test]
     async fn test_readiness_probe() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "db".to_string(),
+        }));
 
         let probe = ReadinessProbe::new(Arc::new(checker));
         let result = probe.check().await;
@@ -728,7 +740,9 @@ mod tests {
     #[tokio::test]
     async fn test_health_endpoint() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
+        checker.register(Arc::new(AlwaysHealthyCheck {
+            name: "db".to_string(),
+        }));
 
         let endpoint = HealthEndpoint::new(Arc::new(checker));
         let health = endpoint.health().await;

@@ -57,13 +57,27 @@ pub struct TrustConfig {
     pub blacklist_threshold: f64,
 }
 
-fn default_decay_rate() -> f64 { 1.0 }
-fn default_inactive_threshold_days() -> i64 { 7 }
-fn default_min_score() -> f64 { 10.0 }
-fn default_success_bonus() -> f64 { 2.0 }
-fn default_failure_penalty() -> f64 { 5.0 }
-fn default_watch_threshold() -> f64 { 30.0 }
-fn default_blacklist_threshold() -> f64 { 15.0 }
+fn default_decay_rate() -> f64 {
+    1.0
+}
+fn default_inactive_threshold_days() -> i64 {
+    7
+}
+fn default_min_score() -> f64 {
+    10.0
+}
+fn default_success_bonus() -> f64 {
+    2.0
+}
+fn default_failure_penalty() -> f64 {
+    5.0
+}
+fn default_watch_threshold() -> f64 {
+    30.0
+}
+fn default_blacklist_threshold() -> f64 {
+    15.0
+}
 
 impl Default for TrustConfig {
     fn default() -> Self {
@@ -137,16 +151,18 @@ impl TrustManager {
         let mut scores = self.scores.write().await;
         let now = chrono::Utc::now().timestamp();
 
-        let score = scores.entry(agent_id.to_string()).or_insert_with(|| TrustScore {
-            agent_id: agent_id.to_string(),
-            score: 50.0, // 默认起始分
-            total_interactions: 0,
-            success_count: 0,
-            failure_count: 0,
-            first_interaction: now,
-            last_interaction: now,
-            computed_at: now,
-        });
+        let score = scores
+            .entry(agent_id.to_string())
+            .or_insert_with(|| TrustScore {
+                agent_id: agent_id.to_string(),
+                score: 50.0, // 默认起始分
+                total_interactions: 0,
+                success_count: 0,
+                failure_count: 0,
+                first_interaction: now,
+                last_interaction: now,
+                computed_at: now,
+            });
 
         score.total_interactions += 1;
         score.success_count += 1;
@@ -180,16 +196,18 @@ impl TrustManager {
         let mut scores = self.scores.write().await;
         let now = chrono::Utc::now().timestamp();
 
-        let score = scores.entry(agent_id.to_string()).or_insert_with(|| TrustScore {
-            agent_id: agent_id.to_string(),
-            score: 50.0,
-            total_interactions: 0,
-            success_count: 0,
-            failure_count: 0,
-            first_interaction: now,
-            last_interaction: now,
-            computed_at: now,
-        });
+        let score = scores
+            .entry(agent_id.to_string())
+            .or_insert_with(|| TrustScore {
+                agent_id: agent_id.to_string(),
+                score: 50.0,
+                total_interactions: 0,
+                success_count: 0,
+                failure_count: 0,
+                first_interaction: now,
+                last_interaction: now,
+                computed_at: now,
+            });
 
         score.total_interactions += 1;
         score.failure_count += 1;
@@ -204,9 +222,19 @@ impl TrustManager {
 
         // 如果分数低于阈值，自动加入观察名单或黑名单
         if current_score <= self.config.blacklist_threshold {
-            self.add_to_list(agent_id, ListType::Blacklist, "Auto-blacklisted due to low trust score").await;
+            self.add_to_list(
+                agent_id,
+                ListType::Blacklist,
+                "Auto-blacklisted due to low trust score",
+            )
+            .await;
         } else if current_score <= self.config.watch_threshold {
-            self.add_to_list(agent_id, ListType::Watchlist, "Auto-watchlisted due to declining trust score").await;
+            self.add_to_list(
+                agent_id,
+                ListType::Watchlist,
+                "Auto-watchlisted due to declining trust score",
+            )
+            .await;
         }
 
         let scores = self.scores.read().await;
@@ -465,18 +493,24 @@ mod tests {
         let manager = TrustManager::default();
 
         // Add to blacklist
-        manager.add_to_list("agent-1", ListType::Blacklist, "bad behavior").await;
+        manager
+            .add_to_list("agent-1", ListType::Blacklist, "bad behavior")
+            .await;
         assert!(!manager.is_trusted("agent-1").await);
 
         // Override with whitelist
-        manager.add_to_list("agent-1", ListType::Whitelist, "admin override").await;
+        manager
+            .add_to_list("agent-1", ListType::Whitelist, "admin override")
+            .await;
         assert!(manager.is_trusted("agent-1").await);
     }
 
     #[tokio::test]
     async fn test_remove_from_list() {
         let manager = TrustManager::default();
-        manager.add_to_list("agent-1", ListType::Blacklist, "test").await;
+        manager
+            .add_to_list("agent-1", ListType::Blacklist, "test")
+            .await;
         assert!(manager.is_blacklisted("agent-1").await);
 
         let removed = manager.remove_from_list("agent-1").await;
@@ -497,10 +531,22 @@ mod tests {
             computed_at: 0,
         };
 
-        assert_eq!(TrustManager::score_to_trust_level(&make_score(90.0)), TrustLevel::Trusted);
-        assert_eq!(TrustManager::score_to_trust_level(&make_score(70.0)), TrustLevel::Verified);
-        assert_eq!(TrustManager::score_to_trust_level(&make_score(50.0)), TrustLevel::Basic);
-        assert_eq!(TrustManager::score_to_trust_level(&make_score(20.0)), TrustLevel::Unverified);
+        assert_eq!(
+            TrustManager::score_to_trust_level(&make_score(90.0)),
+            TrustLevel::Trusted
+        );
+        assert_eq!(
+            TrustManager::score_to_trust_level(&make_score(70.0)),
+            TrustLevel::Verified
+        );
+        assert_eq!(
+            TrustManager::score_to_trust_level(&make_score(50.0)),
+            TrustLevel::Basic
+        );
+        assert_eq!(
+            TrustManager::score_to_trust_level(&make_score(20.0)),
+            TrustLevel::Unverified
+        );
     }
 
     #[tokio::test]
@@ -514,16 +560,19 @@ mod tests {
         // Create a score with old last_interaction
         let mut scores = manager.scores.write().await;
         let now = chrono::Utc::now().timestamp();
-        scores.insert("agent-1".to_string(), TrustScore {
-            agent_id: "agent-1".to_string(),
-            score: 80.0,
-            total_interactions: 10,
-            success_count: 10,
-            failure_count: 0,
-            first_interaction: now - 86400 * 30,
-            last_interaction: now - 86400 * 30, // 30 days ago
-            computed_at: now,
-        });
+        scores.insert(
+            "agent-1".to_string(),
+            TrustScore {
+                agent_id: "agent-1".to_string(),
+                score: 80.0,
+                total_interactions: 10,
+                success_count: 10,
+                failure_count: 0,
+                first_interaction: now - 86400 * 30,
+                last_interaction: now - 86400 * 30, // 30 days ago
+                computed_at: now,
+            },
+        );
         drop(scores);
 
         let count = manager.apply_decay().await;

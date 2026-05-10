@@ -51,7 +51,11 @@ impl AgentRegistry {
     }
 
     /// 更新 Agent 信息
-    pub async fn update(&self, agent_id: &str, update_fn: impl FnOnce(&mut AgentInfo)) -> Result<(), RegistryError> {
+    pub async fn update(
+        &self,
+        agent_id: &str,
+        update_fn: impl FnOnce(&mut AgentInfo),
+    ) -> Result<(), RegistryError> {
         let mut agents = self.agents.write().await;
 
         let info = agents
@@ -63,7 +67,12 @@ impl AgentRegistry {
     }
 
     /// 更新心跳
-    pub async fn update_heartbeat(&self, agent_id: &str, status: AgentStatus, active_tasks: u32) -> Result<(), RegistryError> {
+    pub async fn update_heartbeat(
+        &self,
+        agent_id: &str,
+        status: AgentStatus,
+        active_tasks: u32,
+    ) -> Result<(), RegistryError> {
         let mut agents = self.agents.write().await;
 
         let info = agents
@@ -117,7 +126,11 @@ impl AgentRegistry {
                         .get("tags")
                         .map(|s| s.split(',').map(|t| t.trim()).collect())
                         .unwrap_or_default();
-                    if !query.tags.iter().any(|tag| agent_tags.iter().any(|t| t == tag)) {
+                    if !query
+                        .tags
+                        .iter()
+                        .any(|tag| agent_tags.iter().any(|t| t == tag))
+                    {
                         return false;
                     }
                 }
@@ -143,7 +156,10 @@ impl AgentRegistry {
     /// 获取在线 Agent 数量
     pub async fn online_count(&self) -> usize {
         let agents = self.agents.read().await;
-        agents.values().filter(|a| a.status == AgentStatus::Online).count()
+        agents
+            .values()
+            .filter(|a| a.status == AgentStatus::Online)
+            .count()
     }
 }
 
@@ -291,7 +307,10 @@ mod tests {
         let agent = make_test_agent("agent-1");
 
         registry.register(agent).await.unwrap();
-        registry.update_heartbeat("agent-1", AgentStatus::Busy, 5).await.unwrap();
+        registry
+            .update_heartbeat("agent-1", AgentStatus::Busy, 5)
+            .await
+            .unwrap();
 
         let updated = registry.get("agent-1").await.unwrap();
         assert_eq!(updated.status, AgentStatus::Busy);

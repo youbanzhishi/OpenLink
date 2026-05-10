@@ -95,8 +95,8 @@ impl PluginDistribution {
 
 /// 验证插件 URL
 pub fn validate_plugin_url(url: &str) -> bool {
-    url.starts_with("https://") &&
-    (url.ends_with(".vst3") || url.ends_with(".clap") || url.ends_with(".jsfx"))
+    url.starts_with("https://")
+        && (url.ends_with(".vst3") || url.ends_with(".clap") || url.ends_with(".jsfx"))
 }
 
 #[cfg(test)]

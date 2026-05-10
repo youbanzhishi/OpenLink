@@ -24,13 +24,10 @@
 //! }
 //! ```
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{
-    ActionHandler, ExtensionRegistry, Context, CoreError,
-    ActionResult, Target,
-};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 // ─── Workflow Action ────────────────────────────────────────
 
@@ -93,10 +90,12 @@ impl WorkflowAction {
         };
 
         // 查找 Action Handler
-        let handler = self.registry.get_action_handler(&step.action)
-            .ok_or_else(|| CoreError::ExtensionError(format!(
-                "Action handler not found: {}", step.action
-            )))?;
+        let handler = self
+            .registry
+            .get_action_handler(&step.action)
+            .ok_or_else(|| {
+                CoreError::ExtensionError(format!("Action handler not found: {}", step.action))
+            })?;
 
         handler.execute(ctx, &target).await
     }
@@ -151,11 +150,7 @@ impl WorkflowAction {
 
 #[async_trait]
 impl ActionHandler for WorkflowAction {
-    async fn execute(
-        &self,
-        ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let definition = Self::parse_workflow(&target.params)?;
         self.execute_workflow(ctx, &definition).await
     }
@@ -246,13 +241,11 @@ mod tests {
     #[test]
     fn test_workflow_definition_serialization() {
         let workflow = WorkflowDefinition {
-            steps: vec![
-                WorkflowStep {
-                    action: "redirect".to_string(),
-                    params: serde_json::json!({"url": "https://example.com"}),
-                    continue_on_error: false,
-                },
-            ],
+            steps: vec![WorkflowStep {
+                action: "redirect".to_string(),
+                params: serde_json::json!({"url": "https://example.com"}),
+                continue_on_error: false,
+            }],
             error_step: None,
             timeout_ms: 10000,
         };

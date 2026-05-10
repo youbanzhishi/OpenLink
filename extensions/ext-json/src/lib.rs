@@ -5,9 +5,9 @@
 //!
 //! 设计验证：新功能 = 注册扩展，架构本身永远不需要改。
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, ExtensionRegistry, Context, Target, ActionResult, CoreError};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use std::sync::Arc;
 
 /// JSON 数据响应 Action Handler
 ///

@@ -422,12 +422,10 @@ impl RateLimitConfig {
             RateLimitAlgorithm::TokenBucket => {
                 Arc::new(TokenBucketLimiter::new(self.capacity, self.refill_rate))
             }
-            RateLimitAlgorithm::SlidingWindow => {
-                Arc::new(SlidingWindowLimiter::new(
-                    Duration::from_secs(self.window_secs),
-                    self.max_requests,
-                ))
-            }
+            RateLimitAlgorithm::SlidingWindow => Arc::new(SlidingWindowLimiter::new(
+                Duration::from_secs(self.window_secs),
+                self.max_requests,
+            )),
         }
     }
 
@@ -506,13 +504,23 @@ impl RateLimitMiddleware {
     }
 
     /// 获取限流状态（用于响应头）
-    pub async fn get_headers(&self, ip: Option<&str>, api_key: Option<&str>) -> HashMap<String, String> {
+    pub async fn get_headers(
+        &self,
+        ip: Option<&str>,
+        api_key: Option<&str>,
+    ) -> HashMap<String, String> {
         let key = self.config.extract_key(ip, api_key);
         let status = self.limiter.status(&key).await;
         let mut headers = HashMap::new();
         headers.insert("X-RateLimit-Limit".to_string(), status.limit.to_string());
-        headers.insert("X-RateLimit-Remaining".to_string(), status.remaining.to_string());
-        headers.insert("X-RateLimit-Reset".to_string(), format!("{:.0}", status.reset_after_secs));
+        headers.insert(
+            "X-RateLimit-Remaining".to_string(),
+            status.remaining.to_string(),
+        );
+        headers.insert(
+            "X-RateLimit-Reset".to_string(),
+            format!("{:.0}", status.reset_after_secs),
+        );
         headers
     }
 
@@ -581,7 +589,10 @@ impl RateLimiter for CompositeRateLimiter {
         };
 
         let min_remaining = statuses.iter().map(|s| s.remaining).min().unwrap_or(0);
-        let max_reset = statuses.iter().map(|s| s.reset_after_secs).fold(0.0f64, f64::max);
+        let max_reset = statuses
+            .iter()
+            .map(|s| s.reset_after_secs)
+            .fold(0.0f64, f64::max);
         let min_limit = statuses.iter().map(|s| s.limit).min().unwrap_or(0);
 
         RateLimitStatus {

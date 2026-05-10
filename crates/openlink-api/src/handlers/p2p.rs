@@ -4,12 +4,8 @@
 //! - GET /api/v1/p2p/status — P2P 连接状态
 //! - POST /api/v1/p2p/connect — 建立P2P连接
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Response,
-};
 use axum::response::IntoResponse;
+use axum::{extract::State, http::StatusCode, response::Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -105,15 +101,13 @@ pub async fn get_status(_state: State<Arc<AppState>>) -> Response {
     let response = P2pStatusResponse {
         local_node_id: "local-node".to_string(),
         active_connections: 1,
-        connections: vec![
-            ConnectionEntry {
-                peer_id: "edge-cn-east-1".to_string(),
-                state: "connected".to_string(),
-                latency_ms: Some(15.0),
-                quality_score: Some(85.0),
-                bytes_transferred: 1_048_576,
-            },
-        ],
+        connections: vec![ConnectionEntry {
+            peer_id: "edge-cn-east-1".to_string(),
+            state: "connected".to_string(),
+            latency_ms: Some(15.0),
+            quality_score: Some(85.0),
+            bytes_transferred: 1_048_576,
+        }],
         nat_type: "full_cone".to_string(),
         routing_table_size: 3,
     };
@@ -137,7 +131,10 @@ pub async fn connect(
         peer_id: req.peer_node_id.clone(),
         strategy: mode.to_string(),
         estimated_latency_ms: Some(20.0),
-        message: format!("P2P connection to {} established via {}", req.peer_node_id, mode),
+        message: format!(
+            "P2P connection to {} established via {}",
+            req.peer_node_id, mode
+        ),
     };
 
     Response::builder()

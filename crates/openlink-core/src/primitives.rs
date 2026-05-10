@@ -4,8 +4,8 @@
 //! 这些原语是架构的基石，永不需要新增。
 //! 设计铁律：核心层零业务逻辑，路由引擎不知道"短链"是什么。
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// 全局唯一标识
 pub type LinkID = String;
@@ -133,10 +133,7 @@ pub struct Context {
 impl Context {
     /// 从 HTTP 请求构建基础 Context
     /// Phase 2: 增强 User-Agent 解析，识别 curl/Agent 等请求类型
-    pub fn from_request(
-        user_agent: Option<&str>,
-        ip: Option<&str>,
-    ) -> Self {
+    pub fn from_request(user_agent: Option<&str>, ip: Option<&str>) -> Self {
         let identity_type = user_agent
             .map(|ua| detect_identity_type(ua))
             .unwrap_or(IdentityType::Human);
@@ -443,22 +440,13 @@ pub struct Hook {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ActionResult {
     /// 重定向结果
-    Redirect {
-        url: String,
-        status_code: u16,
-    },
+    Redirect { url: String, status_code: u16 },
     /// JSON 数据响应
     Json(serde_json::Value),
     /// 自定义响应
-    Custom {
-        content_type: String,
-        body: String,
-    },
+    Custom { content_type: String, body: String },
     /// Webhook 已触发（Phase 2: 异步执行，仅记录触发状态）
-    WebhookTriggered {
-        target_url: String,
-        status: String,
-    },
+    WebhookTriggered { target_url: String, status: String },
 }
 
 // ─── Extension metadata (for storage) ──────────────────────
@@ -585,7 +573,10 @@ mod tests {
     #[test]
     fn test_action_as_str() {
         assert_eq!(Action::Redirect.as_str(), "redirect");
-        assert_eq!(Action::Custom("my-action".to_string()).as_str(), "my-action");
+        assert_eq!(
+            Action::Custom("my-action".to_string()).as_str(),
+            "my-action"
+        );
         assert_eq!(Action::JsonData.as_str(), "json_data");
     }
 
@@ -593,17 +584,32 @@ mod tests {
     fn test_detect_identity_type() {
         assert_eq!(detect_identity_type("curl/7.88.1"), IdentityType::Service);
         assert_eq!(detect_identity_type("wget/1.21.4"), IdentityType::Service);
-        assert_eq!(detect_identity_type("python-requests/2.31.0"), IdentityType::Service);
-        assert_eq!(detect_identity_type("Mozilla/5.0 (Windows NT 10.0)"), IdentityType::Human);
+        assert_eq!(
+            detect_identity_type("python-requests/2.31.0"),
+            IdentityType::Service
+        );
+        assert_eq!(
+            detect_identity_type("Mozilla/5.0 (Windows NT 10.0)"),
+            IdentityType::Human
+        );
         assert_eq!(detect_identity_type("OpenAI/1.0"), IdentityType::Agent);
         assert_eq!(detect_identity_type("ClaudeBot/1.0"), IdentityType::Agent);
     }
 
     #[test]
     fn test_detect_device_type() {
-        assert_eq!(detect_device_type("curl/7.88.1"), Some("server".to_string()));
-        assert_eq!(detect_device_type("Mozilla/5.0 (iPhone)"), Some("mobile".to_string()));
-        assert_eq!(detect_device_type("Mozilla/5.0 (Windows NT 10.0)"), Some("desktop".to_string()));
+        assert_eq!(
+            detect_device_type("curl/7.88.1"),
+            Some("server".to_string())
+        );
+        assert_eq!(
+            detect_device_type("Mozilla/5.0 (iPhone)"),
+            Some("mobile".to_string())
+        );
+        assert_eq!(
+            detect_device_type("Mozilla/5.0 (Windows NT 10.0)"),
+            Some("desktop".to_string())
+        );
     }
 
     #[test]

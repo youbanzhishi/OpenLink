@@ -105,7 +105,9 @@ pub struct ShareProjectApiRequest {
     pub ttl_secs: u64,
 }
 
-fn default_permission() -> String { "public".to_string() }
+fn default_permission() -> String {
+    "public".to_string()
+}
 
 /// 项目分享响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,7 +196,10 @@ pub async fn share_project(
     tracing::info!(project_id = %req.project_id, "Sharing project");
 
     let deeplink = if req.project_url.starts_with("http") {
-        format!("opendaw://project?url={}", urlencoding::encode(&req.project_url))
+        format!(
+            "opendaw://project?url={}",
+            urlencoding::encode(&req.project_url)
+        )
     } else {
         format!("opendaw://project/{}", req.project_id)
     };

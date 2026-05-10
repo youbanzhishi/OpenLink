@@ -9,14 +9,16 @@
 //! - **WorkflowTemplate**: 预设编排模板
 //! - **ResultAggregator**: 结果聚合和回调
 
+pub mod aggregator;
 pub mod dag;
 pub mod executor;
 pub mod parallel_executor;
 pub mod template;
-pub mod aggregator;
 
-pub use dag::{Dag, DagNode, DagEdge, EdgeCondition, NodeId};
-pub use executor::{DagExecutor, ExecutionResult, ExecutionStatus, NodeResult, TaskExecutor, SimpleTaskExecutor};
-pub use parallel_executor::{ParallelDagExecutor, ParallelConfig};
-pub use template::{WorkflowTemplate, TemplateRegistry};
-pub use aggregator::{ResultAggregator, AggregationStrategy};
+pub use aggregator::{AggregationStrategy, ResultAggregator};
+pub use dag::{Dag, DagEdge, DagNode, EdgeCondition, NodeId};
+pub use executor::{
+    DagExecutor, ExecutionResult, ExecutionStatus, NodeResult, SimpleTaskExecutor, TaskExecutor,
+};
+pub use parallel_executor::{ParallelConfig, ParallelDagExecutor};
+pub use template::{TemplateRegistry, WorkflowTemplate};

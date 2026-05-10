@@ -51,15 +51,13 @@ impl LanDiscovery {
         // 测试实现：返回模拟数据
         #[cfg(test)]
         {
-            return vec![
-                LanPeer {
-                    node_id: "openlink-node-1".to_string(),
-                    ip: "192.168.1.100".to_string(),
-                    port: 8080,
-                    latency_ms: Some(5),
-                    supports_encryption: true,
-                },
-            ];
+            return vec![LanPeer {
+                node_id: "openlink-node-1".to_string(),
+                ip: "192.168.1.100".to_string(),
+                port: 8080,
+                latency_ms: Some(5),
+                supports_encryption: true,
+            }];
         }
 
         #[cfg(not(test))]
@@ -119,6 +117,9 @@ mod tests {
             supports_encryption: true,
         };
         assert_eq!(peer.file_url(), "http://192.168.1.50:8080/openlink/files");
-        assert_eq!(peer.transfer_url(), "http://192.168.1.50:8080/openlink/transfer");
+        assert_eq!(
+            peer.transfer_url(),
+            "http://192.168.1.50:8080/openlink/transfer"
+        );
     }
 }

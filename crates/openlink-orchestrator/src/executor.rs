@@ -2,7 +2,7 @@
 //!
 //! 按拓扑顺序执行 DAG，支持并行执行无依赖的节点。
 
-use crate::dag::{Dag, DagNode, EdgeCondition, DagError, NodeId};
+use crate::dag::{Dag, DagError, DagNode, EdgeCondition, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -173,12 +173,11 @@ impl DagExecutor {
             let mut last_error = String::new();
 
             loop {
-                match self.executor.execute_task(
-                    &node.agent_id,
-                    &node.task_type,
-                    &node.params,
-                    &inputs,
-                ).await {
+                match self
+                    .executor
+                    .execute_task(&node.agent_id, &node.task_type, &node.params, &inputs)
+                    .await
+                {
                     Ok(output) => {
                         let elapsed = node_start.elapsed().as_millis() as u64;
                         node_results.insert(
@@ -278,11 +277,7 @@ impl DagExecutor {
         }
 
         // 获取所有入边
-        let incoming_edges: Vec<_> = dag
-            .edges
-            .iter()
-            .filter(|e| e.to == node_id)
-            .collect();
+        let incoming_edges: Vec<_> = dag.edges.iter().filter(|e| e.to == node_id).collect();
 
         for edge in &incoming_edges {
             let pred_completed = completed.contains(&edge.from);

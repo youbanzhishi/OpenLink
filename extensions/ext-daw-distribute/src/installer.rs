@@ -51,7 +51,9 @@ pub struct InstallConfig {
     pub expected_checksum: Option<String>,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 impl Default for InstallConfig {
     fn default() -> Self {
@@ -123,7 +125,9 @@ impl PluginInstaller {
             plugin_id: plugin_id.clone(),
         };
 
-        let result = self.do_install(&registration, config, &mut record, progress_callback).await;
+        let result = self
+            .do_install(&registration, config, &mut record, progress_callback)
+            .await;
 
         match result {
             Ok(install_path) => {
@@ -140,7 +144,12 @@ impl PluginInstaller {
                 }
                 record.registered = true;
 
-                self.report_progress(progress_callback, InstallStep::Completed, 1.0, "Installation complete");
+                self.report_progress(
+                    progress_callback,
+                    InstallStep::Completed,
+                    1.0,
+                    "Installation complete",
+                );
 
                 InstallResult {
                     plugin_id,
@@ -153,7 +162,12 @@ impl PluginInstaller {
                 // Rollback on failure
                 self.rollback(&record, config).await;
 
-                self.report_progress(progress_callback, InstallStep::Failed, 0.0, &format!("Failed: {}", e));
+                self.report_progress(
+                    progress_callback,
+                    InstallStep::Failed,
+                    0.0,
+                    &format!("Failed: {}", e),
+                );
 
                 InstallResult {
                     plugin_id,
@@ -172,55 +186,98 @@ impl PluginInstaller {
         record: &mut InstallRecord,
         progress_callback: Option<&ProgressCallback>,
     ) -> Result<PathBuf, String> {
-        let download_url = registration.download_url.as_ref()
+        let download_url = registration
+            .download_url
+            .as_ref()
             .ok_or_else(|| "No download URL".to_string())?;
 
         // Step 1: Download
-        self.report_progress(progress_callback, InstallStep::Downloading, 0.0, "Downloading plugin");
-        let temp_dir = config.temp_dir.clone()
+        self.report_progress(
+            progress_callback,
+            InstallStep::Downloading,
+            0.0,
+            "Downloading plugin",
+        );
+        let temp_dir = config
+            .temp_dir
+            .clone()
             .unwrap_or_else(|| PathBuf::from("/tmp/openlink-downloads"));
-        
+
         if let Err(e) = tokio::fs::create_dir_all(&temp_dir).await {
             return Err(format!("Failed to create temp dir: {}", e));
         }
         record.created_dirs.push(temp_dir.clone());
 
         let temp_file = temp_dir.join(format!("{}.download", registration.id));
-        
-        let response = self.http_client.get(download_url)
-            .send().await
+
+        let response = self
+            .http_client
+            .get(download_url)
+            .send()
+            .await
             .map_err(|e| format!("Download failed: {}", e))?;
 
         if !response.status().is_success() {
             return Err(format!("Download failed: HTTP {}", response.status()));
         }
 
-        let bytes = response.bytes().await
+        let bytes = response
+            .bytes()
+            .await
             .map_err(|e| format!("Download read failed: {}", e))?;
 
-        tokio::fs::write(&temp_file, &bytes).await
+        tokio::fs::write(&temp_file, &bytes)
+            .await
             .map_err(|e| format!("Write temp file failed: {}", e))?;
         record.temp_file = Some(temp_file.clone());
 
-        self.report_progress(progress_callback, InstallStep::Downloading, 1.0, "Download complete");
+        self.report_progress(
+            progress_callback,
+            InstallStep::Downloading,
+            1.0,
+            "Download complete",
+        );
 
         // Step 2: Verify checksum
         if config.verify_checksum {
-            self.report_progress(progress_callback, InstallStep::Verifying, 0.0, "Verifying checksum");
+            self.report_progress(
+                progress_callback,
+                InstallStep::Verifying,
+                0.0,
+                "Verifying checksum",
+            );
             if let Some(ref expected) = config.expected_checksum {
                 let actual = sha256_hex(&bytes);
                 if actual != *expected {
-                    return Err(format!("Checksum mismatch: expected {}, got {}", expected, actual));
+                    return Err(format!(
+                        "Checksum mismatch: expected {}, got {}",
+                        expected, actual
+                    ));
                 }
             }
-            self.report_progress(progress_callback, InstallStep::Verifying, 1.0, "Checksum verified");
+            self.report_progress(
+                progress_callback,
+                InstallStep::Verifying,
+                1.0,
+                "Checksum verified",
+            );
         }
 
         // Step 3: Extract (simulate - just copy for now)
-        self.report_progress(progress_callback, InstallStep::Extracting, 0.0, "Extracting plugin");
+        self.report_progress(
+            progress_callback,
+            InstallStep::Extracting,
+            0.0,
+            "Extracting plugin",
+        );
 
         // Step 4: Install
-        self.report_progress(progress_callback, InstallStep::Installing, 0.0, "Installing plugin");
+        self.report_progress(
+            progress_callback,
+            InstallStep::Installing,
+            0.0,
+            "Installing plugin",
+        );
         let install_dir = config.install_dir.join(registration.format.extension());
         if let Err(e) = tokio::fs::create_dir_all(&install_dir).await {
             return Err(format!("Failed to create install dir: {}", e));
@@ -229,14 +286,25 @@ impl PluginInstaller {
 
         let ext = registration.format.extension();
         let install_path = install_dir.join(format!("{}.{}", registration.id, ext));
-        tokio::fs::copy(&temp_file, &install_path).await
+        tokio::fs::copy(&temp_file, &install_path)
+            .await
             .map_err(|e| format!("Install copy failed: {}", e))?;
         record.installed_files.push(install_path.clone());
 
-        self.report_progress(progress_callback, InstallStep::Installing, 1.0, "Plugin installed");
+        self.report_progress(
+            progress_callback,
+            InstallStep::Installing,
+            1.0,
+            "Plugin installed",
+        );
 
         // Step 5: Register
-        self.report_progress(progress_callback, InstallStep::Registering, 0.0, "Registering plugin");
+        self.report_progress(
+            progress_callback,
+            InstallStep::Registering,
+            0.0,
+            "Registering plugin",
+        );
 
         Ok(install_path)
     }
@@ -284,7 +352,7 @@ impl PluginInstaller {
 
 /// Calculate SHA256 hex digest
 fn sha256_hex(data: &[u8]) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(data);
     let result = hasher.finalize();

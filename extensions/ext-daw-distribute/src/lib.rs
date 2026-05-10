@@ -8,17 +8,16 @@
 //! - **PluginInstaller**: 一键安装（下载→校验→安装→回滚）
 //! - **ProjectShare**: 项目分享（打包+深链接+权限控制）
 
-pub mod plugin;
 pub mod daw_link;
-pub mod registry;
 pub mod installer;
+pub mod plugin;
+pub mod registry;
 pub mod share;
-
 
 // ─── Re-exports ─────────────────────────────────────────────
 
+use openlink_core::{CoreError, ExtensionRegistry};
 use std::sync::Arc;
-use openlink_core::{ExtensionRegistry, CoreError};
 
 /// 注册 DAW 分发扩展到 Extension Registry
 pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
@@ -35,7 +34,7 @@ pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
 }
 
 use async_trait::async_trait;
-use openlink_core::{ActionHandler, ConditionHandler, Context, ActionResult, Target};
+use openlink_core::{ActionHandler, ActionResult, ConditionHandler, Context, Target};
 use serde::{Deserialize, Serialize};
 
 // ─── DAW 分发参数 ───────────────────────────────────────────
@@ -122,7 +121,9 @@ impl DawDistributeAction {
         &self,
         params: &DawDistributeParams,
     ) -> Result<ActionResult, CoreError> {
-        let plugin = params.plugin.as_ref()
+        let plugin = params
+            .plugin
+            .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("plugin info required".to_string()))?;
 
         tracing::info!(
@@ -153,15 +154,17 @@ impl DawDistributeAction {
         &self,
         params: &DawDistributeParams,
     ) -> Result<ActionResult, CoreError> {
-        let script_name = params.jsfx_name.as_deref()
-            .unwrap_or("Untitled.jsfx");
-        let content = params.jsfx_content.as_ref()
+        let script_name = params.jsfx_name.as_deref().unwrap_or("Untitled.jsfx");
+        let content = params
+            .jsfx_content
+            .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("jsfx_content required".to_string()))?;
 
         // 验证 JSFX 内容（基本检查）
-        if !content.contains("@init") && !content.contains("@sample") && !content.contains("@block") {
+        if !content.contains("@init") && !content.contains("@sample") && !content.contains("@block")
+        {
             return Err(CoreError::ExtensionError(
-                "Invalid JSFX content: missing @init/@sample/@block".to_string()
+                "Invalid JSFX content: missing @init/@sample/@block".to_string(),
             ));
         }
 
@@ -190,9 +193,13 @@ impl DawDistributeAction {
         &self,
         params: &DawDistributeParams,
     ) -> Result<ActionResult, CoreError> {
-        let project_url = params.project_url.as_ref()
+        let project_url = params
+            .project_url
+            .as_ref()
             .or(params.project_id.as_ref())
-            .ok_or_else(|| CoreError::ExtensionError("project_url or project_id required".to_string()))?;
+            .ok_or_else(|| {
+                CoreError::ExtensionError("project_url or project_id required".to_string())
+            })?;
 
         tracing::info!(
             project = %project_url,
@@ -243,7 +250,9 @@ impl DawDistributeAction {
         &self,
         params: &DawDistributeParams,
     ) -> Result<ActionResult, CoreError> {
-        let plugin = params.plugin.as_ref()
+        let plugin = params
+            .plugin
+            .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("plugin info required".to_string()))?;
 
         tracing::info!(
@@ -269,11 +278,7 @@ impl Default for DawDistributeAction {
 
 #[async_trait]
 impl ActionHandler for DawDistributeAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let params = DawDistributeParams::from_json(&target.params)?;
 
         tracing::info!(operation = ?params.operation, "DawDistribute action");
@@ -299,17 +304,15 @@ pub struct DawDeviceCondition;
 
 #[async_trait]
 impl ConditionHandler for DawDeviceCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 检查请求是否来自 DAW 设备
         let device_type = ctx.device.device_type.as_deref().unwrap_or("");
         let is_daw = device_type == "daw" || device_type == "audio_workstation";
 
         // 检查自定义字段
-        let has_daw_marker = ctx.custom.get("is_daw_device")
+        let has_daw_marker = ctx
+            .custom
+            .get("is_daw_device")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
@@ -317,11 +320,15 @@ impl ConditionHandler for DawDeviceCondition {
         let allowed_devices: Vec<String> = params
             .get("allowed_devices")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default();
 
-        let device_matches = allowed_devices.is_empty()
-            || allowed_devices.contains(&ctx.identity.id);
+        let device_matches =
+            allowed_devices.is_empty() || allowed_devices.contains(&ctx.identity.id);
 
         Ok((is_daw || has_daw_marker) && device_matches)
     }

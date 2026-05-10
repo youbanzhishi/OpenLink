@@ -4,8 +4,8 @@
 
 use crate::nat::{NatInfo, NatType};
 use crate::stun::StunClient;
-use openlink_core::{CoreError, ActionHandler, Context, ActionResult, Target};
 use async_trait::async_trait;
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, Target};
 use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
 
@@ -49,23 +49,23 @@ pub struct P2pTransferParams {
     /// 文件 ID
     #[serde(default)]
     pub file_id: Option<String>,
-    
+
     /// 传输方向
     #[serde(default = "default_direction")]
     pub direction: String,
-    
+
     /// 传输模式
     #[serde(default = "default_mode")]
     pub mode: String,
-    
+
     /// 目标节点 ID
     #[serde(default)]
     pub peer_node_id: Option<String>,
-    
+
     /// 传输令牌（用于验证）
     #[serde(default)]
     pub transfer_token: Option<String>,
-    
+
     /// 传输超时（秒）
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
@@ -101,28 +101,28 @@ pub struct P2pResponse {
     /// 响应类型
     #[serde(rename = "type")]
     pub response_type: String,
-    
+
     /// 使用的传输模式
     pub mode: String,
-    
+
     /// 文件 ID
     pub file_id: Option<String>,
-    
+
     /// 节点信息
     pub peer: Option<PeerInfo>,
-    
+
     /// 是否降级
     pub fallback: bool,
-    
+
     /// 降级原因
     pub fallback_reason: Option<String>,
-    
+
     /// 预估速度 (Mbps)
     pub estimated_speed_mbps: Option<f64>,
-    
+
     /// 传输 URL 或指令
     pub transfer_url: Option<String>,
-    
+
     /// NAT 信息
     pub nat_info: Option<NatInfo>,
 }
@@ -149,18 +149,18 @@ impl P2pTransferAction {
             nat_info: None,
         }
     }
-    
+
     fn parse_params(params: &serde_json::Value) -> Result<P2pTransferParams, CoreError> {
         serde_json::from_value(params.clone())
             .map_err(|e| CoreError::ExtensionError(format!("Invalid P2P transfer params: {}", e)))
     }
-    
+
     /// 获取/检测 NAT 信息
     fn get_nat_info(&mut self) -> NatInfo {
         if let Some(ref info) = self.nat_info {
             return info.clone();
         }
-        
+
         // 创建 UDP socket 用于检测
         let socket = match UdpSocket::bind("0.0.0.0:0") {
             Ok(s) => s,
@@ -168,16 +168,16 @@ impl P2pTransferAction {
                 return NatInfo::unknown("0.0.0.0", 0);
             }
         };
-        
+
         let info = self.stun_client.detect_nat_type(&socket);
         self.nat_info = Some(info.clone());
         info
     }
-    
+
     /// 选择传输路径
     fn select_transfer_path(&self, params: &P2pTransferParams) -> P2pResponse {
         let mode = params.parse_mode();
-        
+
         match mode {
             TransferMode::Direct => {
                 // 直连模式：假设 peer 在同一 LAN
@@ -195,7 +195,10 @@ impl P2pTransferAction {
                     fallback: false,
                     fallback_reason: None,
                     estimated_speed_mbps: Some(1000.0),
-                    transfer_url: Some(format!("udp://peer-lan-address:{}", params.peer_node_id.as_deref().unwrap_or(""))),
+                    transfer_url: Some(format!(
+                        "udp://peer-lan-address:{}",
+                        params.peer_node_id.as_deref().unwrap_or("")
+                    )),
                     nat_info: None,
                 }
             }
@@ -229,8 +232,10 @@ impl P2pTransferAction {
                     fallback: false,
                     fallback_reason: None,
                     estimated_speed_mbps: Some(10.0),
-                    transfer_url: Some(format!("https://relay.openlink.dev/transfer/{}", 
-                        params.file_id.as_deref().unwrap_or(""))),
+                    transfer_url: Some(format!(
+                        "https://relay.openlink.dev/transfer/{}",
+                        params.file_id.as_deref().unwrap_or("")
+                    )),
                     nat_info: None,
                 }
             }
@@ -244,8 +249,10 @@ impl P2pTransferAction {
                     fallback: false,
                     fallback_reason: None,
                     estimated_speed_mbps: Some(50.0),
-                    transfer_url: Some(format!("https://api.openlink.dev/api/v1/files/transfer/{}",
-                        params.file_id.as_deref().unwrap_or(""))),
+                    transfer_url: Some(format!(
+                        "https://api.openlink.dev/api/v1/files/transfer/{}",
+                        params.file_id.as_deref().unwrap_or("")
+                    )),
                     nat_info: None,
                 }
             }
@@ -277,7 +284,7 @@ impl Default for P2pTransferAction {
 impl ActionHandler for P2pTransferAction {
     async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let params = Self::parse_params(&target.params)?;
-        
+
         tracing::info!(
             file_id = ?params.file_id,
             direction = %params.direction,
@@ -285,16 +292,16 @@ impl ActionHandler for P2pTransferAction {
             peer = ?params.peer_node_id,
             "P2P transfer action"
         );
-        
+
         let mode = params.parse_mode();
-        
+
         // 根据模式生成响应
         let response = match mode {
             TransferMode::Auto => {
                 // 自动模式：检测 NAT 并选择最优路径
                 let mut action = Self::new(); // 创建新的以避免缓存问题
                 let nat_info = action.get_nat_info();
-                
+
                 if nat_info.nat_type == NatType::Open {
                     P2pResponse {
                         response_type: "direct_transfer".to_string(),
@@ -341,8 +348,10 @@ impl ActionHandler for P2pTransferAction {
                         fallback: true,
                         fallback_reason: Some("Symmetric NAT detected, using relay".to_string()),
                         estimated_speed_mbps: Some(10.0),
-                        transfer_url: Some(format!("https://relay.openlink.dev/transfer/{}",
-                            params.file_id.as_deref().unwrap_or(""))),
+                        transfer_url: Some(format!(
+                            "https://relay.openlink.dev/transfer/{}",
+                            params.file_id.as_deref().unwrap_or("")
+                        )),
                         nat_info: Some(nat_info),
                     }
                 }
@@ -356,10 +365,10 @@ impl ActionHandler for P2pTransferAction {
                 resp
             }
         };
-        
+
         Ok(ActionResult::Json(serde_json::to_value(&response).unwrap()))
     }
-    
+
     fn name(&self) -> &str {
         "p2p_transfer"
     }
@@ -368,7 +377,7 @@ impl ActionHandler for P2pTransferAction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_parse_mode() {
         let params = P2pTransferParams {
@@ -381,7 +390,7 @@ mod tests {
         };
         assert_eq!(params.parse_mode(), TransferMode::P2p);
     }
-    
+
     #[test]
     fn test_parse_mode_auto() {
         let params = P2pTransferParams {
@@ -394,7 +403,7 @@ mod tests {
         };
         assert_eq!(params.parse_mode(), TransferMode::Auto);
     }
-    
+
     #[test]
     fn test_transfer_action_creation() {
         let action = P2pTransferAction::new();

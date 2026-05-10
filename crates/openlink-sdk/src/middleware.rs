@@ -24,7 +24,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-
 use parking_lot::Mutex;
 
 // ─── Middleware Trait ──────────────────────────────────────────────────────
@@ -106,10 +105,12 @@ impl Middleware for AuthMiddleware {
             format!("Bearer {}", self.api_key),
         );
         if let Some(ref agent_id) = self.agent_id {
-            ctx.headers.insert("X-Agent-ID".to_string(), agent_id.clone());
+            ctx.headers
+                .insert("X-Agent-ID".to_string(), agent_id.clone());
         }
         if let Some(ref device_id) = self.device_id {
-            ctx.headers.insert("X-Device-ID".to_string(), device_id.clone());
+            ctx.headers
+                .insert("X-Device-ID".to_string(), device_id.clone());
         }
     }
 
@@ -158,12 +159,7 @@ impl Middleware for LoggingMiddleware {
         } else {
             String::new()
         };
-        tracing::info!(
-            "[SDK] -> {} {} {}",
-            ctx.method,
-            ctx.url,
-            body_info
-        );
+        tracing::info!("[SDK] -> {} {} {}", ctx.method, ctx.url, body_info);
     }
 
     fn after_response(&self, ctx: &ResponseContext) {

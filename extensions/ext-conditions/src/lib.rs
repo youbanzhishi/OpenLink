@@ -10,9 +10,9 @@
 //!
 //! 设计验证：新功能 = 注册扩展，架构本身永远不需要改。
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{ConditionHandler, ExtensionRegistry, Context, CoreError};
+use openlink_core::{ConditionHandler, Context, CoreError, ExtensionRegistry};
+use std::sync::Arc;
 
 // ─── HeaderMatch Condition ─────────────────────────────────
 
@@ -29,21 +29,14 @@ struct HeaderMatchCondition;
 
 #[async_trait]
 impl ConditionHandler for HeaderMatchCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         let header_name = params
             .get("header")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_lowercase();
 
-        let pattern = params
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let pattern = params.get("pattern").and_then(|v| v.as_str()).unwrap_or("");
 
         let mode = params
             .get("mode")
@@ -78,12 +71,10 @@ impl ConditionHandler for HeaderMatchCondition {
         });
 
         match header_value {
-            Some(val) => {
-                match mode.as_str() {
-                    "exact" => Ok(val == pattern),
-                    _ => Ok(val.to_lowercase().contains(&pattern.to_lowercase())),
-                }
-            }
+            Some(val) => match mode.as_str() {
+                "exact" => Ok(val == pattern),
+                _ => Ok(val.to_lowercase().contains(&pattern.to_lowercase())),
+            },
             None => Ok(false),
         }
     }
@@ -107,23 +98,19 @@ struct GeoMatchCondition;
 
 #[async_trait]
 impl ConditionHandler for GeoMatchCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 国家匹配
         if let Some(country) = params.get("country").and_then(|v| v.as_str()) {
             match &ctx.location.country {
                 Some(ctx_country) if ctx_country.to_lowercase() == country.to_lowercase() => {
                     // 进一步匹配 region
                     if let Some(region) = params.get("region").and_then(|v| v.as_str()) {
-                        return Ok(
-                            ctx.location.region
-                                .as_ref()
-                                .map(|r| r.to_lowercase() == region.to_lowercase())
-                                .unwrap_or(false)
-                        );
+                        return Ok(ctx
+                            .location
+                            .region
+                            .as_ref()
+                            .map(|r| r.to_lowercase() == region.to_lowercase())
+                            .unwrap_or(false));
                     }
                     return Ok(true);
                 }
@@ -133,12 +120,12 @@ impl ConditionHandler for GeoMatchCondition {
 
         // 城市匹配
         if let Some(city) = params.get("city").and_then(|v| v.as_str()) {
-            return Ok(
-                ctx.location.city
-                    .as_ref()
-                    .map(|c| c.to_lowercase() == city.to_lowercase())
-                    .unwrap_or(false)
-            );
+            return Ok(ctx
+                .location
+                .city
+                .as_ref()
+                .map(|c| c.to_lowercase() == city.to_lowercase())
+                .unwrap_or(false));
         }
 
         Ok(false)
@@ -173,11 +160,7 @@ struct AgentMatchCondition;
 
 #[async_trait]
 impl ConditionHandler for AgentMatchCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 只处理 Agent 身份
         if ctx.identity.identity_type != openlink_core::IdentityType::Agent {
             return Ok(false);
@@ -203,9 +186,7 @@ impl ConditionHandler for AgentMatchCondition {
             let id_match = agent_ids
                 .iter()
                 .filter_map(|v| v.as_str())
-                .any(|id| {
-                    effective_agent_id == id || header_agent_id.as_deref() == Some(id)
-                });
+                .any(|id| effective_agent_id == id || header_agent_id.as_deref() == Some(id));
 
             if !id_match {
                 return Ok(false);
@@ -227,13 +208,13 @@ impl ConditionHandler for AgentMatchCondition {
 
         // 匹配 agent_types（任一匹配）
         if let Some(agent_types) = params.get("agent_types").and_then(|v| v.as_array()) {
-            let type_match = agent_types
-                .iter()
-                .filter_map(|v| v.as_str())
-                .any(|t| {
-                    effective_agent_type.as_ref().map(|et| et == t).unwrap_or(false)
-                        || header_agent_type.as_deref() == Some(t)
-                });
+            let type_match = agent_types.iter().filter_map(|v| v.as_str()).any(|t| {
+                effective_agent_type
+                    .as_ref()
+                    .map(|et| et == t)
+                    .unwrap_or(false)
+                    || header_agent_type.as_deref() == Some(t)
+            });
 
             if !type_match {
                 return Ok(false);
@@ -279,11 +260,7 @@ struct DeviceMatchCondition;
 
 #[async_trait]
 impl ConditionHandler for DeviceMatchCondition {
-    async fn evaluate(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 匹配设备类型
         if let Some(device_type) = params.get("device_type").and_then(|v| v.as_str()) {
             let dt_match = ctx
@@ -300,16 +277,13 @@ impl ConditionHandler for DeviceMatchCondition {
 
         // 匹配设备类型列表
         if let Some(device_types) = params.get("device_types").and_then(|v| v.as_array()) {
-            let dt_match = device_types
-                .iter()
-                .filter_map(|v| v.as_str())
-                .any(|dt| {
-                    ctx.device
-                        .device_type
-                        .as_ref()
-                        .map(|d| d.to_lowercase() == dt.to_lowercase())
-                        .unwrap_or(false)
-                });
+            let dt_match = device_types.iter().filter_map(|v| v.as_str()).any(|dt| {
+                ctx.device
+                    .device_type
+                    .as_ref()
+                    .map(|d| d.to_lowercase() == dt.to_lowercase())
+                    .unwrap_or(false)
+            });
 
             if !dt_match {
                 return Ok(false);
@@ -364,7 +338,7 @@ pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openlink_core::{Identity, IdentityType, DeviceInfo, GeoInfo};
+    use openlink_core::{DeviceInfo, GeoInfo, Identity, IdentityType};
     use std::collections::HashMap;
 
     fn make_ctx_with_headers(headers: HashMap<String, String>) -> Context {
@@ -372,7 +346,11 @@ mod tests {
         ctx
     }
 
-    fn make_agent_ctx(headers: HashMap<String, String>, agent_id: &str, agent_type: Option<&str>) -> Context {
+    fn make_agent_ctx(
+        headers: HashMap<String, String>,
+        agent_id: &str,
+        agent_type: Option<&str>,
+    ) -> Context {
         let mut ctx = make_ctx_with_headers(headers);
         ctx.identity = Identity {
             id: agent_id.to_string(),

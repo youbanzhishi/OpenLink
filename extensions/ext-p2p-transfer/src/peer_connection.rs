@@ -229,7 +229,11 @@ impl PeerConnection {
     /// 更新连接质量
     pub fn update_quality(&mut self, latency_ms: f64, packet_loss: f64) {
         let bandwidth_mbps = self.bandwidth_estimator.estimate_mbps();
-        self.quality = Some(ConnectionQuality::calculate(latency_ms, packet_loss, bandwidth_mbps));
+        self.quality = Some(ConnectionQuality::calculate(
+            latency_ms,
+            packet_loss,
+            bandwidth_mbps,
+        ));
     }
 
     /// 获取连接统计信息
@@ -264,10 +268,7 @@ mod tests {
 
     #[test]
     fn test_connection_state_transitions() {
-        let mut conn = PeerConnection::new(
-            "peer-1".to_string(),
-            "1.2.3.4:12345".parse().unwrap(),
-        );
+        let mut conn = PeerConnection::new("peer-1".to_string(), "1.2.3.4:12345".parse().unwrap());
         assert_eq!(conn.state, ConnectionState::Initiating);
 
         conn.mark_connected();
@@ -306,10 +307,7 @@ mod tests {
 
     #[test]
     fn test_heartbeat_timeout() {
-        let mut conn = PeerConnection::new(
-            "peer-1".to_string(),
-            "1.2.3.4:12345".parse().unwrap(),
-        );
+        let mut conn = PeerConnection::new("peer-1".to_string(), "1.2.3.4:12345".parse().unwrap());
         conn.mark_connected();
         conn.heartbeat_interval_secs = 0; // Set very short interval
         std::thread::sleep(Duration::from_millis(10));
@@ -318,10 +316,7 @@ mod tests {
 
     #[test]
     fn test_record_transfer() {
-        let mut conn = PeerConnection::new(
-            "peer-1".to_string(),
-            "1.2.3.4:12345".parse().unwrap(),
-        );
+        let mut conn = PeerConnection::new("peer-1".to_string(), "1.2.3.4:12345".parse().unwrap());
         conn.record_transfer(1024);
         conn.record_transfer(2048);
         assert_eq!(conn.bytes_transferred, 3072);
@@ -329,10 +324,7 @@ mod tests {
 
     #[test]
     fn test_peer_connection_stats() {
-        let mut conn = PeerConnection::new(
-            "peer-1".to_string(),
-            "1.2.3.4:12345".parse().unwrap(),
-        );
+        let mut conn = PeerConnection::new("peer-1".to_string(), "1.2.3.4:12345".parse().unwrap());
         conn.mark_connected();
         conn.record_transfer(1024);
         let stats = conn.stats();

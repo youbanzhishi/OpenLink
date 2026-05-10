@@ -27,18 +27,14 @@
 //! }
 //! ```
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{
-    ActionHandler, ExtensionRegistry, CoreError,
-    ActionResult, Context, Target,
-};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use openlink_orchestrator::{
-    Dag, DagExecutor, DagNode, EdgeCondition,
-    ExecutionStatus, ExecutionResult, ResultAggregator, AggregationStrategy,
-    TemplateRegistry, ParallelDagExecutor, ParallelConfig,
-    SimpleTaskExecutor,
+    AggregationStrategy, Dag, DagExecutor, DagNode, EdgeCondition, ExecutionResult,
+    ExecutionStatus, ParallelConfig, ParallelDagExecutor, ResultAggregator, SimpleTaskExecutor,
+    TemplateRegistry,
 };
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// 编排 Action
@@ -51,9 +47,9 @@ pub struct OrchestrateAction {
 
 impl OrchestrateAction {
     pub fn new(executor: Arc<DagExecutor>) -> Self {
-        let parallel_executor = Arc::new(ParallelDagExecutor::new(
-            Arc::new(SimpleTaskExecutor::new())
-        ));
+        let parallel_executor = Arc::new(ParallelDagExecutor::new(Arc::new(
+            SimpleTaskExecutor::new(),
+        )));
         Self {
             executor,
             parallel_executor,
@@ -89,7 +85,11 @@ impl OrchestrateAction {
 
     /// 解析聚合策略
     fn parse_aggregation_strategy(params: &serde_json::Value) -> AggregationStrategy {
-        match params.get("aggregation").and_then(|v| v.as_str()).unwrap_or("merge") {
+        match params
+            .get("aggregation")
+            .and_then(|v| v.as_str())
+            .unwrap_or("merge")
+        {
             "last" => AggregationStrategy::Last,
             "collect" => AggregationStrategy::Collect,
             "merge" => AggregationStrategy::Merge,
@@ -100,32 +100,35 @@ impl OrchestrateAction {
 
 #[async_trait]
 impl ActionHandler for OrchestrateAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         // 检查是否使用模板
         if let Some(template_id) = target.params.get("template_id").and_then(|v| v.as_str()) {
             return self.execute_template(template_id, &target.params).await;
         }
 
         // 检查是否使用并行执行
-        let parallel = target.params.get("parallel")
+        let parallel = target
+            .params
+            .get("parallel")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
         // 直接执行 DAG
-        let dag_value = target.params.get("dag")
+        let dag_value = target
+            .params
+            .get("dag")
             .ok_or_else(|| CoreError::InvalidInput("'dag' parameter is required".to_string()))?;
 
         let dag = Self::parse_dag(dag_value)?;
 
         let result = if parallel {
-            self.parallel_executor.execute(&dag).await
-                .map_err(|e| CoreError::ExtensionError(format!("Parallel DAG execution failed: {}", e)))?
+            self.parallel_executor.execute(&dag).await.map_err(|e| {
+                CoreError::ExtensionError(format!("Parallel DAG execution failed: {}", e))
+            })?
         } else {
-            self.executor.execute(&dag).await
+            self.executor
+                .execute(&dag)
+                .await
                 .map_err(|e| CoreError::ExtensionError(format!("DAG execution failed: {}", e)))?
         };
 
@@ -173,10 +176,9 @@ impl OrchestrateAction {
         params: &serde_json::Value,
     ) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
-        let template = templates.get(template_id)
-            .ok_or_else(|| CoreError::InvalidInput(
-                format!("Template '{}' not found", template_id)
-            ))?;
+        let template = templates.get(template_id).ok_or_else(|| {
+            CoreError::InvalidInput(format!("Template '{}' not found", template_id))
+        })?;
 
         tracing::info!(
             template_id = %template_id,
@@ -207,21 +209,18 @@ impl ListTemplatesAction {
 
 #[async_trait]
 impl ActionHandler for ListTemplatesAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
 
-        let category = target.params.get("category")
-            .and_then(|v| v.as_str());
+        let category = target.params.get("category").and_then(|v| v.as_str());
 
         let template_list: Vec<serde_json::Value> = if let Some(cat) = category {
             templates.list_by_category(cat)
         } else {
             templates.list()
-        }.iter().map(|t| {
+        }
+        .iter()
+        .map(|t| {
             serde_json::json!({
                 "id": t.id,
                 "name": t.name,
@@ -236,7 +235,8 @@ impl ActionHandler for ListTemplatesAction {
                     })
                 }).collect::<Vec<_>>(),
             })
-        }).collect();
+        })
+        .collect();
 
         Ok(ActionResult::Json(serde_json::json!({
             "templates": template_list,
@@ -260,12 +260,10 @@ impl ValidateDagAction {
 
 #[async_trait]
 impl ActionHandler for ValidateDagAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let dag_value = target.params.get("dag")
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let dag_value = target
+            .params
+            .get("dag")
             .ok_or_else(|| CoreError::InvalidInput("'dag' parameter is required".to_string()))?;
 
         let dag = OrchestrateAction::parse_dag(dag_value)?;

@@ -5,10 +5,10 @@
 //!
 //! 设计铁律：存储层可替换 — 核心逻辑通过 trait 抽象，不绑定具体数据库。
 
-pub mod traits;
-pub mod sqlite;
 pub mod error;
+pub mod sqlite;
+pub mod traits;
 
-pub use traits::Store;
-pub use sqlite::SqliteStore;
 pub use error::StoreError;
+pub use sqlite::SqliteStore;
+pub use traits::Store;

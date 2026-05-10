@@ -31,10 +31,7 @@ pub enum RetryPolicy {
         backoff_multiplier: f64,
     },
     /// Fixed interval: constant wait between retries
-    FixedInterval {
-        max_retries: u32,
-        interval_ms: u64,
-    },
+    FixedInterval { max_retries: u32, interval_ms: u64 },
     /// Custom policy with user-defined parameters
     Custom {
         max_retries: u32,
@@ -96,7 +93,9 @@ impl RetryPolicy {
     /// Get the initial backoff in milliseconds (for exponential).
     pub fn initial_backoff_ms(&self) -> u64 {
         match self {
-            Self::ExponentialBackoff { initial_backoff_ms, .. } => *initial_backoff_ms,
+            Self::ExponentialBackoff {
+                initial_backoff_ms, ..
+            } => *initial_backoff_ms,
             Self::FixedInterval { interval_ms, .. } => *interval_ms,
             Self::Custom { delays_ms, .. } => delays_ms.first().copied().unwrap_or(100),
         }
@@ -114,7 +113,9 @@ impl RetryPolicy {
     /// Get the backoff multiplier (for exponential).
     pub fn backoff_multiplier(&self) -> f64 {
         match self {
-            Self::ExponentialBackoff { backoff_multiplier, .. } => *backoff_multiplier,
+            Self::ExponentialBackoff {
+                backoff_multiplier, ..
+            } => *backoff_multiplier,
             _ => 1.0,
         }
     }
@@ -128,17 +129,17 @@ impl RetryPolicy {
                 backoff_multiplier,
                 ..
             } => {
-                let delay_ms = (*initial_backoff_ms as f64
-                    * backoff_multiplier.powi(attempt as i32))
-                    as u64;
+                let delay_ms =
+                    (*initial_backoff_ms as f64 * backoff_multiplier.powi(attempt as i32)) as u64;
                 Duration::from_millis(delay_ms.min(*max_backoff_ms))
             }
             Self::FixedInterval { interval_ms, .. } => Duration::from_millis(*interval_ms),
             Self::Custom { delays_ms, .. } => {
                 let idx = attempt as usize;
-                let delay = delays_ms.get(idx).copied().unwrap_or_else(|| {
-                    delays_ms.last().copied().unwrap_or(1000)
-                });
+                let delay = delays_ms
+                    .get(idx)
+                    .copied()
+                    .unwrap_or_else(|| delays_ms.last().copied().unwrap_or(1000));
                 Duration::from_millis(delay)
             }
         }

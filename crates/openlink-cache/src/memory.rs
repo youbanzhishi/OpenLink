@@ -5,7 +5,7 @@
 //! - 按前缀删除
 //! - 主动失效（TTL + 显式删除）
 
-use super::traits::{Cache, CacheEntry, CacheStats, CacheError};
+use super::traits::{Cache, CacheEntry, CacheError, CacheStats};
 use async_trait::async_trait;
 use lru::LruCache;
 use std::num::NonZeroUsize;
@@ -30,9 +30,7 @@ struct CacheInternalStats {
 impl MemoryCache {
     /// 创建新内存缓存
     pub fn new(capacity: usize) -> Self {
-        let cache = LruCache::new(
-            NonZeroUsize::new(capacity.max(1)).unwrap_or(NonZeroUsize::MIN)
-        );
+        let cache = LruCache::new(NonZeroUsize::new(capacity.max(1)).unwrap_or(NonZeroUsize::MIN));
 
         Self {
             cache: Arc::new(Mutex::new(cache)),
@@ -92,12 +90,15 @@ impl Cache for MemoryCache {
     async fn set(&self, key: &str, value: &str, ttl_secs: u64) -> Result<(), CacheError> {
         let mut cache = self.cache.lock().await;
 
-        cache.put(key.to_string(), CacheEntry {
-            value: value.to_string(),
-            created_at: chrono::Utc::now().timestamp(),
-            ttl_secs,
-            access_count: 0,
-        });
+        cache.put(
+            key.to_string(),
+            CacheEntry {
+                value: value.to_string(),
+                created_at: chrono::Utc::now().timestamp(),
+                ttl_secs,
+                access_count: 0,
+            },
+        );
 
         Ok(())
     }
@@ -153,12 +154,15 @@ impl Cache for MemoryCache {
         let mut cache = self.cache.lock().await;
         let now = chrono::Utc::now().timestamp();
         for (key, value, ttl) in entries {
-            cache.put(key.to_string(), CacheEntry {
-                value: value.to_string(),
-                created_at: now,
-                ttl_secs: ttl,
-                access_count: 0,
-            });
+            cache.put(
+                key.to_string(),
+                CacheEntry {
+                    value: value.to_string(),
+                    created_at: now,
+                    ttl_secs: ttl,
+                    access_count: 0,
+                },
+            );
         }
         tracing::info!(count = cache.len(), "Cache warmup completed");
         Ok(())
@@ -356,11 +360,14 @@ mod tests {
     #[tokio::test]
     async fn test_warmup() {
         let cache = MemoryCache::new(100);
-        cache.warmup(vec![
-            ("k1", "v1", 3600),
-            ("k2", "v2", 3600),
-            ("k3", "v3", 3600),
-        ]).await.unwrap();
+        cache
+            .warmup(vec![
+                ("k1", "v1", 3600),
+                ("k2", "v2", 3600),
+                ("k3", "v3", 3600),
+            ])
+            .await
+            .unwrap();
 
         assert_eq!(cache.get("k1").await.unwrap(), Some("v1".to_string()));
         assert_eq!(cache.get("k2").await.unwrap(), Some("v2".to_string()));
@@ -387,7 +394,10 @@ mod tests {
         cache.set("b", "2", 3600).await.unwrap();
         cache.set("c", "3", 3600).await.unwrap();
 
-        let deleted = cache.delete_batch(&["a", "b", "nonexistent"]).await.unwrap();
+        let deleted = cache
+            .delete_batch(&["a", "b", "nonexistent"])
+            .await
+            .unwrap();
         assert_eq!(deleted, 2);
     }
 
@@ -395,7 +405,10 @@ mod tests {
     async fn test_layered_cache() {
         let layered = LayeredCache::new(50, None); // 无 L2
         layered.set("key1", "value1", 3600).await.unwrap();
-        assert_eq!(layered.get("key1").await.unwrap(), Some("value1".to_string()));
+        assert_eq!(
+            layered.get("key1").await.unwrap(),
+            Some("value1".to_string())
+        );
         assert_eq!(layered.cache_type(), "layered");
     }
 }

@@ -5,8 +5,8 @@
 //!
 //! Phase 2: 新增 auth 配置（API Token 认证）
 
-use serde::Deserialize;
 use openlink_core::ApiToken;
+use serde::Deserialize;
 
 /// 应用配置根结构
 #[derive(Debug, Deserialize, Clone)]
@@ -135,22 +135,27 @@ impl AuthConfig {
     pub fn to_api_tokens(&self) -> Vec<ApiToken> {
         use openlink_core::TokenScope;
 
-        self.tokens.iter().map(|tc| {
-            let scopes: Vec<TokenScope> = tc.scopes.iter().filter_map(|s| {
-                match s.as_str() {
-                    "read" => Some(TokenScope::Read),
-                    "write" => Some(TokenScope::Write),
-                    "admin" => Some(TokenScope::Admin),
-                    _ => None,
-                }
-            }).collect();
+        self.tokens
+            .iter()
+            .map(|tc| {
+                let scopes: Vec<TokenScope> = tc
+                    .scopes
+                    .iter()
+                    .filter_map(|s| match s.as_str() {
+                        "read" => Some(TokenScope::Read),
+                        "write" => Some(TokenScope::Write),
+                        "admin" => Some(TokenScope::Admin),
+                        _ => None,
+                    })
+                    .collect();
 
-            ApiToken {
-                token: tc.token.clone(),
-                name: tc.name.clone(),
-                scopes,
-            }
-        }).collect()
+                ApiToken {
+                    token: tc.token.clone(),
+                    name: tc.name.clone(),
+                    scopes,
+                }
+            })
+            .collect()
     }
 
     /// 验证 Token 是否有效，返回权限范围
@@ -191,10 +196,7 @@ impl AppConfig {
     /// 从文件加载配置
     pub fn load() -> Result<Self, String> {
         // 尝试从当前目录和项目根目录加载
-        let config_paths = [
-            "config/default.toml",
-            "openlink/config/default.toml",
-        ];
+        let config_paths = ["config/default.toml", "openlink/config/default.toml"];
 
         for path in &config_paths {
             if let Ok(content) = std::fs::read_to_string(path) {

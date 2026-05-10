@@ -9,14 +9,14 @@
 //! - 健康检查 (Phase 5)
 //! - Prometheus 指标 (Phase 5)
 
+pub mod config;
 pub mod handlers;
 pub mod middleware;
+pub mod monitoring;
 pub mod router;
 pub mod state;
-pub mod config;
-pub mod monitoring;
 
-pub use state::AppState;
 pub use config::AppConfig;
-pub use monitoring::{AppMetrics, HealthStatus, HealthCheck};
+pub use monitoring::{AppMetrics, HealthCheck, HealthStatus};
 pub use router::build_app;
+pub use state::AppState;

@@ -41,11 +41,9 @@ fn default_log_level() -> String {
 impl EdgeConfig {
     /// 从 TOML 文件加载配置
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| ConfigError::Io(e.to_string()))?;
+        let content = fs::read_to_string(path).map_err(|e| ConfigError::Io(e.to_string()))?;
 
-        toml::from_str(&content)
-            .map_err(|e| ConfigError::Parse(e.to_string()))
+        toml::from_str(&content).map_err(|e| ConfigError::Parse(e.to_string()))
     }
 
     /// 创建默认配置

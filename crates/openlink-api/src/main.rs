@@ -2,11 +2,11 @@
 //!
 //! Phase 5: 健康检查
 
-use std::sync::Arc;
-use openlink_api::{build_app, state::AppState, config::AppConfig};
-use openlink_store::SqliteStore;
+use openlink_api::{build_app, config::AppConfig, state::AppState};
 use openlink_core::ExtensionRegistry;
 use openlink_core::RoutingEngine;
+use openlink_store::SqliteStore;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +25,10 @@ async fn main() {
         .init();
 
     tracing::info!("OpenLink starting (Phase 5)...");
-    tracing::info!(addr = format!("{}:{}", config.server.host, config.server.port), "Listening on");
+    tracing::info!(
+        addr = format!("{}:{}", config.server.host, config.server.port),
+        "Listening on"
+    );
     tracing::info!(auth_enabled = config.auth.enabled, "Auth configuration");
 
     // 3. 创建 SQLite 存储
@@ -35,7 +38,7 @@ async fn main() {
 
     // 4. 构建 Extension Registry
     let registry = ExtensionRegistry::new();
-    
+
     // 注意：扩展注册在 Phase 6 中实现
 
     tracing::info!(
@@ -47,11 +50,7 @@ async fn main() {
     let engine = RoutingEngine::new(Arc::new(registry));
 
     // 6. 构建 AppState
-    let state = AppState::new(
-        Arc::new(store),
-        Arc::new(engine),
-        Arc::new(config),
-    );
+    let state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
 
     // 7. 获取监听地址
     let addr = format!("{}:{}", state.config.server.host, state.config.server.port);
@@ -64,7 +63,5 @@ async fn main() {
 
     tracing::info!("OpenLink server ready at {}", addr);
     tracing::info!("Phase 5 features: health checks, monitoring");
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }

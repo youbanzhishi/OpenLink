@@ -3,12 +3,8 @@
 //! - GET /api/v1/edge/metrics — 边缘节点指标
 //! - GET /api/v1/edge/cache — 缓存统计
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Response,
-};
 use axum::response::IntoResponse;
+use axum::{extract::State, http::StatusCode, response::Response};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

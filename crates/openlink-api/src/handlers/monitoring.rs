@@ -3,14 +3,10 @@
 //! Phase 5: 基础健康检查 + Prometheus 指标
 //! Phase 7: 增强健康检查（组件级 + Readiness/Liveness）
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Response,
-};
-use axum::response::IntoResponse;
-use std::sync::Arc;
 use crate::state::AppState;
+use axum::response::IntoResponse;
+use axum::{extract::State, http::StatusCode, response::Response};
+use std::sync::Arc;
 
 /// GET /health — 整体健康检查
 ///

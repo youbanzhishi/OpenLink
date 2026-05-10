@@ -47,7 +47,9 @@ pub struct TaskProposal {
     pub status: ProposalStatus,
 }
 
-fn default_priority() -> u32 { 5 }
+fn default_priority() -> u32 {
+    5
+}
 
 /// 提案状态
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,9 +144,15 @@ pub struct NegotiationConfig {
     pub max_retries: u32,
 }
 
-fn default_bid_timeout() -> u64 { 300 }
-fn default_execution_timeout() -> u64 { 3600 }
-fn default_max_retries() -> u32 { 3 }
+fn default_bid_timeout() -> u64 {
+    300
+}
+fn default_execution_timeout() -> u64 {
+    3600
+}
+fn default_max_retries() -> u32 {
+    3
+}
 
 impl Default for NegotiationConfig {
     fn default() -> Self {
@@ -180,9 +188,14 @@ impl NegotiationEngine {
     }
 
     /// 发布任务提案
-    pub async fn publish_proposal(&self, proposal: TaskProposal) -> Result<ProposalId, NegotiationError> {
+    pub async fn publish_proposal(
+        &self,
+        proposal: TaskProposal,
+    ) -> Result<ProposalId, NegotiationError> {
         if proposal.status != ProposalStatus::Open {
-            return Err(NegotiationError::InvalidStatus("New proposal must have Open status".to_string()));
+            return Err(NegotiationError::InvalidStatus(
+                "New proposal must have Open status".to_string(),
+            ));
         }
 
         let id = proposal.id.clone();
@@ -208,7 +221,8 @@ impl NegotiationEngine {
         // 检查提案是否存在且开放
         {
             let proposals = self.proposals.read().await;
-            let proposal = proposals.get(&bid.proposal_id)
+            let proposal = proposals
+                .get(&bid.proposal_id)
                 .ok_or_else(|| NegotiationError::ProposalNotFound(bid.proposal_id.clone()))?;
 
             if proposal.status != ProposalStatus::Open {
@@ -236,7 +250,10 @@ impl NegotiationEngine {
             let bids = self.bids.read().await;
             if let Some(existing) = bids.get(&bid.proposal_id) {
                 if existing.iter().any(|b| b.bidder == bid.bidder) {
-                    return Err(NegotiationError::AlreadyBid(bid.bidder.clone(), bid.proposal_id.clone()));
+                    return Err(NegotiationError::AlreadyBid(
+                        bid.bidder.clone(),
+                        bid.proposal_id.clone(),
+                    ));
                 }
             }
         }
@@ -259,10 +276,14 @@ impl NegotiationEngine {
     /// 选择中标者
     ///
     /// 评分策略：综合自信度、价格、能力匹配度。
-    pub async fn award_proposal(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn award_proposal(
+        &self,
+        proposal_id: &str,
+    ) -> Result<TaskAssignment, NegotiationError> {
         let (_proposal, winning_bid) = {
             let proposals = self.proposals.read().await;
-            let proposal = proposals.get(proposal_id)
+            let proposal = proposals
+                .get(proposal_id)
                 .ok_or_else(|| NegotiationError::ProposalNotFound(proposal_id.to_string()))?;
 
             if proposal.status != ProposalStatus::Open {
@@ -270,7 +291,8 @@ impl NegotiationEngine {
             }
 
             let bids = self.bids.read().await;
-            let proposal_bids = bids.get(proposal_id)
+            let proposal_bids = bids
+                .get(proposal_id)
                 .ok_or_else(|| NegotiationError::NoBids(proposal_id.to_string()))?;
 
             if proposal_bids.is_empty() {
@@ -281,13 +303,18 @@ impl NegotiationEngine {
             let mut sorted_bids: Vec<&TaskBid> = proposal_bids.iter().collect();
             sorted_bids.sort_by(|a, b| {
                 // Higher confidence first
-                let conf_cmp = b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal);
+                let conf_cmp = b
+                    .confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal);
                 if conf_cmp != std::cmp::Ordering::Equal {
                     return conf_cmp;
                 }
                 // Lower price first
                 match (a.price, b.price) {
-                    (Some(ap), Some(bp)) => ap.partial_cmp(&bp).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(ap), Some(bp)) => {
+                        ap.partial_cmp(&bp).unwrap_or(std::cmp::Ordering::Equal)
+                    }
                     (Some(_), None) => std::cmp::Ordering::Less,
                     (None, Some(_)) => std::cmp::Ordering::Greater,
                     (None, None) => std::cmp::Ordering::Equal,
@@ -330,9 +357,14 @@ impl NegotiationEngine {
     }
 
     /// 取消提案
-    pub async fn cancel_proposal(&self, proposal_id: &str, canceller: &str) -> Result<(), NegotiationError> {
+    pub async fn cancel_proposal(
+        &self,
+        proposal_id: &str,
+        canceller: &str,
+    ) -> Result<(), NegotiationError> {
         let mut proposals = self.proposals.write().await;
-        let proposal = proposals.get_mut(proposal_id)
+        let proposal = proposals
+            .get_mut(proposal_id)
             .ok_or_else(|| NegotiationError::ProposalNotFound(proposal_id.to_string()))?;
 
         if proposal.publisher != canceller {
@@ -340,7 +372,9 @@ impl NegotiationEngine {
         }
 
         if proposal.status != ProposalStatus::Open {
-            return Err(NegotiationError::InvalidStatus("Can only cancel Open proposals".to_string()));
+            return Err(NegotiationError::InvalidStatus(
+                "Can only cancel Open proposals".to_string(),
+            ));
         }
 
         proposal.status = ProposalStatus::Cancelled;
@@ -366,9 +400,13 @@ impl NegotiationEngine {
     }
 
     /// 标记任务完成
-    pub async fn complete_assignment(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn complete_assignment(
+        &self,
+        proposal_id: &str,
+    ) -> Result<TaskAssignment, NegotiationError> {
         let mut assignments = self.assignments.write().await;
-        let assignment = assignments.get_mut(proposal_id)
+        let assignment = assignments
+            .get_mut(proposal_id)
             .ok_or_else(|| NegotiationError::AssignmentNotFound(proposal_id.to_string()))?;
 
         assignment.status = AssignmentStatus::Completed;
@@ -384,9 +422,13 @@ impl NegotiationEngine {
     }
 
     /// 标记任务失败（支持重试）
-    pub async fn fail_assignment(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn fail_assignment(
+        &self,
+        proposal_id: &str,
+    ) -> Result<TaskAssignment, NegotiationError> {
         let mut assignments = self.assignments.write().await;
-        let assignment = assignments.get_mut(proposal_id)
+        let assignment = assignments
+            .get_mut(proposal_id)
             .ok_or_else(|| NegotiationError::AssignmentNotFound(proposal_id.to_string()))?;
 
         if assignment.retry_count < assignment.max_retries {
@@ -555,8 +597,14 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        engine.submit_bid(make_bid(&proposal_id, "agent-2", 0.8, Some(60.0))).await.unwrap();
-        engine.submit_bid(make_bid(&proposal_id, "agent-3", 0.95, Some(55.0))).await.unwrap();
+        engine
+            .submit_bid(make_bid(&proposal_id, "agent-2", 0.8, Some(60.0)))
+            .await
+            .unwrap();
+        engine
+            .submit_bid(make_bid(&proposal_id, "agent-3", 0.95, Some(55.0)))
+            .await
+            .unwrap();
 
         let assignment = engine.award_proposal(&proposal_id).await.unwrap();
         // agent-3 should win (higher confidence)
@@ -579,7 +627,10 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        engine.cancel_proposal(&proposal_id, "agent-1").await.unwrap();
+        engine
+            .cancel_proposal(&proposal_id, "agent-1")
+            .await
+            .unwrap();
         let p = engine.get_proposal(&proposal_id).await.unwrap();
         assert_eq!(p.status, ProposalStatus::Cancelled);
     }
@@ -590,7 +641,10 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        assert!(engine.cancel_proposal(&proposal_id, "agent-2").await.is_err());
+        assert!(engine
+            .cancel_proposal(&proposal_id, "agent-2")
+            .await
+            .is_err());
     }
 
     #[tokio::test]
@@ -611,7 +665,10 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        engine.submit_bid(make_bid(&proposal_id, "agent-2", 0.9, None)).await.unwrap();
+        engine
+            .submit_bid(make_bid(&proposal_id, "agent-2", 0.9, None))
+            .await
+            .unwrap();
         engine.award_proposal(&proposal_id).await.unwrap();
 
         // Complete
@@ -628,7 +685,10 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        engine.submit_bid(make_bid(&proposal_id, "agent-2", 0.9, None)).await.unwrap();
+        engine
+            .submit_bid(make_bid(&proposal_id, "agent-2", 0.9, None))
+            .await
+            .unwrap();
         engine.award_proposal(&proposal_id).await.unwrap();
 
         // First failure -> retry

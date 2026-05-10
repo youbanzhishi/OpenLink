@@ -20,17 +20,16 @@
 //! }
 //! ```
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{
-    ActionHandler, ConditionHandler, ExtensionRegistry, CoreError,
-    ActionResult, Context, Target,
-};
 use openlink_a2a::{
-    AgentRegistry, HandshakeEngine, HeartbeatMonitor,
-    DiscoveryQuery, Capability, AgentStatus, AgentInfo, HeartbeatMessage,
+    AgentInfo, AgentRegistry, AgentStatus, Capability, DiscoveryQuery, HandshakeEngine,
+    HeartbeatMessage, HeartbeatMonitor,
+};
+use openlink_core::{
+    ActionHandler, ActionResult, ConditionHandler, Context, CoreError, ExtensionRegistry, Target,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 // ─── A2A Discovery Action ──────────────────────────────────
 
@@ -47,16 +46,16 @@ impl A2aDiscoveryAction {
 
 #[async_trait]
 impl ActionHandler for A2aDiscoveryAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let capability = target.params.get("capability")
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let capability = target
+            .params
+            .get("capability")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let status = target.params.get("status")
+        let status = target
+            .params
+            .get("status")
             .and_then(|v| v.as_str())
             .and_then(|s| match s {
                 "online" => Some(AgentStatus::Online),
@@ -66,7 +65,11 @@ impl ActionHandler for A2aDiscoveryAction {
             });
 
         let query = DiscoveryQuery {
-            capability: if capability.is_empty() { None } else { Some(capability.to_string()) },
+            capability: if capability.is_empty() {
+                None
+            } else {
+                Some(capability.to_string())
+            },
             status,
             min_trust: None,
             tags: vec![],
@@ -74,15 +77,18 @@ impl ActionHandler for A2aDiscoveryAction {
 
         let agents = self.registry.discover(&query).await;
 
-        let results: Vec<serde_json::Value> = agents.iter().map(|a| {
-            serde_json::json!({
-                "id": a.id,
-                "name": a.name,
-                "endpoint": a.endpoint,
-                "status": format!("{:?}", a.status).to_lowercase(),
-                "capabilities": a.capabilities.iter().map(|c| &c.id).collect::<Vec<_>>(),
+        let results: Vec<serde_json::Value> = agents
+            .iter()
+            .map(|a| {
+                serde_json::json!({
+                    "id": a.id,
+                    "name": a.name,
+                    "endpoint": a.endpoint,
+                    "status": format!("{:?}", a.status).to_lowercase(),
+                    "capabilities": a.capabilities.iter().map(|c| &c.id).collect::<Vec<_>>(),
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(ActionResult::Json(serde_json::json!({
             "discovered": results,
@@ -105,46 +111,58 @@ pub struct A2aHandshakeAction {
 
 impl A2aHandshakeAction {
     pub fn new(handshake: Arc<HandshakeEngine>, registry: Arc<AgentRegistry>) -> Self {
-        Self { handshake, registry }
+        Self {
+            handshake,
+            registry,
+        }
     }
 }
 
 #[async_trait]
 impl ActionHandler for A2aHandshakeAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let target_agent = target.params.get("target_agent")
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let target_agent = target
+            .params
+            .get("target_agent")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("target_agent is required".to_string()))?;
 
-        let offered: Vec<String> = target.params.get("offered_capabilities")
+        let offered: Vec<String> = target
+            .params
+            .get("offered_capabilities")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
             .unwrap_or_default();
 
-        let requested: Vec<String> = target.params.get("requested_capabilities")
+        let requested: Vec<String> = target
+            .params
+            .get("requested_capabilities")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
             .unwrap_or_default();
 
         // 创建握手请求
-        let request = self.handshake.create_handshake_request(
-            target_agent,
-            offered,
-            requested,
-        );
+        let request = self
+            .handshake
+            .create_handshake_request(target_agent, offered, requested);
 
         // 获取目标 Agent 的能力
         let agent_info = self.registry.get(target_agent).await;
-        let capabilities = agent_info
-            .map(|a| a.capabilities)
-            .unwrap_or_default();
+        let capabilities = agent_info.map(|a| a.capabilities).unwrap_or_default();
 
         // 处理握手
-        let response = self.handshake.handle_handshake_request(&request, &capabilities).await;
+        let response = self
+            .handshake
+            .handle_handshake_request(&request, &capabilities)
+            .await;
 
         Ok(ActionResult::Json(serde_json::json!({
             "accepted": response.accepted,
@@ -174,46 +192,60 @@ impl A2aRegisterAction {
 
 #[async_trait]
 impl ActionHandler for A2aRegisterAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let id = target.params.get("id")
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let id = target
+            .params
+            .get("id")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("id is required".to_string()))?;
 
-        let name = target.params.get("name")
+        let name = target
+            .params
+            .get("name")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("name is required".to_string()))?;
 
-        let endpoint = target.params.get("endpoint")
+        let endpoint = target
+            .params
+            .get("endpoint")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("endpoint is required".to_string()))?;
 
-        let version = target.params.get("version")
+        let version = target
+            .params
+            .get("version")
             .and_then(|v| v.as_str())
             .unwrap_or("1.0.0");
 
-        let description = target.params.get("description")
+        let description = target
+            .params
+            .get("description")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
         // 解析能力列表
-        let capabilities: Vec<Capability> = target.params.get("capabilities")
+        let capabilities: Vec<Capability> = target
+            .params
+            .get("capabilities")
             .and_then(|v| v.as_array())
             .map(|arr| {
-                arr.iter().filter_map(|v| {
-                    let cap_id = v.get("id")?.as_str()?.to_string();
-                    Some(Capability {
-                        id: cap_id,
-                        name: v.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string(),
-                        description: String::new(),
-                        input_format: String::new(),
-                        output_format: String::new(),
-                        params: serde_json::Value::Null,
+                arr.iter()
+                    .filter_map(|v| {
+                        let cap_id = v.get("id")?.as_str()?.to_string();
+                        Some(Capability {
+                            id: cap_id,
+                            name: v
+                                .get("name")
+                                .and_then(|n| n.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            description: String::new(),
+                            input_format: String::new(),
+                            output_format: String::new(),
+                            params: serde_json::Value::Null,
+                        })
                     })
-                }).collect()
+                    .collect()
             })
             .unwrap_or_default();
 
@@ -262,16 +294,16 @@ impl A2aHeartbeatAction {
 
 #[async_trait]
 impl ActionHandler for A2aHeartbeatAction {
-    async fn execute(
-        &self,
-        _ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
-        let agent_id = target.params.get("agent_id")
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+        let agent_id = target
+            .params
+            .get("agent_id")
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("agent_id is required".to_string()))?;
 
-        let status_str = target.params.get("status")
+        let status_str = target
+            .params
+            .get("status")
             .and_then(|v| v.as_str())
             .unwrap_or("online");
 
@@ -282,7 +314,9 @@ impl ActionHandler for A2aHeartbeatAction {
             _ => AgentStatus::Online,
         };
 
-        let active_tasks = target.params.get("active_tasks")
+        let active_tasks = target
+            .params
+            .get("active_tasks")
             .and_then(|v| v.as_u64())
             .unwrap_or(0) as u32;
 
@@ -296,7 +330,10 @@ impl ActionHandler for A2aHeartbeatAction {
         };
 
         // 处理心跳（内部会更新注册表）
-        self.monitor.handle_heartbeat(&heartbeat).await.map_err(|e| CoreError::InternalError(e))?;
+        self.monitor
+            .handle_heartbeat(&heartbeat)
+            .await
+            .map_err(|e| CoreError::InternalError(e))?;
 
         Ok(ActionResult::Json(serde_json::json!({
             "status": "acknowledged",
@@ -329,11 +366,13 @@ impl ConditionHandler for AgentCapabilityCondition {
         _ctx: &Context,
         params: &serde_json::Value,
     ) -> Result<bool, CoreError> {
-        let agent_id = params.get("agent_id")
+        let agent_id = params
+            .get("agent_id")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
-        let capability = params.get("capability")
+        let capability = params
+            .get("capability")
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
@@ -343,9 +382,7 @@ impl ConditionHandler for AgentCapabilityCondition {
 
         let agent = self.registry.get(agent_id).await;
         match agent {
-            Some(info) => {
-                Ok(info.capabilities.iter().any(|c| c.id == capability))
-            }
+            Some(info) => Ok(info.capabilities.iter().any(|c| c.id == capability)),
             None => Ok(false),
         }
     }
@@ -363,7 +400,10 @@ pub fn register(
     heartbeat_monitor: Arc<HeartbeatMonitor>,
 ) -> Result<(), CoreError> {
     registry.register_action(Arc::new(A2aDiscoveryAction::new(agent_registry.clone())))?;
-    registry.register_action(Arc::new(A2aHandshakeAction::new(handshake_engine, agent_registry.clone())))?;
+    registry.register_action(Arc::new(A2aHandshakeAction::new(
+        handshake_engine,
+        agent_registry.clone(),
+    )))?;
     registry.register_action(Arc::new(A2aRegisterAction::new(agent_registry.clone())))?;
     registry.register_action(Arc::new(A2aHeartbeatAction::new(heartbeat_monitor)))?;
     registry.register_condition(Arc::new(AgentCapabilityCondition::new(agent_registry)))?;
@@ -391,25 +431,28 @@ mod tests {
     #[tokio::test]
     async fn test_a2a_discovery_action() {
         let agent_registry = Arc::new(AgentRegistry::new());
-        agent_registry.register(AgentInfo {
-            id: "agent-1".to_string(),
-            name: "Test Agent".to_string(),
-            description: String::new(),
-            version: "1.0".to_string(),
-            endpoint: "https://agent-1.example.com".to_string(),
-            capabilities: vec![Capability {
-                id: "text-gen".to_string(),
-                name: "Text Generation".to_string(),
+        agent_registry
+            .register(AgentInfo {
+                id: "agent-1".to_string(),
+                name: "Test Agent".to_string(),
                 description: String::new(),
-                input_format: String::new(),
-                output_format: String::new(),
-                params: serde_json::Value::Null,
-            }],
-            metadata: std::collections::HashMap::new(),
-            registered_at: chrono::Utc::now().timestamp(),
-            last_heartbeat: chrono::Utc::now().timestamp(),
-            status: AgentStatus::Online,
-        }).await.unwrap();
+                version: "1.0".to_string(),
+                endpoint: "https://agent-1.example.com".to_string(),
+                capabilities: vec![Capability {
+                    id: "text-gen".to_string(),
+                    name: "Text Generation".to_string(),
+                    description: String::new(),
+                    input_format: String::new(),
+                    output_format: String::new(),
+                    params: serde_json::Value::Null,
+                }],
+                metadata: std::collections::HashMap::new(),
+                registered_at: chrono::Utc::now().timestamp(),
+                last_heartbeat: chrono::Utc::now().timestamp(),
+                status: AgentStatus::Online,
+            })
+            .await
+            .unwrap();
 
         let action = A2aDiscoveryAction::new(agent_registry);
         let ctx = Context::from_request(None, None);
@@ -460,41 +503,56 @@ mod tests {
     #[tokio::test]
     async fn test_agent_capability_condition() {
         let agent_registry = Arc::new(AgentRegistry::new());
-        agent_registry.register(AgentInfo {
-            id: "agent-1".to_string(),
-            name: "Test Agent".to_string(),
-            description: String::new(),
-            version: "1.0".to_string(),
-            endpoint: "https://agent-1.example.com".to_string(),
-            capabilities: vec![Capability {
-                id: "text-gen".to_string(),
-                name: "Text Generation".to_string(),
+        agent_registry
+            .register(AgentInfo {
+                id: "agent-1".to_string(),
+                name: "Test Agent".to_string(),
                 description: String::new(),
-                input_format: String::new(),
-                output_format: String::new(),
-                params: serde_json::Value::Null,
-            }],
-            metadata: std::collections::HashMap::new(),
-            registered_at: chrono::Utc::now().timestamp(),
-            last_heartbeat: chrono::Utc::now().timestamp(),
-            status: AgentStatus::Online,
-        }).await.unwrap();
+                version: "1.0".to_string(),
+                endpoint: "https://agent-1.example.com".to_string(),
+                capabilities: vec![Capability {
+                    id: "text-gen".to_string(),
+                    name: "Text Generation".to_string(),
+                    description: String::new(),
+                    input_format: String::new(),
+                    output_format: String::new(),
+                    params: serde_json::Value::Null,
+                }],
+                metadata: std::collections::HashMap::new(),
+                registered_at: chrono::Utc::now().timestamp(),
+                last_heartbeat: chrono::Utc::now().timestamp(),
+                status: AgentStatus::Online,
+            })
+            .await
+            .unwrap();
 
         let condition = AgentCapabilityCondition::new(agent_registry);
         let ctx = Context::from_request(None, None);
 
         // Should match
-        let result = condition.evaluate(&ctx, &serde_json::json!({
-            "agent_id": "agent-1",
-            "capability": "text-gen"
-        })).await.unwrap();
+        let result = condition
+            .evaluate(
+                &ctx,
+                &serde_json::json!({
+                    "agent_id": "agent-1",
+                    "capability": "text-gen"
+                }),
+            )
+            .await
+            .unwrap();
         assert!(result);
 
         // Should not match
-        let result = condition.evaluate(&ctx, &serde_json::json!({
-            "agent_id": "agent-1",
-            "capability": "image-analysis"
-        })).await.unwrap();
+        let result = condition
+            .evaluate(
+                &ctx,
+                &serde_json::json!({
+                    "agent_id": "agent-1",
+                    "capability": "image-analysis"
+                }),
+            )
+            .await
+            .unwrap();
         assert!(!result);
     }
 }

@@ -19,64 +19,58 @@
 //! - **Bridge**: 协议桥接层（MCP/A2A/HTTP 统一接口/自动协商/格式转换）
 
 // Phase 6 modules
-pub mod types;
-pub mod registry;
 pub mod handshake;
 pub mod heartbeat;
 pub mod message_bus;
+pub mod registry;
+pub mod types;
 
 // Phase 10 modules
-pub mod mcp;
-pub mod marketplace;
-pub mod trust;
-pub mod negotiation;
-pub mod decentralized;
 pub mod bridge;
+pub mod decentralized;
+pub mod marketplace;
+pub mod mcp;
+pub mod negotiation;
+pub mod trust;
 
 // Phase 6 re-exports
-pub use types::*;
-pub use registry::AgentRegistry;
 pub use handshake::HandshakeEngine;
-pub use heartbeat::{HeartbeatMonitor, HeartbeatConfig};
-pub use message_bus::{MessageBus, MessageBusConfig, MessageBusStats, MessageBusError, BroadcastResult};
+pub use heartbeat::{HeartbeatConfig, HeartbeatMonitor};
+pub use message_bus::{
+    BroadcastResult, MessageBus, MessageBusConfig, MessageBusError, MessageBusStats,
+};
+pub use registry::AgentRegistry;
+pub use types::*;
 
 // Phase 10 re-exports — MCP
 pub use mcp::{
-    McpTransport, McpTool, McpRequest, McpResponse, McpError,
-    McpServerInfo, McpClientConfig, McpParser,
-    McpServer, McpClient,
-    McpProtocolError,
+    McpClient, McpClientConfig, McpError, McpParser, McpProtocolError, McpRequest, McpResponse,
+    McpServer, McpServerInfo, McpTool, McpTransport,
 };
 
 // Phase 10 re-exports — Marketplace
 pub use marketplace::{
-    AgentProfile, MarketplaceQuery, CapabilityType,
-    Recommendation, MarketplaceRegistry, MarketplaceError,
+    AgentProfile, CapabilityType, MarketplaceError, MarketplaceQuery, MarketplaceRegistry,
+    Recommendation,
 };
 
 // Phase 10 re-exports — Trust
-pub use trust::{
-    TrustScore, TrustConfig, TrustManager,
-    ListType, ListEntry,
-};
+pub use trust::{ListEntry, ListType, TrustConfig, TrustManager, TrustScore};
 
 // Phase 10 re-exports — Negotiation
 pub use negotiation::{
-    TaskProposal, ProposalStatus, TaskBid, TaskAssignment, AssignmentStatus,
-    NegotiationConfig, NegotiationEngine, NegotiationError,
+    AssignmentStatus, NegotiationConfig, NegotiationEngine, NegotiationError, ProposalStatus,
+    TaskAssignment, TaskBid, TaskProposal,
 };
 
 // Phase 10 re-exports — Decentralized
 pub use decentralized::{
-    DhtKey, DhtValue, CapabilityRoute, CapabilityProvider,
-    CapabilityGossip, CapabilityAnnouncement,
-    PartitionStatus, PartitionPolicy,
-    DecentralizedCapabilityRouter,
+    CapabilityAnnouncement, CapabilityGossip, CapabilityProvider, CapabilityRoute,
+    DecentralizedCapabilityRouter, DhtKey, DhtValue, PartitionPolicy, PartitionStatus,
 };
 
 // Phase 10 re-exports — Bridge
 pub use bridge::{
-    ProtocolType, NegotiatedProtocol, ProtocolCapabilities, UnifiedMessage,
-    ProtocolBridge, A2ABridge, McpBridge, HttpBridge,
-    ProtocolNegotiator, ProtocolGateway, BridgeError,
+    A2ABridge, BridgeError, HttpBridge, McpBridge, NegotiatedProtocol, ProtocolBridge,
+    ProtocolCapabilities, ProtocolGateway, ProtocolNegotiator, ProtocolType, UnifiedMessage,
 };

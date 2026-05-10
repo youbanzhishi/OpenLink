@@ -3,8 +3,13 @@
 //! Phase 2: 管理API需要Token认证，重定向API不需要认证。
 //! 支持多Token，每个Token有权限范围（read/write/admin）。
 
-use axum::{extract::Request, http::{HeaderMap, StatusCode}, middleware::Next, response::{IntoResponse, Response}};
 use crate::state::AppState;
+use axum::{
+    extract::Request,
+    http::{HeaderMap, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
+};
 use std::sync::Arc;
 
 /// Token 认证中间件
@@ -46,27 +51,28 @@ fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
 ///
 /// 在 router.rs 中将管理路由与公开路由分开，
 /// 管理路由添加认证中间件层。
-pub async fn auth_middleware(
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn auth_middleware(req: Request, next: Next) -> Response {
     // 从扩展中获取 AppState
     let state = req.extensions().get::<Arc<AppState>>().cloned();
 
     if let Some(state) = state {
         if state.config.auth.enabled {
-            let auth_header = req.headers().get("authorization")
+            let auth_header = req
+                .headers()
+                .get("authorization")
                 .and_then(|v| v.to_str().ok());
 
             match auth_header {
                 Some(h) if h.starts_with("Bearer ") => {
                     let token = h[7..].trim();
                     if state.config.auth.validate_token(token).is_none() {
-                        return (StatusCode::UNAUTHORIZED, "Invalid or unauthorized token").into_response();
+                        return (StatusCode::UNAUTHORIZED, "Invalid or unauthorized token")
+                            .into_response();
                     }
                 }
                 _ => {
-                    return (StatusCode::UNAUTHORIZED, "Missing Authorization header").into_response();
+                    return (StatusCode::UNAUTHORIZED, "Missing Authorization header")
+                        .into_response();
                 }
             }
         }

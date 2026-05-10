@@ -137,13 +137,16 @@ impl BatchClient {
         links: Vec<CreateLinkRequest>,
     ) -> Result<BatchCreateResponse, SdkError> {
         let body = BatchCreateRequest { links };
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/links/batch"))
             .json(&body);
 
-        let _permit = self.semaphore.acquire().await.map_err(|e| {
-            SdkError::Other(format!("Semaphore error: {}", e))
-        })?;
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|e| SdkError::Other(format!("Semaphore error: {}", e)))?;
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -155,31 +158,34 @@ impl BatchClient {
         codes: Vec<String>,
     ) -> Result<BatchResolveResponse, SdkError> {
         let body = BatchResolveRequest { codes };
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/agent/resolve"))
             .json(&body);
 
-        let _permit = self.semaphore.acquire().await.map_err(|e| {
-            SdkError::Other(format!("Semaphore error: {}", e))
-        })?;
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|e| SdkError::Other(format!("Semaphore error: {}", e)))?;
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
     }
 
     /// Batch delete short links.
-    pub async fn batch_delete(
-        &self,
-        codes: Vec<String>,
-    ) -> Result<BatchDeleteResponse, SdkError> {
+    pub async fn batch_delete(&self, codes: Vec<String>) -> Result<BatchDeleteResponse, SdkError> {
         let body = BatchDeleteRequest { codes };
-        let req = self.client
+        let req = self
+            .client
             .post(self.config.api_url("/api/v1/links/batch-delete"))
             .json(&body);
 
-        let _permit = self.semaphore.acquire().await.map_err(|e| {
-            SdkError::Other(format!("Semaphore error: {}", e))
-        })?;
+        let _permit = self
+            .semaphore
+            .acquire()
+            .await
+            .map_err(|e| SdkError::Other(format!("Semaphore error: {}", e)))?;
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -242,10 +248,7 @@ impl BatchClient {
                 Ok(Err(e)) => Err(e),
                 Err(_) => Err(SdkError::Other("Task panicked".to_string())),
             };
-            results.push(BatchResult {
-                id: code,
-                result,
-            });
+            results.push(BatchResult { id: code, result });
         }
 
         BatchResponse::from_results(results)
@@ -276,15 +279,13 @@ mod tests {
 
     #[test]
     fn test_batch_client_new() {
-        let config = Config::new("https://api.example.com")
-            .api_token("test-token");
+        let config = Config::new("https://api.example.com").api_token("test-token");
         let _client = BatchClient::new(config);
     }
 
     #[test]
     fn test_batch_client_with_concurrency() {
-        let config = Config::new("https://api.example.com")
-            .api_token("test-token");
+        let config = Config::new("https://api.example.com").api_token("test-token");
         let client = BatchClient::with_max_concurrency(config, 8);
         assert!(client.max_concurrency() > 0);
     }
@@ -346,8 +347,14 @@ mod tests {
     #[test]
     fn test_batch_response_all_succeeded() {
         let results: Vec<BatchResult<String>> = vec![
-            BatchResult { id: "1".to_string(), result: Ok("ok1".to_string()) },
-            BatchResult { id: "2".to_string(), result: Ok("ok2".to_string()) },
+            BatchResult {
+                id: "1".to_string(),
+                result: Ok("ok1".to_string()),
+            },
+            BatchResult {
+                id: "2".to_string(),
+                result: Ok("ok2".to_string()),
+            },
         ];
         let resp = BatchResponse::from_results(results);
         assert!(resp.all_succeeded());
@@ -358,8 +365,14 @@ mod tests {
     #[test]
     fn test_batch_response_partial_failure() {
         let results: Vec<BatchResult<String>> = vec![
-            BatchResult { id: "1".to_string(), result: Ok("ok".to_string()) },
-            BatchResult { id: "2".to_string(), result: Err(SdkError::Other("fail".to_string())) },
+            BatchResult {
+                id: "1".to_string(),
+                result: Ok("ok".to_string()),
+            },
+            BatchResult {
+                id: "2".to_string(),
+                result: Err(SdkError::Other("fail".to_string())),
+            },
         ];
         let resp = BatchResponse::from_results(results);
         assert!(!resp.all_succeeded());

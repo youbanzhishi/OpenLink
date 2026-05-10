@@ -2,11 +2,11 @@
 //!
 //! Phase 6: 监控 Agent 的在线状态，检测故障。
 
-use crate::types::*;
 use crate::registry::AgentRegistry;
+use crate::types::*;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use std::time::Duration;
+use tokio::sync::RwLock;
 
 /// 心跳配置
 #[derive(Debug, Clone)]
@@ -71,9 +71,13 @@ impl HeartbeatMonitor {
 
         // 标记超时 Agent 为 Offline
         for agent_id in &timed_out {
-            if let Err(e) = self.registry.update(agent_id, |info| {
-                info.status = AgentStatus::Offline;
-            }).await {
+            if let Err(e) = self
+                .registry
+                .update(agent_id, |info| {
+                    info.status = AgentStatus::Offline;
+                })
+                .await
+            {
                 tracing::warn!(agent_id = %agent_id, error = %e, "Failed to mark agent as offline");
             } else {
                 tracing::info!(agent_id = %agent_id, "Agent marked as offline due to heartbeat timeout");
@@ -134,7 +138,13 @@ impl HeartbeatMonitor {
     }
 
     /// 生成心跳消息（Agent 自身发送）
-    pub fn create_heartbeat(&self, agent_id: &str, status: AgentStatus, active_tasks: u32, seq: u64) -> HeartbeatMessage {
+    pub fn create_heartbeat(
+        &self,
+        agent_id: &str,
+        status: AgentStatus,
+        active_tasks: u32,
+        seq: u64,
+    ) -> HeartbeatMessage {
         HeartbeatMessage {
             agent_id: agent_id.to_string(),
             seq,

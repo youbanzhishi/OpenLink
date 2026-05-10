@@ -71,9 +71,7 @@ impl FileServer {
             .and(warp::body::bytes())
             .and_then(move |body: bytes::Bytes| {
                 let server = file_server_upload.clone();
-                async move {
-                    server.handle_upload(body).await
-                }
+                async move { server.handle_upload(body).await }
             });
 
         // 文件下载端点
@@ -84,9 +82,7 @@ impl FileServer {
             .and_then(move |file_id: String| {
                 let server = file_server_download.clone();
                 let file_id = file_id.clone();
-                async move {
-                    server.handle_download(&file_id).await
-                }
+                async move { server.handle_download(&file_id).await }
             });
 
         // 文件存在检查端点
@@ -97,9 +93,7 @@ impl FileServer {
             .and_then(move |file_id: String| {
                 let server = file_server_head.clone();
                 let file_id = file_id.clone();
-                async move {
-                    server.handle_exists(&file_id).await
-                }
+                async move { server.handle_exists(&file_id).await }
             });
 
         let routes = upload.or(download).or(head);

@@ -8,10 +8,10 @@
 //! - 批量预热接口
 
 use lru::LruCache;
+use serde::{Deserialize, Serialize};
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde::{Deserialize, Serialize};
 
 /// 缓存条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,9 +103,8 @@ impl EdgeCache {
 
     /// 创建新缓存（带热链配置）
     pub fn with_hot_config(max_entries: usize, ttl_secs: u64, hot_config: HotLinkConfig) -> Self {
-        let cache = LruCache::new(
-            NonZeroUsize::new(max_entries.max(1)).unwrap_or(NonZeroUsize::MIN),
-        );
+        let cache =
+            LruCache::new(NonZeroUsize::new(max_entries.max(1)).unwrap_or(NonZeroUsize::MIN));
         Self {
             cache: Arc::new(Mutex::new(cache)),
             ttl_secs,
@@ -298,7 +297,9 @@ mod tests {
     #[tokio::test]
     async fn test_cache_put_get() {
         let cache = EdgeCache::new(100, 3600);
-        cache.put("test".to_string(), "https://example.com".to_string(), 302).await;
+        cache
+            .put("test".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         let entry = cache.get("test").await;
         assert!(entry.is_some());
@@ -315,7 +316,14 @@ mod tests {
     #[tokio::test]
     async fn test_cache_expiry() {
         let cache = EdgeCache::new(100, 3600);
-        cache.put_with_ttl("ttl1".to_string(), "https://example.com".to_string(), 302, 1).await;
+        cache
+            .put_with_ttl(
+                "ttl1".to_string(),
+                "https://example.com".to_string(),
+                302,
+                1,
+            )
+            .await;
 
         // 短暂等待让 TTL 过期
         tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
@@ -331,7 +339,9 @@ mod tests {
             hot_ttl_multiplier: 5,
         };
         let cache = EdgeCache::with_hot_config(100, 3600, hot_config);
-        cache.put("hot1".to_string(), "https://example.com".to_string(), 302).await;
+        cache
+            .put("hot1".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         // 访问 3 次达到热链阈值
         for _ in 0..3 {
@@ -362,7 +372,9 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidate() {
         let cache = EdgeCache::new(100, 3600);
-        cache.put("del1".to_string(), "https://example.com".to_string(), 302).await;
+        cache
+            .put("del1".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         assert!(cache.get("del1").await.is_some());
         assert!(cache.invalidate("del1").await);
@@ -372,9 +384,15 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidate_prefix() {
         let cache = EdgeCache::new(100, 3600);
-        cache.put("abc_1".to_string(), "https://a.com".to_string(), 302).await;
-        cache.put("abc_2".to_string(), "https://b.com".to_string(), 302).await;
-        cache.put("xyz_1".to_string(), "https://c.com".to_string(), 302).await;
+        cache
+            .put("abc_1".to_string(), "https://a.com".to_string(), 302)
+            .await;
+        cache
+            .put("abc_2".to_string(), "https://b.com".to_string(), 302)
+            .await;
+        cache
+            .put("xyz_1".to_string(), "https://c.com".to_string(), 302)
+            .await;
 
         let removed = cache.invalidate_prefix("abc_").await;
         assert_eq!(removed, 2);
@@ -386,7 +404,9 @@ mod tests {
     #[tokio::test]
     async fn test_cache_stats() {
         let cache = EdgeCache::new(100, 3600);
-        cache.put("key1".to_string(), "https://example.com".to_string(), 302).await;
+        cache
+            .put("key1".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         cache.get("nonexistent").await; // miss
         cache.get("key1").await; // hit

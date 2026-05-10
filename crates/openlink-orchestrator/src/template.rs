@@ -103,15 +103,13 @@ impl TemplateRegistry {
             name: "Serial Pipeline".to_string(),
             description: "串行执行多个 Agent 任务，前一步输出作为后一步输入".to_string(),
             category: "pipeline".to_string(),
-            parameters: vec![
-                TemplateParameter {
-                    name: "steps".to_string(),
-                    param_type: "array".to_string(),
-                    required: true,
-                    default: None,
-                    description: "Agent 任务步骤列表".to_string(),
-                },
-            ],
+            parameters: vec![TemplateParameter {
+                name: "steps".to_string(),
+                param_type: "array".to_string(),
+                required: true,
+                default: None,
+                description: "Agent 任务步骤列表".to_string(),
+            }],
             dag_blueprint: DagBlueprint {
                 nodes: vec![],
                 edges: vec![],
@@ -185,7 +183,8 @@ impl TemplateRegistry {
         self.register(WorkflowTemplate {
             id: "map-reduce".to_string(),
             name: "Map-Reduce".to_string(),
-            description: "将任务分片到多个 Agent 并行处理（Map），然后汇总结果（Reduce）".to_string(),
+            description: "将任务分片到多个 Agent 并行处理（Map），然后汇总结果（Reduce）"
+                .to_string(),
             category: "parallel".to_string(),
             parameters: vec![
                 TemplateParameter {
@@ -257,15 +256,13 @@ impl TemplateRegistry {
             name: "Parallel Merge".to_string(),
             description: "多 Agent 并行处理后合并所有结果（无需单独聚合 Agent）".to_string(),
             category: "parallel".to_string(),
-            parameters: vec![
-                TemplateParameter {
-                    name: "agents".to_string(),
-                    param_type: "array".to_string(),
-                    required: true,
-                    default: None,
-                    description: "并行执行的 Agent 列表".to_string(),
-                },
-            ],
+            parameters: vec![TemplateParameter {
+                name: "agents".to_string(),
+                param_type: "array".to_string(),
+                required: true,
+                default: None,
+                description: "并行执行的 Agent 列表".to_string(),
+            }],
             dag_blueprint: DagBlueprint {
                 nodes: vec![],
                 edges: vec![],
@@ -483,10 +480,7 @@ impl TemplateRegistry {
     ///
     /// 多 Agent 并行执行，无需单独聚合节点。
     /// 结果由编排器自动合并。
-    pub fn create_parallel_merge(
-        dag_id: &str,
-        agents: Vec<(&str, &str)>,
-    ) -> Dag {
+    pub fn create_parallel_merge(dag_id: &str, agents: Vec<(&str, &str)>) -> Dag {
         let mut dag = Dag::new(dag_id, "Parallel Merge");
 
         // 起始节点
@@ -517,7 +511,6 @@ impl TemplateRegistry {
 
         dag
     }
-
 }
 
 impl Default for TemplateRegistry {
@@ -586,9 +579,12 @@ mod tests {
     fn test_create_conditional_branch() {
         let dag = TemplateRegistry::create_conditional_branch(
             "test-cond",
-            "agent-checker", "check",
-            "agent-success", "success",
-            "agent-failure", "failure",
+            "agent-checker",
+            "check",
+            "agent-success",
+            "success",
+            "agent-failure",
+            "failure",
         );
 
         assert!(dag.validate().is_ok());
@@ -618,10 +614,7 @@ mod tests {
     fn test_create_parallel_merge() {
         let dag = TemplateRegistry::create_parallel_merge(
             "test-merge",
-            vec![
-                ("agent-1", "analyze-text"),
-                ("agent-2", "analyze-image"),
-            ],
+            vec![("agent-1", "analyze-text"), ("agent-2", "analyze-image")],
         );
 
         assert!(dag.validate().is_ok());

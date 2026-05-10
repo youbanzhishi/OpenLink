@@ -12,22 +12,22 @@
 //! - 后台驱逐任务
 //! - 缓存预加载器
 
-pub mod traits;
-pub mod memory;
 pub mod eviction;
+pub mod memory;
 pub mod preload;
+pub mod traits;
 
 #[cfg(feature = "redis")]
 pub mod redis_impl;
 
-pub use traits::{Cache, CacheEntry, CacheStats, CacheError};
-pub use memory::MemoryCache;
-pub use memory::LayeredCache;
 pub use eviction::{BackgroundEviction, EvictionConfig, EvictionResult};
+pub use memory::LayeredCache;
+pub use memory::MemoryCache;
 pub use preload::{
-    CachePreloader, PreloadEntry, PreloadResult,
-    PreloadSource, FilePreloadSource, StaticPreloadSource, PreloadError,
+    CachePreloader, FilePreloadSource, PreloadEntry, PreloadError, PreloadResult, PreloadSource,
+    StaticPreloadSource,
 };
+pub use traits::{Cache, CacheEntry, CacheError, CacheStats};
 
 #[cfg(feature = "redis")]
 pub use redis_impl::RedisCache;

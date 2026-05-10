@@ -24,29 +24,27 @@
 //! }
 //! ```
 
-pub mod stun;
+pub mod chunk_transfer;
 pub mod nat;
-pub mod transfer;
 pub mod nat_traversal;
 pub mod peer_connection;
-pub mod chunk_transfer;
+pub mod stun;
+pub mod transfer;
 
-pub use nat::{NatType, NatInfo};
-pub use stun::StunClient;
-pub use transfer::{P2pTransferAction, P2pTransferParams, TransferMode, P2pResponse};
-pub use nat_traversal::{NatTraversal, TraversalStrategy, TraversalResult, TraversalSuccessRate};
-pub use peer_connection::{
-    PeerConnection, ConnectionState, ConnectionQuality, PeerConnectionStats,
-    BandwidthEstimator,
-};
 pub use chunk_transfer::{
-    ChunkTransferTask, ChunkInfo, ChunkState, ChunkVerifyResult,
-    ParallelDownloadScheduler, DEFAULT_CHUNK_SIZE,
-    calculate_chunk_count, compute_chunk_checksum,
+    calculate_chunk_count, compute_chunk_checksum, ChunkInfo, ChunkState, ChunkTransferTask,
+    ChunkVerifyResult, ParallelDownloadScheduler, DEFAULT_CHUNK_SIZE,
 };
+pub use nat::{NatInfo, NatType};
+pub use nat_traversal::{NatTraversal, TraversalResult, TraversalStrategy, TraversalSuccessRate};
+pub use peer_connection::{
+    BandwidthEstimator, ConnectionQuality, ConnectionState, PeerConnection, PeerConnectionStats,
+};
+pub use stun::StunClient;
+pub use transfer::{P2pResponse, P2pTransferAction, P2pTransferParams, TransferMode};
 
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use std::sync::Arc;
-use openlink_core::{ExtensionRegistry, CoreError, ActionHandler, Context, ActionResult, Target};
 
 /// 注册 P2P 传输扩展
 pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {

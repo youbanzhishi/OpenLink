@@ -3,15 +3,15 @@
 //! 精简版路由器，处理短链重定向。
 //! Phase 5 增强：集成 WASM 重定向引擎和地理路由。
 
+use crate::cache::{CacheEntry, EdgeCache};
 use crate::config::EdgeConfig;
-use crate::cache::{EdgeCache, CacheEntry};
 use crate::geo::GeoRouter;
-use crate::wasm_redirect::{EdgeRedirectEngine, EdgeRequest, EdgeRedirectRule};
-use std::sync::Arc;
-use std::io::Cursor;
-use tiny_http::{Response, Header, StatusCode};
-use tokio::sync::RwLock;
+use crate::wasm_redirect::{EdgeRedirectEngine, EdgeRedirectRule, EdgeRequest};
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
+use std::sync::Arc;
+use tiny_http::{Header, Response, StatusCode};
+use tokio::sync::RwLock;
 
 /// 路由目标
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,11 +50,14 @@ impl EdgeRouter {
     /// 注册路由
     pub async fn register_route(&self, code: String, url: String, status_code: u16) {
         let mut routes = self.routes.write().await;
-        routes.insert(code.clone(), RouteTarget {
-            code: code.clone(),
-            url: url.clone(),
-            status_code,
-        });
+        routes.insert(
+            code.clone(),
+            RouteTarget {
+                code: code.clone(),
+                url: url.clone(),
+                status_code,
+            },
+        );
 
         // 预热缓存
         self.cache.put(code, url, status_code).await;
@@ -78,7 +81,12 @@ impl EdgeRouter {
     /// 1. WASM 重定向引擎（含热链快速路径）
     /// 2. 缓存
     /// 3. 路由表
-    pub async fn resolve(&self, code: &str, client_ip: Option<&str>, user_agent: Option<&str>) -> Option<RedirectResult> {
+    pub async fn resolve(
+        &self,
+        code: &str,
+        client_ip: Option<&str>,
+        user_agent: Option<&str>,
+    ) -> Option<RedirectResult> {
         // 1. WASM 重定向引擎
         let request = EdgeRequest {
             code: code.to_string(),
@@ -103,7 +111,11 @@ impl EdgeRouter {
                 return Some(RedirectResult {
                     target_url: decision.target_url,
                     status_code: decision.status_code,
-                    source: if decision.cache_hit { "hot_link" } else { "wasm_rule" },
+                    source: if decision.cache_hit {
+                        "hot_link"
+                    } else {
+                        "wasm_rule"
+                    },
                 });
             }
         }
@@ -125,7 +137,9 @@ impl EdgeRouter {
 
         if let Some((target_url, status_code)) = url {
             // 回填缓存
-            self.cache.put(code.to_string(), target_url.clone(), status_code).await;
+            self.cache
+                .put(code.to_string(), target_url.clone(), status_code)
+                .await;
 
             return Some(RedirectResult {
                 target_url,
@@ -159,7 +173,11 @@ impl EdgeRouter {
     }
 
     /// 构建重定向响应（保留兼容）
-    pub fn build_redirect_response(&self, target_url: &str, status_code: u16) -> Response<Cursor<Vec<u8>>> {
+    pub fn build_redirect_response(
+        &self,
+        target_url: &str,
+        status_code: u16,
+    ) -> Response<Cursor<Vec<u8>>> {
         let status = if status_code == 301 {
             StatusCode(301)
         } else {
@@ -186,9 +204,16 @@ pub struct RedirectResult {
 /// 从 User-Agent 检测身份类型（边缘简化版）
 fn detect_identity_type(ua: &str) -> Option<String> {
     let ua_lower = ua.to_lowercase();
-    if ua_lower.contains("curl/") || ua_lower.contains("wget/") || ua_lower.contains("python-requests/") {
+    if ua_lower.contains("curl/")
+        || ua_lower.contains("wget/")
+        || ua_lower.contains("python-requests/")
+    {
         Some("service".to_string())
-    } else if ua_lower.contains("openai") || ua_lower.contains("anthropic") || ua_lower.contains("claude") || ua_lower.contains("agent") {
+    } else if ua_lower.contains("openai")
+        || ua_lower.contains("anthropic")
+        || ua_lower.contains("claude")
+        || ua_lower.contains("agent")
+    {
         Some("agent".to_string())
     } else {
         Some("human".to_string())
@@ -216,7 +241,9 @@ mod tests {
         let config = EdgeConfig::default_config();
         let router = EdgeRouter::new(config);
 
-        router.register_route("test".to_string(), "https://example.com".to_string(), 302).await;
+        router
+            .register_route("test".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         let result = router.resolve("test", None, None).await;
         assert!(result.is_some());
@@ -260,7 +287,9 @@ mod tests {
         let config = EdgeConfig::default_config();
         let router = EdgeRouter::new(config);
 
-        router.register_hot_link("hot1".to_string(), "https://hot.example.com".to_string()).await;
+        router
+            .register_hot_link("hot1".to_string(), "https://hot.example.com".to_string())
+            .await;
 
         let result = router.resolve("hot1", None, None).await;
         assert!(result.is_some());
@@ -281,7 +310,9 @@ mod tests {
         let config = EdgeConfig::default_config();
         let router = EdgeRouter::new(config);
 
-        router.register_route("del1".to_string(), "https://example.com".to_string(), 302).await;
+        router
+            .register_route("del1".to_string(), "https://example.com".to_string(), 302)
+            .await;
 
         // 先查一次让它进缓存
         let _ = router.resolve("del1", None, None).await;

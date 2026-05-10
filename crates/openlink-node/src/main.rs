@@ -1,9 +1,9 @@
 //! # openlink-node — 设备端守护进程入口
 
-use openlink_node::{NodeDiscovery, FileServer, NodeConfig};
-use openlink_node::heartbeat::HeartbeatClient;
-use openlink_node::discovery::DiscoveredNode;
 use chrono::Utc;
+use openlink_node::discovery::DiscoveredNode;
+use openlink_node::heartbeat::HeartbeatClient;
+use openlink_node::{FileServer, NodeConfig, NodeDiscovery};
 use std::sync::Arc;
 use tracing_subscriber::prelude::*;
 
@@ -12,17 +12,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
-        .with(tracing_subscriber::EnvFilter::from_default_env()
-            .add_directive(tracing::Level::INFO.into()))
+        .with(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into()),
+        )
         .init();
 
     // 加载配置
-    let config = NodeConfig::load("node.toml")
-        .await
-        .unwrap_or_else(|_| {
-            tracing::info!("No config found, using defaults");
-            NodeConfig::default()
-        });
+    let config = NodeConfig::load("node.toml").await.unwrap_or_else(|_| {
+        tracing::info!("No config found, using defaults");
+        NodeConfig::default()
+    });
 
     tracing::info!(
         node_id = %config.node_id,
@@ -31,7 +31,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // 获取本机 LAN IP
-    let lan_ip = get_local_ip().await.unwrap_or_else(|| "127.0.0.1".to_string());
+    let lan_ip = get_local_ip()
+        .await
+        .unwrap_or_else(|| "127.0.0.1".to_string());
 
     // 启动 mDNS 广播
     let local_node = DiscoveredNode {
@@ -55,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 启动 HTTP 文件服务
     let file_server = Arc::new(FileServer::new(
-        openlink_node::file_service::FileBackend::Local(config.storage_path.clone().into())
+        openlink_node::file_service::FileBackend::Local(config.storage_path.clone().into()),
     ));
     let file_port = config.file_service_port;
     tokio::spawn(async move {

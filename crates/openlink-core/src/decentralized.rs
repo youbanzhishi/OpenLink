@@ -4,12 +4,11 @@
 //! 路由表维护和自动更新。
 
 use crate::gossip::{
-    GossipMembership, GossipConfig, GossipMessage,
-    NodeId, NodeInfo, NodeStatus, LinkStateEntry,
+    GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 /// 路由策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,16 +122,20 @@ impl RoutingTable {
         let now = chrono::Utc::now().timestamp();
         let should_update = match self.entries.get(&entry.destination) {
             Some(existing) => {
-                entry.total_latency_ms < existing.total_latency_ms || entry.updated_at > existing.updated_at
+                entry.total_latency_ms < existing.total_latency_ms
+                    || entry.updated_at > existing.updated_at
             }
             None => true,
         };
 
         if should_update {
-            self.entries.insert(entry.destination.clone(), RoutingTableEntry {
-                updated_at: now,
-                ..entry
-            });
+            self.entries.insert(
+                entry.destination.clone(),
+                RoutingTableEntry {
+                    updated_at: now,
+                    ..entry
+                },
+            );
         }
     }
 
@@ -143,9 +146,8 @@ impl RoutingTable {
 
     /// 删除节点相关路由
     pub fn remove_node(&mut self, node_id: &NodeId) {
-        self.entries.retain(|_, entry| {
-            entry.next_hop != *node_id && entry.destination != *node_id
-        });
+        self.entries
+            .retain(|_, entry| entry.next_hop != *node_id && entry.destination != *node_id);
     }
 
     /// 获取所有条目
@@ -200,7 +202,11 @@ pub struct DecentralizedRouter {
 
 impl DecentralizedRouter {
     /// 创建路由引擎
-    pub fn new(local_node_id: NodeId, gossip_config: GossipConfig, strategy: RouteStrategy) -> Self {
+    pub fn new(
+        local_node_id: NodeId,
+        gossip_config: GossipConfig,
+        strategy: RouteStrategy,
+    ) -> Self {
         let membership = GossipMembership::new(local_node_id.clone(), gossip_config);
         let routing_table = RoutingTable::new(local_node_id);
         Self {
@@ -244,8 +250,14 @@ impl DecentralizedRouter {
 
         for ((from, to), link) in links {
             if link.available {
-                adjacency.entry(from.clone()).or_default().push((to.clone(), link.latency_ms));
-                adjacency.entry(to.clone()).or_default().push((from.clone(), link.latency_ms));
+                adjacency
+                    .entry(from.clone())
+                    .or_default()
+                    .push((to.clone(), link.latency_ms));
+                adjacency
+                    .entry(to.clone())
+                    .or_default()
+                    .push((from.clone(), link.latency_ms));
             }
         }
 
@@ -308,11 +320,18 @@ impl DecentralizedRouter {
         }
 
         // 删除不可达节点
-        let alive_node_ids: HashSet<NodeId> = self.membership.alive_nodes()
-            .iter().map(|n| n.node_id.clone()).collect();
+        let alive_node_ids: HashSet<NodeId> = self
+            .membership
+            .alive_nodes()
+            .iter()
+            .map(|n| n.node_id.clone())
+            .collect();
         alive_node_ids.iter().for_each(|_| {});
         // Remove dead nodes from routing table
-        let dead_nodes: Vec<NodeId> = self.routing_table.entries.keys()
+        let dead_nodes: Vec<NodeId> = self
+            .routing_table
+            .entries
+            .keys()
             .filter(|k| !alive_node_ids.contains(*k))
             .cloned()
             .collect();
@@ -398,7 +417,11 @@ impl DecentralizedRouter {
 
             // 获取带宽信息
             let links = self.membership.link_states();
-            let bw = links.get(&(self.routing_table.local_node_id.clone(), entry.next_hop.clone()))
+            let bw = links
+                .get(&(
+                    self.routing_table.local_node_id.clone(),
+                    entry.next_hop.clone(),
+                ))
                 .and_then(|l| l.bandwidth_mbps)
                 .unwrap_or(0.0);
 
@@ -412,7 +435,10 @@ impl DecentralizedRouter {
         } else {
             // 无可达路径，降级为直连
             RoutePath {
-                nodes: vec![self.routing_table.local_node_id.clone(), destination.clone()],
+                nodes: vec![
+                    self.routing_table.local_node_id.clone(),
+                    destination.clone(),
+                ],
                 total_latency_ms: f64::INFINITY,
                 min_bandwidth_mbps: 0.0,
                 available: false,
@@ -433,7 +459,9 @@ impl DecentralizedRouter {
             }
 
             // 检查通过中间节点的路径
-            let link1 = self.membership.get_link(&self.routing_table.local_node_id, &node.node_id);
+            let link1 = self
+                .membership
+                .get_link(&self.routing_table.local_node_id, &node.node_id);
             let link2 = self.membership.get_link(&node.node_id, destination);
 
             if let (Some(l1), Some(l2)) = (link1, link2) {
@@ -463,7 +491,11 @@ impl DecentralizedRouter {
         }
 
         // 按延迟排序
-        alternatives.sort_by(|a, b| a.total_latency_ms.partial_cmp(&b.total_latency_ms).unwrap_or(Ordering::Equal));
+        alternatives.sort_by(|a, b| {
+            a.total_latency_ms
+                .partial_cmp(&b.total_latency_ms)
+                .unwrap_or(Ordering::Equal)
+        });
         alternatives
     }
 }
@@ -521,7 +553,10 @@ mod tests {
         assert_eq!(chain.len(), 3);
         assert_eq!(chain[0], DegradationStrategy::P2P);
 
-        assert_eq!(DegradationStrategy::P2P.next_fallback(), Some(DegradationStrategy::DirectTransfer));
+        assert_eq!(
+            DegradationStrategy::P2P.next_fallback(),
+            Some(DegradationStrategy::DirectTransfer)
+        );
         assert_eq!(DegradationStrategy::CloudRelay.next_fallback(), None);
     }
 

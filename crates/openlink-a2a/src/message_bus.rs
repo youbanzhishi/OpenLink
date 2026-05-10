@@ -10,7 +10,7 @@ use crate::types::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tracing;
 
 /// 消息总线配置
@@ -27,8 +27,12 @@ pub struct MessageBusConfig {
     pub max_message_size: usize,
 }
 
-fn default_buffer_size() -> usize { 256 }
-fn default_max_message_size() -> usize { 1024 * 1024 } // 1MB
+fn default_buffer_size() -> usize {
+    256
+}
+fn default_max_message_size() -> usize {
+    1024 * 1024
+} // 1MB
 
 impl Default for MessageBusConfig {
     fn default() -> Self {
@@ -236,10 +240,7 @@ impl MessageBus {
             stats.delivery_failures += failed as u64;
         }
 
-        BroadcastResult {
-            delivered,
-            failed,
-        }
+        BroadcastResult { delivered, failed }
     }
 
     /// 获取消息总线统计
@@ -296,7 +297,9 @@ mod tests {
     async fn test_subscribe_and_direct_message() {
         let bus = MessageBus::default();
 
-        let (_, mut rx) = bus.subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest)).await;
+        let (_, mut rx) = bus
+            .subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest))
+            .await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),
@@ -335,8 +338,12 @@ mod tests {
     async fn test_broadcast() {
         let bus = MessageBus::default();
 
-        let (_, mut rx1) = bus.subscribe("agent-b".to_string(), Some(A2AMessageType::Event)).await;
-        let (_, mut rx2) = bus.subscribe("agent-c".to_string(), Some(A2AMessageType::Event)).await;
+        let (_, mut rx1) = bus
+            .subscribe("agent-b".to_string(), Some(A2AMessageType::Event))
+            .await;
+        let (_, mut rx2) = bus
+            .subscribe("agent-c".to_string(), Some(A2AMessageType::Event))
+            .await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),
@@ -359,7 +366,9 @@ mod tests {
     async fn test_broadcast_no_self_delivery() {
         let bus = MessageBus::default();
 
-        let (_, mut rx) = bus.subscribe("agent-a".to_string(), Some(A2AMessageType::Event)).await;
+        let (_, mut rx) = bus
+            .subscribe("agent-a".to_string(), Some(A2AMessageType::Event))
+            .await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),
@@ -381,7 +390,8 @@ mod tests {
     async fn test_message_bus_stats() {
         let bus = MessageBus::default();
 
-        bus.subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest)).await;
+        bus.subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest))
+            .await;
 
         let stats = bus.stats().await;
         assert_eq!(stats.active_subscriptions, 1);
@@ -395,7 +405,8 @@ mod tests {
         };
         let bus = MessageBus::new(config);
 
-        bus.subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest)).await;
+        bus.subscribe("agent-b".to_string(), Some(A2AMessageType::TaskRequest))
+            .await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),

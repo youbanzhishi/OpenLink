@@ -19,7 +19,7 @@
 //! ```
 
 use crate::client::LinkClient;
-use crate::config::{Config, RetryConfig, CircuitBreakerConfig};
+use crate::config::{CircuitBreakerConfig, Config, RetryConfig};
 use crate::retry::RetryPolicy;
 
 /// Builder for constructing `LinkClient` with a fluent API.
@@ -219,9 +219,7 @@ mod tests {
 
     #[test]
     fn test_builder_empty_url_fails() {
-        let result = LinkClientBuilder::new()
-            .url("")
-            .build();
+        let result = LinkClientBuilder::new().url("").build();
         assert!(result.is_err());
         assert!(result.is_err());
         let err = result.err().unwrap();
@@ -230,9 +228,7 @@ mod tests {
 
     #[test]
     fn test_builder_invalid_url_scheme_fails() {
-        let result = LinkClientBuilder::new()
-            .url("ftp://example.com")
-            .build();
+        let result = LinkClientBuilder::new().url("ftp://example.com").build();
         assert!(result.is_err());
         assert!(result.is_err());
         let err = result.err().unwrap();

@@ -108,7 +108,10 @@ impl ChunkTransferTask {
 
     /// 获取已完成的 chunk 数
     pub fn completed_chunks(&self) -> u32 {
-        self.chunks.iter().filter(|c| c.state == ChunkState::Completed).count() as u32
+        self.chunks
+            .iter()
+            .filter(|c| c.state == ChunkState::Completed)
+            .count() as u32
     }
 
     /// 获取进度百分比 (0.0 - 1.0)
@@ -225,14 +228,19 @@ impl ParallelDownloadScheduler {
         let mut assignments = Vec::new();
 
         // 找到所有待传输的 chunk
-        let pending_indices: Vec<u32> = self.task.chunks.iter()
+        let pending_indices: Vec<u32> = self
+            .task
+            .chunks
+            .iter()
             .filter(|c| c.state == ChunkState::Pending)
             .map(|c| c.index)
             .collect();
 
         for chunk_index in pending_indices {
             // 找到负载最低的 peer
-            let best_peer = self.peer_loads.iter()
+            let best_peer = self
+                .peer_loads
+                .iter()
                 .filter(|(_, &load)| load < self.max_concurrent_per_peer)
                 .min_by_key(|(_, &load)| load)
                 .map(|(peer, _)| peer.clone());

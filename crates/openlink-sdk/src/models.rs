@@ -2,8 +2,8 @@
 //!
 //! 对应 OpenLink 核心原语，便于 SDK 使用。
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 // ─── Link 模型 ─────────────────────────────────────────────
 

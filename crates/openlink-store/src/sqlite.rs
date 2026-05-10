@@ -13,15 +13,14 @@
 //! - 新增 get_overview_stats
 //! - 增强 get_link_stats（设备/身份分布）
 
+use crate::error::StoreError;
+use crate::traits::Store;
 use async_trait::async_trait;
+use chrono::Utc;
 use openlink_core::{
-    Link, Route, Extension, AccessLog, LinkStats, OverviewStats, TopLink,
-    Target, Action,
+    AccessLog, Action, Extension, Link, LinkStats, OverviewStats, Route, Target, TopLink,
 };
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use chrono::Utc;
-use crate::traits::Store;
-use crate::error::StoreError;
 
 /// SQLite 存储实现
 pub struct SqliteStore {
@@ -142,9 +141,11 @@ impl SqliteStore {
             .execute(&self.pool)
             .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_device_type ON access_logs(device_type)")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_access_logs_device_type ON access_logs(device_type)",
+        )
+        .execute(&self.pool)
+        .await?;
 
         tracing::info!("SQLite tables initialized");
         Ok(())
@@ -287,23 +288,20 @@ impl Store for SqliteStore {
     }
 
     async fn get_link(&self, id: &str) -> Result<Option<Link>, StoreError> {
-        let row = sqlx::query_as::<_, LinkRow>(
-            "SELECT * FROM links WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row = sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(row.map(Link::from))
     }
 
     async fn get_link_by_code(&self, code: &str) -> Result<Option<Link>, StoreError> {
-        let row = sqlx::query_as::<_, LinkRow>(
-            "SELECT * FROM links WHERE code = ? AND is_active = 1",
-        )
-        .bind(code)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row =
+            sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE code = ? AND is_active = 1")
+                .bind(code)
+                .fetch_optional(&self.pool)
+                .await?;
 
         Ok(row.map(Link::from))
     }
@@ -328,13 +326,11 @@ impl Store for SqliteStore {
 
     async fn delete_link(&self, id: &str) -> Result<(), StoreError> {
         let now = Utc::now().to_rfc3339();
-        let result = sqlx::query(
-            "UPDATE links SET is_active = 0, updated_at = ? WHERE id = ?",
-        )
-        .bind(&now)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query("UPDATE links SET is_active = 0, updated_at = ? WHERE id = ?")
+            .bind(&now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
 
         if result.rows_affected() == 0 {
             return Err(StoreError::NotFound(format!("Link '{}' not found", id)));
@@ -389,12 +385,10 @@ impl Store for SqliteStore {
     }
 
     async fn get_route(&self, id: &str) -> Result<Option<Route>, StoreError> {
-        let row = sqlx::query_as::<_, RouteRow>(
-            "SELECT * FROM routes WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row = sqlx::query_as::<_, RouteRow>("SELECT * FROM routes WHERE id = ?")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(row.map(Route::from))
     }
@@ -451,11 +445,9 @@ impl Store for SqliteStore {
                 .await?
             }
             None => {
-                sqlx::query_as::<_, RouteRow>(
-                    "SELECT * FROM routes ORDER BY created_at DESC",
-                )
-                .fetch_all(&self.pool)
-                .await?
+                sqlx::query_as::<_, RouteRow>("SELECT * FROM routes ORDER BY created_at DESC")
+                    .fetch_all(&self.pool)
+                    .await?
             }
         };
 
@@ -465,11 +457,10 @@ impl Store for SqliteStore {
     // ─── Extension 操作 ─────────────────────────────────────
 
     async fn list_extensions(&self) -> Result<Vec<Extension>, StoreError> {
-        let rows = sqlx::query_as::<_, ExtensionRow>(
-            "SELECT * FROM extensions WHERE is_active = 1",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query_as::<_, ExtensionRow>("SELECT * FROM extensions WHERE is_active = 1")
+                .fetch_all(&self.pool)
+                .await?;
 
         Ok(rows.into_iter().map(Extension::from).collect())
     }
@@ -525,7 +516,11 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    async fn get_access_logs(&self, link_id: &str, limit: usize) -> Result<Vec<AccessLog>, StoreError> {
+    async fn get_access_logs(
+        &self,
+        link_id: &str,
+        limit: usize,
+    ) -> Result<Vec<AccessLog>, StoreError> {
         let rows = sqlx::query_as::<_, AccessLogRow>(
             "SELECT * FROM access_logs WHERE link_id = ? ORDER BY created_at DESC LIMIT ?",
         )
@@ -539,25 +534,21 @@ impl Store for SqliteStore {
 
     async fn get_link_stats(&self, link_id: &str) -> Result<LinkStats, StoreError> {
         // 首先获取链接信息
-        let link = sqlx::query_as::<_, LinkRow>(
-            "SELECT * FROM links WHERE id = ?",
-        )
-        .bind(link_id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or_else(|| StoreError::NotFound(format!("Link '{}' not found", link_id)))?;
+        let link = sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE id = ?")
+            .bind(link_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or_else(|| StoreError::NotFound(format!("Link '{}' not found", link_id)))?;
 
         let now = Utc::now();
         let _24h_ago = (now - chrono::Duration::hours(24)).to_rfc3339();
         let _7d_ago = (now - chrono::Duration::days(7)).to_rfc3339();
 
         // 总访问次数
-        let total: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM access_logs WHERE link_id = ?",
-        )
-        .bind(link_id)
-        .fetch_one(&self.pool)
-        .await?;
+        let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE link_id = ?")
+            .bind(link_id)
+            .fetch_one(&self.pool)
+            .await?;
 
         // 唯一访客数（按 visitor_ip 去重，回退到 context.identity.id）
         let unique: (i64,) = sqlx::query_as(
@@ -628,33 +619,26 @@ impl Store for SqliteStore {
         let today_start = now.format("%Y-%m-%dT00:00:00+00:00").to_string();
 
         // 总链接数
-        let total_links: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM links",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let total_links: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM links")
+            .fetch_one(&self.pool)
+            .await?;
 
         // 活跃链接数
-        let active_links: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM links WHERE is_active = 1",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let active_links: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM links WHERE is_active = 1")
+            .fetch_one(&self.pool)
+            .await?;
 
         // 总访问次数
-        let total_accesses: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM access_logs",
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let total_accesses: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM access_logs")
+            .fetch_one(&self.pool)
+            .await?;
 
         // 今日访问次数
-        let accesses_today: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM access_logs WHERE created_at >= ?",
-        )
-        .bind(&today_start)
-        .fetch_one(&self.pool)
-        .await?;
+        let accesses_today: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE created_at >= ?")
+                .bind(&today_start)
+                .fetch_one(&self.pool)
+                .await?;
 
         // 热门链接 Top 5
         let top_rows: Vec<(String, String, i64)> = sqlx::query_as(
@@ -670,7 +654,11 @@ impl Store for SqliteStore {
 
         let top_links: Vec<TopLink> = top_rows
             .into_iter()
-            .map(|(code, link_id, access_count)| TopLink { code, link_id, access_count })
+            .map(|(code, link_id, access_count)| TopLink {
+                code,
+                link_id,
+                access_count,
+            })
             .collect();
 
         Ok(OverviewStats {
@@ -685,9 +673,7 @@ impl Store for SqliteStore {
     // ─── Health Check (Phase 5) ─────────────────────────────
 
     async fn health_check(&self) -> Result<(), StoreError> {
-        sqlx::query("SELECT 1")
-            .fetch_one(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").fetch_one(&self.pool).await?;
         Ok(())
     }
 }
