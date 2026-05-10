@@ -1388,7 +1388,6 @@ mod tests {
             key_path: Some("/home/user/.ssh/id_rsa".to_string()),
             base_dir: "/data".to_string(),
         };
-        assert!(SftpStorageBackend::new(config).is_ok());
         let backend = SftpStorageBackend::new(config).unwrap();
         assert_eq!(backend.backend_name(), "sftp");
     }
