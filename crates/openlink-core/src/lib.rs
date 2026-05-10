@@ -7,6 +7,12 @@
 //! - 核心层零业务逻辑：路由引擎不知道"短链"是什么，只知道 Context → Action
 //! - 新功能 = 注册扩展：任何新场景都不改核心代码
 //! - 可观测内置：每次路由决策都有完整上下文记录
+//!
+//! ## Phase 7 模块
+//! - `metrics`: 统一指标收集与 Prometheus 导出
+//! - `rate_limit`: 限流器（令牌桶/滑动窗口）
+//! - `auth`: 认证增强（API Key/JWT）
+//! - `health`: 组件级健康检查（Readiness/Liveness）
 
 pub mod primitives;
 pub mod engine;
@@ -14,9 +20,42 @@ pub mod registry;
 pub mod error;
 pub mod shortcode;
 
+// Phase 7: Monitoring & Security
+pub mod metrics;
+pub mod rate_limit;
+pub mod auth;
+pub mod health;
+
 pub use primitives::*;
 pub use engine::RoutingEngine;
 pub use registry::ExtensionRegistry;
 pub use registry::{ActionHandler, ConditionHandler, HookHandler};
 pub use error::CoreError;
 pub use shortcode::{generate, generate_default, is_valid};
+
+// Phase 7: Re-export key types
+pub use metrics::{
+    MetricsCollector, InMemoryMetrics, PrometheusExporter,
+    MetricsMiddleware, RequestMetricsTimer, LatencyTracker,
+    CacheMetrics, MetricsSnapshot,
+};
+pub use rate_limit::{
+    RateLimiter, TokenBucketLimiter, SlidingWindowLimiter,
+    RateLimitConfig, RateLimitResult, RateLimitStatus,
+    RateLimitStrategy, RateLimitAlgorithm, RateLimitMiddleware,
+    CompositeRateLimiter,
+};
+pub use auth::{
+    AuthProvider, AuthResult, AuthMiddleware,
+    ApiKeyAuth, ApiKeyConfig,
+    JwtAuth, JwtAlgorithm, JwtConfig,
+    Credentials,
+};
+pub use health::{
+    HealthCheck, HealthChecker, ComponentHealth, ComponentStatus,
+    ReadinessProbe, ReadinessResult,
+    LivenessProbe, LivenessResult,
+    OverallHealth,
+    DatabaseHealthCheck, CacheHealthCheck, UpstreamHealthCheck,
+    HealthEndpoint,
+};

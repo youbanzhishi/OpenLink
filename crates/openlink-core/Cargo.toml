@@ -13,5 +13,10 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 rand = { workspace = true }
 
+# Phase 7: Metrics & Security
+parking_lot = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+url = { workspace = true }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

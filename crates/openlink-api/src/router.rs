@@ -16,9 +16,10 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/:code", get(handlers::redirect::redirect))
         .route("/s/:share_code", get(handlers::redirect::share_redirect))
         
-        // 健康检查 (Phase 5)
+        // 健康检查 (Phase 5 + Phase 7)
         .route("/health", get(handlers::monitoring::health))
         .route("/ready", get(handlers::monitoring::ready))
+        .route("/live", get(handlers::monitoring::live))
         .route("/metrics", get(handlers::monitoring::metrics))
         
         // API v1 - Links

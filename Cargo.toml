@@ -85,6 +85,10 @@ prometheus = "0.13"
 # Phase 5: LRU Cache
 lru = "0.12"
 
+# Phase 7: Monitoring & Security
+parking_lot = "0.12"
+url = "2"
+
 [profile.release]
 opt-level = "z"
 lto = true
