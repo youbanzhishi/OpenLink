@@ -4,15 +4,23 @@
 //! - **插件分发**：VST3 / CLAP 插件包分发到 DAW 机器
 //! - **JSFX 脚本加载**：远程加载 JSFX 脚本到 OpenDAW
 //! - **项目分享**：深链接拉起 DAW 项目
-//! - **PluginRegistry**: 插件注册表（版本管理+依赖检查）
-//! - **PluginInstaller**: 一键安装（下载→校验→安装→回滚）
-//! - **ProjectShare**: 项目分享（打包+深链接+权限控制）
+//!
+//! ## Action 参数格式
+//! ```json
+//! {
+//!   "operation": "distribute_plugin",
+//!   "plugin": {
+//!     "id": "vst3-xxx",
+//!     "name": "MySynth",
+//!     "format": "vst3",
+//!     "url": "https://..."
+//!   },
+//!   "target_device": "daw-machine-1"
+//! }
+//! ```
 
 pub mod plugin;
 pub mod daw_link;
-pub mod registry;
-pub mod installer;
-pub mod share;
 
 
 // ─── Re-exports ─────────────────────────────────────────────

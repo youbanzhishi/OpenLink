@@ -4,7 +4,7 @@ use std::sync::Arc;
 use reqwest::Client;
 use serde_json::json;
 
-use crate::config::{Config, CircuitBreaker};
+use crate::config::Config;
 use crate::error::SdkError;
 use crate::models::*;
 
@@ -13,17 +13,14 @@ use crate::models::*;
 /// 链接客户端
 ///
 /// 提供创建、查询、解析短链等功能。
-/// 支持自动重试（指数退避）和熔断器。
 pub struct LinkClient {
     client: Client,
     config: Arc<Config>,
-    circuit_breaker: Arc<CircuitBreaker>,
 }
 
 impl LinkClient {
     /// 创建新的 LinkClient
     pub fn new(config: Config) -> Self {
-        let cb_config = config.circuit_breaker.clone();
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
@@ -32,7 +29,6 @@ impl LinkClient {
         Self {
             client,
             config: Arc::new(config),
-            circuit_breaker: Arc::new(CircuitBreaker::new(cb_config)),
         }
     }
 
@@ -69,48 +65,6 @@ impl LinkClient {
         req
     }
 
-    /// 带重试和熔断器的请求执行
-    async fn execute_with_resilience<F, Fut, T>(&self, request_fn: F) -> Result<T, SdkError>
-    where
-        F: Fn() -> Fut,
-        Fut: std::future::Future<Output = Result<T, SdkError>>,
-    {
-        let max_retries = self.config.retry.max_retries;
-
-        let mut last_error: Option<SdkError> = None;
-
-        for attempt in 0..=max_retries {
-            // Check circuit breaker
-            if !self.circuit_breaker.allow_request() {
-                return Err(SdkError::Other("Circuit breaker is open".to_string()));
-            }
-
-            match request_fn().await {
-                Ok(result) => {
-                    self.circuit_breaker.record_success();
-                    return Ok(result);
-                }
-                Err(e) => {
-                    // Don't retry on auth errors
-                    if e.is_auth_error() {
-                        self.circuit_breaker.record_failure();
-                        return Err(e);
-                    }
-
-                    last_error = Some(e);
-                    self.circuit_breaker.record_failure();
-
-                    if attempt < max_retries {
-                        let backoff = self.config.retry.backoff_duration(attempt);
-                        tokio::time::sleep(backoff).await;
-                    }
-                }
-            }
-        }
-
-        Err(last_error.unwrap_or_else(|| SdkError::Other("Unknown error".to_string())))
-    }
-
     // ─── 链接操作 ───────────────────────────────────────────
 
     /// 创建短链
@@ -121,17 +75,12 @@ impl LinkClient {
             "is_active": true
         });
 
-        self.execute_with_resilience(|| {
-            let body = body.clone();
-            async move {
-                let req = self.client
-                    .post(self.config.api_url("/api/v1/links"))
-                    .json(&body);
+        let req = self.client
+            .post(self.config.api_url("/api/v1/links"))
+            .json(&body);
 
-                let resp = self.auth_headers(req).send().await?;
-                Self::handle_response(resp).await
-            }
-        }).await
+        let resp = self.auth_headers(req).send().await?;
+        Self::handle_response(resp).await
     }
 
     /// 创建短链（带完整参数）
@@ -139,34 +88,22 @@ impl LinkClient {
         &self,
         request: CreateLinkRequest,
     ) -> Result<LinkResponse, SdkError> {
-        let request_json = serde_json::to_value(&request)?;
+        let req = self.client
+            .post(self.config.api_url("/api/v1/links"))
+            .json(&request);
 
-        self.execute_with_resilience(|| {
-            let request_json = request_json.clone();
-            async move {
-                let req = self.client
-                    .post(self.config.api_url("/api/v1/links"))
-                    .json(&request_json);
-
-                let resp = self.auth_headers(req).send().await?;
-                Self::handle_response(resp).await
-            }
-        }).await
+        let resp = self.auth_headers(req).send().await?;
+        Self::handle_response(resp).await
     }
 
     /// 获取链接
     pub async fn get(&self, code: impl Into<String>) -> Result<LinkResponse, SdkError> {
         let code = code.into();
-        self.execute_with_resilience(|| {
-            let code = code.clone();
-            async move {
-                let req = self.client
-                    .get(self.config.api_url(&format!("/api/v1/links/{}", code)));
+        let req = self.client
+            .get(self.config.api_url(&format!("/api/v1/links/{}", code)));
 
-                let resp = self.auth_headers(req).send().await?;
-                Self::handle_response(resp).await
-            }
-        }).await
+        let resp = self.auth_headers(req).send().await?;
+        Self::handle_response(resp).await
     }
 
     /// 查询链接列表
@@ -192,52 +129,36 @@ impl LinkClient {
             }
         }
 
-        let url_clone = url.clone();
-        self.execute_with_resilience(|| {
-            let url = url_clone.clone();
-            async move {
-                let req = self.client.get(&url);
-                let resp = self.auth_headers(req).send().await?;
-                Self::handle_response(resp).await
-            }
-        }).await
+        let req = self.client.get(&url);
+        let resp = self.auth_headers(req).send().await?;
+        Self::handle_response(resp).await
     }
 
     /// 删除链接
     pub async fn delete(&self, code: impl Into<String>) -> Result<(), SdkError> {
         let code = code.into();
-        self.execute_with_resilience(|| {
-            let code = code.clone();
-            async move {
-                let req = self.client
-                    .delete(self.config.api_url(&format!("/api/v1/links/{}", code)));
+        let req = self.client
+            .delete(self.config.api_url(&format!("/api/v1/links/{}", code)));
 
-                let resp = self.auth_headers(req).send().await?;
-                if resp.status().is_success() || resp.status().as_u16() == 404 {
-                    Ok(())
-                } else {
-                    Err(SdkError::Http {
-                        status: resp.status().as_u16(),
-                        message: resp.text().await.unwrap_or_default(),
-                    })
-                }
-            }
-        }).await
+        let resp = self.auth_headers(req).send().await?;
+        if resp.status().is_success() || resp.status().as_u16() == 404 {
+            Ok(())
+        } else {
+            Err(SdkError::Http {
+                status: resp.status().as_u16(),
+                message: resp.text().await.unwrap_or_default(),
+            })
+        }
     }
 
     /// 解析短链（获取目标 URL）
     pub async fn resolve(&self, code: impl Into<String>) -> Result<ResolveResult, SdkError> {
         let code = code.into();
-        self.execute_with_resilience(|| {
-            let code = code.clone();
-            async move {
-                let req = self.client
-                    .get(self.config.api_url(&format!("/api/v1/resolve/{}", code)));
+        let req = self.client
+            .get(self.config.api_url(&format!("/api/v1/resolve/{}", code)));
 
-                let resp = self.auth_headers(req).send().await?;
-                Self::handle_response(resp).await
-            }
-        }).await
+        let resp = self.auth_headers(req).send().await?;
+        Self::handle_response(resp).await
     }
 
     /// 批量解析短链
@@ -530,8 +451,6 @@ impl FileClient {
 // ─── Builder ───────────────────────────────────────────────
 
 /// Client 构建器
-///
-/// 支持 `.retry()`, `.timeout()`, `.circuit_breaker()` 等链式调用。
 #[derive(Debug, Default)]
 pub struct ClientBuilder {
     config: Config,
@@ -573,26 +492,6 @@ impl ClientBuilder {
         self
     }
 
-    /// 设置请求超时（秒）
-    pub fn timeout(mut self, secs: u64) -> Self {
-        self.config.timeout_secs = secs;
-        self
-    }
-
-    /// 设置自动重试（指数退避）
-    pub fn retry(mut self, max_retries: u32) -> Self {
-        self.config.retry.max_retries = max_retries;
-        self
-    }
-
-    /// 设置熔断器
-    pub fn circuit_breaker(mut self, failure_threshold: u32, reset_timeout_secs: u64) -> Self {
-        self.config.circuit_breaker.failure_threshold = failure_threshold;
-        self.config.circuit_breaker.reset_timeout_secs = reset_timeout_secs;
-        self.config.circuit_breaker.enabled = true;
-        self
-    }
-
     /// 构建 LinkClient
     pub fn build_link_client(self) -> LinkClient {
         LinkClient::new(self.config)
@@ -627,37 +526,6 @@ mod tests {
         assert_eq!(link.config.base_url, "https://api.example.com");
         assert_eq!(link.config.api_token.as_deref(), Some("test-token"));
         assert_eq!(link.config.agent_id.as_deref(), Some("my-agent"));
-    }
-
-    #[test]
-    fn test_client_builder_with_retry() {
-        let (link, _file) = ClientBuilder::new()
-            .base_url("https://api.example.com")
-            .retry(3)
-            .build();
-
-        assert_eq!(link.config.retry.max_retries, 3);
-    }
-
-    #[test]
-    fn test_client_builder_with_circuit_breaker() {
-        let (link, _file) = ClientBuilder::new()
-            .base_url("https://api.example.com")
-            .circuit_breaker(5, 60)
-            .build();
-
-        assert!(link.config.circuit_breaker.enabled);
-        assert_eq!(link.config.circuit_breaker.failure_threshold, 5);
-        assert_eq!(link.config.circuit_breaker.reset_timeout_secs, 60);
-    }
-
-    #[test]
-    fn test_client_builder_with_timeout() {
-        let (link, _file) = ClientBuilder::new()
-            .timeout(120)
-            .build();
-
-        assert_eq!(link.config.timeout_secs, 120);
     }
 
     #[test]

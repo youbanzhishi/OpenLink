@@ -223,53 +223,6 @@ pub struct DiscoverResponse {
     pub total: usize,
 }
 
-// ─── Batch 操作模型 ─────────────────────────────────────────
-
-/// 批量创建请求
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchCreateRequest {
-    /// 链接创建请求列表
-    pub links: Vec<CreateLinkRequest>,
-}
-
-/// 批量创建响应
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchCreateResponse {
-    /// 成功创建的链接
-    pub results: Vec<LinkResponse>,
-    /// 成功数量
-    pub succeeded: usize,
-    /// 失败数量
-    pub failed: usize,
-}
-
-/// 批量删除请求
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchDeleteRequest {
-    /// 要删除的短码列表
-    pub codes: Vec<String>,
-}
-
-/// 单个删除结果
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchDeleteResult {
-    /// 短码
-    pub code: String,
-    /// 是否删除成功
-    pub deleted: bool,
-}
-
-/// 批量删除响应
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchDeleteResponse {
-    /// 删除结果列表
-    pub results: Vec<BatchDeleteResult>,
-    /// 成功数量
-    pub succeeded: usize,
-    /// 失败数量
-    pub failed: usize,
-}
-
 // ─── 辅助函数 ───────────────────────────────────────────────
 
 fn default_priority() -> i32 {

@@ -47,14 +47,5 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/agent/resolve", post(handlers::agent::batch_resolve))
         .route("/api/v1/agent/discover", post(handlers::agent::discover))
         
-        // API v1 - Plugins (Phase 8)
-        .route("/api/v1/plugins", post(handlers::plugin::register_plugin))
-        .route("/api/v1/plugins/search", post(handlers::plugin::search_plugins))
-        .route("/api/v1/plugins/:id/install", post(handlers::plugin::install_plugin))
-        
-        // API v1 - Share (Phase 8)
-        .route("/api/v1/share/project", post(handlers::plugin::share_project))
-        .route("/api/v1/share/:id", get(handlers::plugin::get_shared_project))
-        
         .with_state(state)
 }

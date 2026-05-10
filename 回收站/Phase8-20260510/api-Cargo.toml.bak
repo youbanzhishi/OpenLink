@@ -50,8 +50,5 @@ prometheus = { workspace = true }
 # HTTP client
 reqwest = { workspace = true }
 
-# Phase 8: URL encoding for share deeplinks
-urlencoding = { workspace = true }
-
 [dev-dependencies]
 tokio-test = "0.4"

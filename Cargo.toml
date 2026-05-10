@@ -64,9 +64,10 @@ rand = "0.8"
 # HTTP client (webhook)
 reqwest = { version = "0.12", features = ["json"] }
 
-# Cryptography (for R2 signing)
+# Cryptography (for R2/OSS signing)
 hmac = "0.12"
 sha2 = "0.10"
+sha1 = "0.10"
 hex = "0.4"
 
 # Phase 4: LAN discovery & file transfer
@@ -88,6 +89,11 @@ lru = "0.12"
 # Phase 7: Monitoring & Security
 parking_lot = "0.12"
 url = "2"
+
+# Phase 8: Base64 encoding (OSS/WebDAV auth)
+
+# Phase 8: SFTP support
+ssh2 = "0.9"
 
 [profile.release]
 opt-level = "z"
