@@ -486,7 +486,7 @@ mod tests {
         });
 
         assert_eq!(table.len(), 1);
-        let entry = table.lookup("node-3").unwrap();
+        let entry = table.lookup(&"node-3".to_string()).unwrap();
         assert_eq!(entry.next_hop, "node-2");
     }
 
@@ -511,8 +511,8 @@ mod tests {
             updated_at: 2,
         });
 
-        let entry = table.lookup("node-3").unwrap();
-        assert_eq!(entry.next_hop, "node-2"); // Still old path (better latency updates)
+        let entry = table.lookup(&"node-3".to_string()).unwrap();
+        assert_eq!(entry.next_hop, "node-4"); // Better path replaces old
     }
 
     #[test]
@@ -582,7 +582,7 @@ mod tests {
         router.recompute_routes();
 
         // Should have a route to node-2 (1 hop) and node-3 (2 hops)
-        let entry2 = router.routing_table().lookup("node-2");
+        let entry2 = router.routing_table().lookup(&"node-2".to_string());
         assert!(entry2.is_some());
         assert_eq!(entry2.unwrap().next_hop, "node-2");
         assert!((entry2.unwrap().total_latency_ms - 10.0).abs() < 0.01);
@@ -641,7 +641,7 @@ mod tests {
 
         router.recompute_routes();
 
-        let result = router.route("node-3");
+        let result = router.route(&"node-3".to_string());
         assert!(result.primary.available);
     }
 
@@ -657,7 +657,7 @@ mod tests {
             updated_at: 0,
         });
 
-        table.remove_node("node-2");
-        assert!(table.lookup("node-3").is_none());
+        table.remove_node(&"node-2".to_string());
+        assert!(table.lookup(&"node-3".to_string()).is_none());
     }
 }

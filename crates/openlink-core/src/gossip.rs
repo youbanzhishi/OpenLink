@@ -443,7 +443,7 @@ mod tests {
 
         membership.handle_message(&msg);
 
-        let link = membership.get_link("node-1", "node-2");
+        let link = membership.get_link(&"node-1".to_string(), &"node-2".to_string());
         assert!(link.is_some());
         assert_eq!(link.unwrap().latency_ms, 15.0);
     }
