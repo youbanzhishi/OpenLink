@@ -417,7 +417,7 @@ impl JwtAuth {
         // Success
         let identity = payload.sub.unwrap_or_else(|| "unknown".to_string());
         let scopes = payload.scopes.clone().unwrap_or_else(|| vec!["read".to_string()]);
-        let expires_at = payload.exp;
+        let expires_at = payload.exp.unwrap_or(0);
 
         AuthResult::success_with_expiry(&identity, scopes, expires_at)
     }
