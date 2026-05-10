@@ -168,7 +168,7 @@ impl Cache for MemoryCache {
         let mut cache = self.cache.lock().await;
         let mut deleted = 0;
         for key in keys {
-            if cache.pop(key).is_some() {
+            if cache.pop(*key).is_some() {
                 deleted += 1;
             }
         }

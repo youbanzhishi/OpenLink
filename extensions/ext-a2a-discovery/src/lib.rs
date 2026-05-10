@@ -365,7 +365,7 @@ pub fn register(
     registry.register_action(Arc::new(A2aDiscoveryAction::new(agent_registry.clone())))?;
     registry.register_action(Arc::new(A2aHandshakeAction::new(handshake_engine, agent_registry.clone())))?;
     registry.register_action(Arc::new(A2aRegisterAction::new(agent_registry.clone())))?;
-    registry.register_action(Arc::new(A2aHeartbeatAction::new(agent_registry, heartbeat_monitor)))?;
+    registry.register_action(Arc::new(A2aHeartbeatAction::new(heartbeat_monitor)))?;
     registry.register_condition(Arc::new(AgentCapabilityCondition::new(agent_registry)))?;
     Ok(())
 }

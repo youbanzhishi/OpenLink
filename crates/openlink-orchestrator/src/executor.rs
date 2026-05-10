@@ -194,6 +194,7 @@ impl DagExecutor {
                         node_outputs.insert(node_id.clone(), output);
                         completed.insert(node_id.clone());
 
+                        let elapsed_ms = node_start.elapsed().as_millis() as u64;
                         tracing::info!(
                             node = %node_id,
                             agent = %node.agent_id,
@@ -223,7 +224,7 @@ impl DagExecutor {
                                 node_id: node_id.clone(),
                                 status: ExecutionStatus::Failed(e.clone()),
                                 output: serde_json::Value::Null,
-                                elapsed_ms,
+                                elapsed_ms: elapsed,
                                 retry_count,
                             },
                         );

@@ -71,14 +71,14 @@ impl AgentRegistry {
             .ok_or_else(|| RegistryError::NotFound(agent_id.to_string()))?;
 
         info.last_heartbeat = chrono::Utc::now().timestamp();
-        info.status = status;
-
         tracing::debug!(
             agent_id = %agent_id,
             status = ?status,
             active_tasks,
             "Heartbeat updated"
         );
+
+        info.status = status;
 
         Ok(())
     }

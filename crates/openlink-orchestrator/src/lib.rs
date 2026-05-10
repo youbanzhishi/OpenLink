@@ -15,7 +15,7 @@ pub mod parallel_executor;
 pub mod template;
 pub mod aggregator;
 
-pub use dag::{Dag, DagNode, DagEdge, NodeId};
+pub use dag::{Dag, DagNode, DagEdge, EdgeCondition, NodeId};
 pub use executor::{DagExecutor, ExecutionResult, ExecutionStatus, NodeResult, TaskExecutor, SimpleTaskExecutor};
 pub use parallel_executor::{ParallelDagExecutor, ParallelConfig};
 pub use template::{WorkflowTemplate, TemplateRegistry};

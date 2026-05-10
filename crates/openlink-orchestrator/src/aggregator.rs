@@ -255,8 +255,8 @@ impl ResultAggregator {
         // 找到最后一个成功的节点结果
         results
             .values()
-            .rev()
-            .find(|r| r.status == ExecutionStatus::Success)
+            .filter(|r| r.status == ExecutionStatus::Success)
+            .last()
             .map(|r| r.output.clone())
             .unwrap_or(serde_json::Value::Null)
     }

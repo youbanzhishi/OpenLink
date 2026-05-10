@@ -86,10 +86,14 @@ impl EdgeRouter {
             user_agent: user_agent.map(|s| s.to_string()),
             device_type: user_agent.and_then(|ua| detect_device_type(ua)),
             identity_type: user_agent.and_then(|ua| detect_identity_type(ua)),
-            geo_region: client_ip.and_then(|ip| {
-                let router = self.geo_router.read().await;
-                Some(router.resolve(ip).region.clone())
-            }),
+            geo_region: {
+                if let Some(ip) = client_ip {
+                    let router = self.geo_router.read().await;
+                    Some(router.resolve(ip).region.clone())
+                } else {
+                    None
+                }
+            },
             headers: std::collections::HashMap::new(),
         };
 

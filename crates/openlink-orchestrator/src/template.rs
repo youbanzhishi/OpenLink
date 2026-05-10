@@ -179,6 +179,7 @@ impl TemplateRegistry {
                 nodes: vec![],
                 edges: vec![],
             },
+        });
 
         // 模板4: Map-Reduce
         self.register(WorkflowTemplate {
@@ -269,7 +270,6 @@ impl TemplateRegistry {
                 nodes: vec![],
                 edges: vec![],
             },
-        });
         });
     }
 
