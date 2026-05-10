@@ -319,7 +319,11 @@ mod tests {
     fn test_percentile() {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
         let p50 = percentile(&data, 50.0);
-        assert!(p50 >= 5.0 && p50 <= 6.0, "P50 should be between 5.0 and 6.0, got {}", p50);
+        assert!(
+            p50 >= 5.0 && p50 <= 6.0,
+            "P50 should be between 5.0 and 6.0, got {}",
+            p50
+        );
         assert_eq!(percentile(&data, 0.0), 1.0);
         assert_eq!(percentile(&data, 100.0), 10.0);
     }

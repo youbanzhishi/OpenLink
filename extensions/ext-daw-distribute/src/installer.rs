@@ -362,8 +362,8 @@ fn sha256_hex(data: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plugin::PluginType;
     use crate::plugin::PluginFormat;
+    use crate::plugin::PluginType;
     use crate::registry::SemVer;
 
     fn make_registration(id: &str, url: Option<&str>) -> PluginRegistration {
