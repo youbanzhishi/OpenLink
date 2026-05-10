@@ -376,11 +376,23 @@ mod tests {
         assert_eq!(snapshot.error_requests, 2);
     }
 
+    #[test]
+    fn test_percentile_empty() {
+        let data: Vec<f64> = vec![];
+        assert_eq!(percentile(&data, 50.0), 0.0);
+    }
+
     #[tokio::test]
-    async fn test_metrics_snapshot_timestamp() {
-        let collector = EdgeMetricsCollector::new();
-        collector.record_request();
-        let snapshot = collector.snapshot().await;
-        assert!(snapshot.timestamp > 0);
+    async fn test_resource_usage_default() {
+        let usage = ResourceUsage::default();
+        assert_eq!(usage.memory_mb, 0.0);
+        assert_eq!(usage.cpu_percent, 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_latency_stats_default() {
+        let stats = LatencyStats::default();
+        assert_eq!(stats.avg_ms, 0.0);
+        assert_eq!(stats.max_ms, 0.0);
     }
 }

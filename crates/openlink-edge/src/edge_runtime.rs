@@ -350,4 +350,57 @@ mod tests {
         // Should still respond (404 not timeout for this simple case)
         assert!(response.status_code == 404 || response.status_code == 504);
     }
+
+    #[tokio::test]
+    async fn test_runtime_handles_multiple_requests() {
+        let config = RuntimeConfig {
+            max_concurrency: 10,
+            default_timeout_secs: 5,
+            queue_size: 100,
+        };
+        let edge_config = EdgeConfig::default_config();
+        let router = Arc::new(EdgeRouter::new(edge_config));
+        router.register_route("test1".to_string(), "https://a.com".to_string(), 301).await;
+        router.register_route("test2".to_string(), "https://b.com".to_string(), 302).await;
+        let runtime = EdgeRuntime::new(config, router);
+
+        let req1 = RuntimeRequest {
+            id: "req-1".to_string(),
+            code: "test1".to_string(),
+            client_ip: None,
+            user_agent: None,
+            priority: RequestPriority::High,
+            created_at: chrono::Utc::now().timestamp(),
+            timeout_secs: 5,
+        };
+        let req2 = RuntimeRequest {
+            id: "req-2".to_string(),
+            code: "test2".to_string(),
+            client_ip: None,
+            user_agent: None,
+            priority: RequestPriority::Low,
+            created_at: chrono::Utc::now().timestamp(),
+            timeout_secs: 5,
+        };
+
+        let resp1 = runtime.handle_request(req1).await;
+        let resp2 = runtime.handle_request(req2).await;
+
+        assert_eq!(resp1.status_code, 301);
+        assert_eq!(resp2.status_code, 302);
+        assert_eq!(resp1.target_url.as_deref(), Some("https://a.com"));
+        assert_eq!(resp2.target_url.as_deref(), Some("https://b.com"));
+    }
+
+    #[test]
+    fn test_runtime_request_default_timeout() {
+        let config = RuntimeConfig::default();
+        assert_eq!(config.default_timeout_secs, 30);
+        assert_eq!(config.max_concurrency, 100);
+    }
+
+    #[test]
+    fn test_request_priority_default() {
+        assert_eq!(RequestPriority::default(), RequestPriority::Medium);
+    }
 }
