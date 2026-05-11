@@ -14,7 +14,7 @@ OpenLink 不是一个短链服务，而是智能体互联网的基础协议层�
 
 ## 构建要求
 
-- **Rust** 1.82+ （推荐使用 rustup 安装最新稳定版）
+- **Rust** 1.86+ （因 icu 依赖需要 edition 2024，推荐使用 rustup 安装最新稳定版）
 - **C/C++ 编译器**（gcc 或 clang，用于 SQLite 编译）
 - **pkg-config**（用于 OpenSSL 链接，可选）
 
@@ -25,7 +25,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ## 快速开始
 
-### 构建
+### 下载预编译二进制
+
+```bash
+# 下载预编译二进制
+curl -L https://github.com/youbanzhishi/OpenLink/releases/latest/download/openlink-linux-amd64.tar.gz | tar xz
+./openlink-api
+```
+
+### 从源码编译
 
 ```bash
 # 构建
@@ -38,15 +46,20 @@ cargo test
 ./target/release/openlink
 ```
 
-### Docker
+### Docker 部署
 
 ```bash
-# 构建并启动
+# 使用预构建镜像（推荐）
+docker run -d -p 3000:3000 ghcr.io/youbanzhishi/openlink/openlink:latest
+
+# 或从 docker-compose 启动
 cd docker && docker-compose up -d
 
 # 查看日志
 docker-compose logs -f openlink
 ```
+
+📖 For full deployment options, see [部署指南](docs/deployment.md) (Docker, binary, source build, systemd, production config).
 
 ## 架构
 
@@ -103,42 +116,32 @@ openlink/
 │   │   │   ├── handlers/         # 请求处理器
 │   │   │   │   ├── link.rs       # 短链 CRUD
 │   │   │   │   ├── route.rs      # 路由规则管理
-│   │   │   │   ├── extension.rs  # 扩展管理
-│   │   │   │   └── redirect.rs   # 核心重定向路径
+│   │   │   │   └── stats.rs      # 访问统计
 │   │   │   └── middleware/       # 中间件
-│   │   │       └── logging.rs    # 请求日志
 │   │   └── Cargo.toml
 │   │
-│   ├── openlink-edge/            # 边缘重定向（WASM，Phase 5 空壳）
-│   │   └── src/lib.rs
-│   │
-│   └── openlink-sdk/             # Agent SDK（Phase 3 空壳）
-│       └── src/lib.rs
+│   └── openlink-extension/       # 内置扩展
+│       ├── src/
+│       │   ├── lib.rs            # 模块导出
+│       │   └── redirect.rs       # Redirect Action 扩展
+│       └── Cargo.toml
 │
-├── extensions/
-│   └── ext-redirect/             # 重定向 Action 扩展
-│       └── src/lib.rs            # 第一个注册的扩展，验证 Registry
-│
-├── config/
-│   └── default.toml              # 默认配置
-│
-├── docker/
-│   ├── Dockerfile                # 多阶段构建
-│   └── docker-compose.yml        # 单容器部署
-│
+├── docker/                       # Docker 部署
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── tests/                        # 集成测试
 └── README.md
 ```
 
-## API 概览
+## API Reference
 
 ### 短链管理
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /v1/links | 创建短链 |
+| GET | /v1/links | 列出所有短链 |
 | GET | /v1/links/:code | 查询短链信息 |
-| GET | /v1/links | 列出短链 |
-| PUT | /v1/links/:code | 更新短链 |
 | DELETE | /v1/links/:code | 删除短链 |
 | GET | /v1/links/:code/stats | 访问统计 |
 
@@ -251,7 +254,7 @@ curl http://localhost:3000/v1/links/abc123/stats
 
 | 组件 | 技术 | 说明 |
 |------|------|------|
-| 语言 | Rust (edition 2021+) | 要求 rustc 1.82+ |
+| 语言 | Rust (edition 2024) | 要求 rustc 1.86+ |
 | Web 框架 | Axum 0.7 + Tokio | 异步高性能 |
 | 数据库 | SQLx 0.7 (SQLite) | 后期可切 PostgreSQL |
 | 序列化 | serde + serde_json | JSON 原生支持 |
