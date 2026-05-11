@@ -277,3 +277,140 @@ docker exec openlink-nginx nginx -t
 - 调整 Redis 最大内存
 - 优化缓存 TTL
 - 监控缓存命中率
+---
+
+## 非 Docker 部署（二进制直接部署）
+
+如果你不想使用 Docker，可以直接下载预编译二进制或从源码编译。
+
+### 方式一：下载预编译二进制
+
+从 [GitHub Releases](https://github.com/youbanzhishi/OpenLink/releases) 下载对应平台的二进制：
+
+```bash
+# Linux x86_64
+curl -L https://github.com/youbanzhishi/OpenLink/releases/latest/download/openlink-linux-amd64.tar.gz | tar xz
+chmod +x openlink
+sudo mv openlink /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/youbanzhishi/OpenLink/releases/latest/download/openlink-macos-arm64.tar.gz | tar xz
+chmod +x openlink
+sudo mv openlink /usr/local/bin/
+
+# Windows
+# 下载 openlink-windows-amd64.exe.zip，解压后使用
+```
+
+#### 创建 systemd 服务（Linux）
+
+```bash
+# 创建配置目录
+sudo mkdir -p /etc/openlink
+sudo cp config/openlink.toml /etc/openlink/
+
+# 创建 systemd 服务
+sudo tee /etc/systemd/system/openlink.service << 'EOF'
+[Unit]
+Description=OpenLink API Server
+After=network.target
+
+[Service]
+Type=simple
+User=openlink
+Group=openlink
+WorkingDirectory=/var/lib/openlink
+Environment=RUST_LOG=openlink=info
+Environment=DATABASE_URL=sqlite:/var/lib/openlink/openlink.db
+Environment=OPENLINK_HOST=0.0.0.0
+Environment=OPENLINK_PORT=3000
+ExecStart=/usr/local/bin/openlink
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 创建用户和数据目录
+sudo useradd -r -s /bin/false openlink
+sudo mkdir -p /var/lib/openlink
+sudo chown openlink:openlink /var/lib/openlink
+
+# 启动服务
+sudo systemctl daemon-reload
+sudo systemctl enable openlink
+sudo systemctl start openlink
+sudo systemctl status openlink
+```
+
+#### 连接 PostgreSQL（生产环境）
+
+```bash
+# 安装 PostgreSQL
+sudo apt-get install postgresql postgresql-contrib
+
+# 创建数据库和用户
+sudo -u postgres createuser openlink
+sudo -u postgres createdb openlink -O openlink
+sudo -u postgres psql -c "ALTER USER openlink PASSWORD 'your_secure_password';"
+
+# 设置环境变量
+export DATABASE_URL="postgres://openlink:your_secure_password@localhost:5432/openlink"
+```
+
+#### 连接 Redis（生产环境）
+
+```bash
+sudo apt-get install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+
+export REDIS_URL="redis://127.0.0.1:6379"
+```
+
+### 方式二：从源码编译
+
+```bash
+# 安装 Rust（如未安装）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 克隆仓库
+git clone https://github.com/youbanzhishi/OpenLink.git
+cd OpenLink
+
+# 编译 release 版本
+cargo build --release -p openlink-api
+
+# 二进制位于
+./target/release/openlink-api
+
+# 安装到系统路径
+sudo cp target/release/openlink-api /usr/local/bin/
+```
+
+#### 编译依赖（Linux）
+
+```bash
+sudo apt-get install build-essential pkg-config libssl-dev
+```
+
+#### 编译依赖（macOS）
+
+```bash
+xcode-select --install
+```
+
+### 配置文件
+
+OpenLink 使用环境变量或配置文件进行配置。配置文件示例位于 `config/openlink.toml`。
+
+关键配置项：
+
+| 配置 | 环境变量 | 默认值 | 说明 |
+|------|----------|--------|------|
+| 监听地址 | OPENLINK_HOST | 0.0.0.0 | API 监听地址 |
+| 监听端口 | OPENLINK_PORT | 3000 | API 监听端口 |
+| 数据库 | DATABASE_URL | sqlite:openlink.db | 数据库连接串 |
+| Redis | REDIS_URL | redis://127.0.0.1:6379 | Redis 连接串 |
+| 日志级别 | RUST_LOG | openlink=info | 日志过滤器 |
