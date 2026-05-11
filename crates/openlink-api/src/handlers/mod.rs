@@ -3,6 +3,7 @@
 //! 各 API 端点的处理逻辑。
 
 pub mod agent; // Phase 3: Agent API
+pub mod card; // Phase 3.5: Identity Card 名片
 pub mod edge;
 pub mod extension;
 pub mod link;

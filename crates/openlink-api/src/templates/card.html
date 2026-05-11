@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{display_name}} - OpenLink Card</title>
+<meta name="description" content="{{bio}}">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="{{display_name}}">
+<meta property="og:description" content="{{bio}}">
+<meta property="og:image" content="{{avatar}}">
+<meta property="og:url" content="{{card_url}}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{display_name}}">
+<meta name="twitter:description" content="{{bio}}">
+<meta name="twitter:image" content="{{avatar}}">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f0f0f;--card-bg:#1a1a2e;--text:#e0e0e0;--text-secondary:#a0a0b0;--accent:#6c63ff;--accent-glow:rgba(108,99,255,0.3);--border:#2a2a3e;--tag-bg:#2a2a3e;--tag-text:#a0a0ff;--social-bg:#2a2a3e;--social-hover:#3a3a5e;--radius:16px;--shadow:0 8px 32px rgba(0,0,0,0.3)}
+[data-theme="light"]{--bg:#f5f5f5;--card-bg:#ffffff;--text:#1a1a1a;--text-secondary:#666666;--accent:#6c63ff;--accent-glow:rgba(108,99,255,0.15);--border:#e0e0e0;--tag-bg:#f0f0ff;--tag-text:#5a5aff;--social-bg:#f0f0f0;--social-hover:#e0e0e0;--shadow:0 8px 32px rgba(0,0,0,0.08)}
+[data-theme="minimal"]{--bg:#ffffff;--card-bg:#ffffff;--text:#111111;--text-secondary:#888888;--accent:#111111;--accent-glow:rgba(0,0,0,0.05);--border:#e5e5e5;--tag-bg:#f5f5f5;--tag-text:#444444;--social-bg:#f5f5f5;--social-hover:#eeeeee;--radius:12px;--shadow:0 2px 8px rgba(0,0,0,0.06)}
+[data-theme="gradient"]{--bg:linear-gradient(135deg,#0f0c29,#302b63,#24243e);--card-bg:rgba(255,255,255,0.08);--text:#ffffff;--text-secondary:rgba(255,255,255,0.7);--accent:#ff6b6b;--accent-glow:rgba(255,107,107,0.3);--border:rgba(255,255,255,0.1);--tag-bg:rgba(255,255,255,0.1);--tag-text:#ff9a9e;--social-bg:rgba(255,255,255,0.1);--social-hover:rgba(255,255,255,0.2);--radius:20px;--shadow:0 8px 32px rgba(0,0,0,0.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;line-height:1.6;color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+[data-theme="gradient"] body{background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)}
+.card{max-width:420px;width:100%;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;backdrop-filter:blur(10px)}
+[data-theme="gradient"] .card{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1)}
+.card-header{text-align:center;padding:40px 24px 24px;position:relative}
+.avatar-wrapper{width:96px;height:96px;margin:0 auto 16px;border-radius:50%;overflow:hidden;border:3px solid var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.avatar-wrapper img{width:100%;height:100%;object-fit:cover}
+.display-name{font-size:1.5rem;font-weight:700;margin-bottom:4px;letter-spacing:-0.02em}
+.bio{color:var(--text-secondary);font-size:0.95rem;line-height:1.5}
+.card-body{padding:0 24px 24px}
+.section{margin-bottom:20px}
+.section-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-secondary);margin-bottom:10px;font-weight:600}
+.social-grid{display:flex;flex-wrap:wrap;gap:8px}
+.social-link{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--social-bg);border-radius:10px;color:var(--text);text-decoration:none;font-size:0.85rem;transition:all 0.2s ease;border:1px solid transparent}
+.social-link:hover{background:var(--social-hover);border-color:var(--accent);transform:translateY(-1px)}
+.social-link svg{width:16px;height:16px;fill:currentColor;flex-shrink:0}
+.projects-list{display:flex;flex-wrap:wrap;gap:8px}
+.project-badge{padding:8px 16px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#ff6b6b));border-radius:10px;color:#fff;font-size:0.85rem;font-weight:500;text-decoration:none;transition:all 0.2s ease}
+.project-badge:hover{transform:translateY(-1px);box-shadow:0 4px 12px var(--accent-glow)}
+.tags-list{display:flex;flex-wrap:wrap;gap:6px}
+.tag{padding:4px 12px;background:var(--tag-bg);color:var(--tag-text);border-radius:20px;font-size:0.8rem;font-weight:500}
+.card-footer{text-align:center;padding:16px 24px;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text-secondary)}
+.card-footer a{color:var(--accent);text-decoration:none}
+.card-footer a:hover{text-decoration:underline}
+.qr-link{display:inline-flex;align-items:center;gap:4px;margin-top:8px;color:var(--text-secondary);font-size:0.8rem;text-decoration:none;transition:color 0.2s}
+.qr-link:hover{color:var(--accent)}
+.qr-link svg{width:14px;height:14px;fill:currentColor}
+@media(max-width:480px){.card{border-radius:12px}.card-header{padding:32px 16px 16px}.card-body{padding:0 16px 16px}.display-name{font-size:1.3rem}.avatar-wrapper{width:80px;height:80px}}
+</style>
+</head>
+<body data-theme="{{theme}}">
+<div class="card">
+  <div class="card-header">
+    <div class="avatar-wrapper">
+      <img src="{{avatar}}" alt="{{display_name}}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236c63ff%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2240%22>{{avatar_fallback}}</text></svg>'">
+    </div>
+    <h1 class="display-name">{{display_name}}</h1>
+    <p class="bio">{{bio}}</p>
+  </div>
+  <div class="card-body">
+    {{social_section}}
+    {{projects_section}}
+    {{tags_section}}
+  </div>
+  <div class="card-footer">
+    <a href="{{card_url}}/qr" class="qr-link">
+      <svg viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v4h-4v2h4v4h2v-4h4v-2h-4v-4z"/></svg>
+      QR Code
+    </a>
+    <br>
+    Powered by <a href="https://openlink.dev">OpenLink</a>
+  </div>
+</div>
+</body>
+</html>

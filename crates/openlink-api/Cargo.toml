@@ -53,5 +53,8 @@ reqwest = { workspace = true }
 # Phase 8: URL encoding for share deeplinks
 urlencoding = { workspace = true }
 
+# Phase 3.5: QR Code generation for Identity Card
+qrcode = "0.14"
+
 [dev-dependencies]
 tokio-test = "0.4"
