@@ -12,6 +12,8 @@ use crate::state::AppState;
 /// 构建 Axum 应用
 pub fn build_app(state: Arc<AppState>) -> Router {
     Router::new()
+        // Person Agent Schema — 必须在 /:code 之前，否则通配路由会吞掉
+        .route("/.well-known/agent.json", get(handlers::agent::person_agent))
         // 重定向核心路径
         .route("/:code", get(handlers::redirect::redirect))
         .route("/s/:share_code", get(handlers::redirect::share_redirect))
@@ -58,6 +60,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             post(handlers::agent::batch_resolve),
         )
         .route("/api/v1/agent/discover", post(handlers::agent::discover))
+        // API v1 - Agent Config (Person Agent Schema v0.2.0)
+        .route("/api/v1/agent/config", post(handlers::agent::config_service))
         // API v1 - Plugins (Phase 8)
         .route("/api/v1/plugins", post(handlers::plugin::register_plugin))
         .route(

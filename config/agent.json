@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.2.0",
+  "identity": {
+    "name": "主人",
+    "type": "person",
+    "bio": "音乐制作人 / 开源开发者 / AI探索者",
+    "agent": {
+      "name": "小龙",
+      "endpoint": "https://openlink.local/api/v1/agent",
+      "protocol": "a2a"
+    }
+  },
+  "capabilities": [
+    { "id": "search-knowledge", "name": "搜索知识库", "category": "search" },
+    { "id": "access-vault", "name": "访问保险箱", "category": "storage", "auth_required": true },
+    { "id": "deploy-service", "name": "部署服务", "category": "deploy", "auth_required": true },
+    { "id": "mix-audio", "name": "混音处理", "category": "create" },
+    { "id": "write-novel", "name": "网文创作", "category": "create" },
+    { "id": "social-media", "name": "自媒体运营", "category": "communicate" }
+  ],
+  "services": {
+    "public": [],
+    "protected": []
+  },
+  "preferences": {
+    "interaction_style": "简洁直接，不要追问",
+    "search_priority": ["knowledge", "vault", "internet"],
+    "format_preferences": { "audio": "mp3", "document": "md" },
+    "language": "zh-CN",
+    "timezone": "Asia/Shanghai"
+  },
+  "auth": {
+    "type": "agent-delegation",
+    "delegation": {
+      "agent_name": "小龙",
+      "protocol": "a2a",
+      "description": "通过主代理小龙间接访问受保护服务"
+    }
+  },
+  "links": {
+    "github": "https://github.com/youbanzhishi"
+  }
+}

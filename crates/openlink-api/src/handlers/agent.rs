@@ -240,3 +240,294 @@ mod tests {
         assert_eq!(ctx.identity.agent_type.as_deref(), Some("assistant"));
     }
 }
+
+// ─── Person Agent Schema (v0.2.0) ────────────────────────────
+
+use std::collections::HashMap;
+use tokio::fs;
+
+/// Person Agent identity declaration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PersonAgent {
+    pub schema_version: String,
+    pub identity: Identity,
+    pub capabilities: Vec<Capability>,
+    pub services: Services,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preferences: Option<Preferences>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<AuthConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<Links>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Identity {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub entity_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent: Option<AgentRef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentRef {
+    pub name: String,
+    pub endpoint: String,
+    pub protocol: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Capability {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_required: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Services {
+    pub public: Vec<Service>,
+    #[serde(rename = "protected")]
+    pub protected_services: Vec<Service>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub service_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_required: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Preferences {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interaction_style: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_priority: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format_preferences: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthConfig {
+    #[serde(rename = "type")]
+    pub auth_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delegation: Option<Delegation>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Delegation {
+    pub agent_name: String,
+    pub protocol: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Links {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blog: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_world: Option<String>,
+}
+
+// ─── Auto-Config ─────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigRequest {
+    pub action: String,
+    pub service: Service,
+    #[serde(default)]
+    pub auto_config: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConfigResponse {
+    pub status: String,
+    pub service_id: String,
+    pub auto_config_results: Vec<ConfigActionResult>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConfigActionResult {
+    pub action: String,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
+/// GET /.well-known/agent.json — 返回人的数字身份声明
+pub async fn person_agent(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let config_path = std::path::Path::new("config/agent.json");
+
+    let content = if config_path.exists() {
+        fs::read_to_string(config_path)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read agent.json: {}", e)))?
+    } else {
+        // 最小默认schema
+        let default = PersonAgent {
+            schema_version: "0.2.0".into(),
+            identity: Identity {
+                name: "Unknown".into(),
+                entity_type: "person".into(),
+                bio: None,
+                avatar: None,
+                agent: None,
+            },
+            capabilities: vec![],
+            services: Services {
+                public: vec![],
+                protected_services: vec![],
+            },
+            preferences: None,
+            auth: None,
+            links: None,
+        };
+        serde_json::to_string_pretty(&default)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    };
+
+    let value: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid agent.json: {}", e)))?;
+
+    tracing::info!("Served .well-known/agent.json");
+    Ok(Json(value))
+}
+
+/// POST /api/v1/agent/config — 注册服务+触发auto-config
+pub async fn config_service(
+    State(_state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(req): Json<ConfigRequest>,
+) -> Result<Json<ConfigResponse>, (StatusCode, String)> {
+    // 验证请求者身份
+    let agent_id = headers
+        .get("x-agent-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("anonymous");
+
+    if agent_id == "anonymous" {
+        return Err((StatusCode::UNAUTHORIZED, "X-Agent-ID header required".into()));
+    }
+
+    let service_id = req.service.id.clone();
+    let mut results = Vec::new();
+
+    // 执行auto_config动作
+    for action in &req.auto_config {
+        let result = match action.as_str() {
+            "verify" => {
+                if let Some(endpoint) = &req.service.endpoint {
+                    match reqwest::Client::new().head(endpoint).timeout(std::time::Duration::from_secs(10)).send().await {
+                        Ok(resp) => ConfigActionResult {
+                            action: "verify".into(),
+                            status: if resp.status().is_success() { "completed".into() } else { "failed".into() },
+                            message: Some(format!("HTTP {}", resp.status())),
+                        },
+                        Err(e) => ConfigActionResult {
+                            action: "verify".into(),
+                            status: "failed".into(),
+                            message: Some(e.to_string()),
+                        },
+                    }
+                } else {
+                    ConfigActionResult {
+                        action: "verify".into(),
+                        status: "skipped".into(),
+                        message: Some("No endpoint provided".into()),
+                    }
+                }
+            }
+            "notify" => {
+                // 记录通知事件（实际webhook调用在workflow引擎中）
+                tracing::info!(agent_id = agent_id, service_id = %service_id, "Auto-config notification for new service");
+                ConfigActionResult {
+                    action: "notify".into(),
+                    status: "completed".into(),
+                    message: Some(format!("Notified for service {}", service_id)),
+                }
+            }
+            "index" | "scan" | "clone" => {
+                // 外部动作，返回pending（需调用OpenMind/OpenVault/GitHub API）
+                ConfigActionResult {
+                    action: action.clone(),
+                    status: "pending".into(),
+                    message: Some(format!("{} requires external API call, queued", action)),
+                }
+            }
+            _ => ConfigActionResult {
+                action: action.clone(),
+                status: "skipped".into(),
+                message: Some(format!("Unknown action: {}", action)),
+            },
+        };
+        results.push(result);
+    }
+
+    // 更新agent.json：添加服务到对应列表
+    let config_path = std::path::Path::new("config/agent.json");
+    if config_path.exists() {
+        if let Ok(content) = fs::read_to_string(config_path).await {
+            if let Ok(mut agent) = serde_json::from_str::<serde_json::Value>(&content) {
+                let service_value = serde_json::to_value(&req.service).unwrap_or_default();
+                let list_key = if req.service.auth_required.unwrap_or(false) {
+                    "protected"
+                } else {
+                    "public"
+                };
+                if let Some(services) = agent.get_mut("services") {
+                    if let Some(list) = services.get_mut(list_key) {
+                        if let Some(arr) = list.as_array_mut() {
+                            // 幂等：不重复添加
+                            let exists = arr.iter().any(|s| s.get("id").and_then(|v| v.as_str()) == Some(&service_id));
+                            if !exists {
+                                arr.push(service_value);
+                            }
+                        }
+                    }
+                }
+                if let Ok(updated) = serde_json::to_string_pretty(&agent) {
+                    let _ = fs::write(config_path, updated).await;
+                }
+            }
+        }
+    }
+
+    tracing::info!(agent_id = agent_id, service_id = %service_id, action = %req.action, "Service config completed");
+
+    Ok(Json(ConfigResponse {
+        status: "ok".into(),
+        service_id,
+        auto_config_results: results,
+    }))
+}
