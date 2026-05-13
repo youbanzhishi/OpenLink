@@ -643,9 +643,7 @@ pub async fn join_knowledge(
         branch: "master".into(),
         entry_file: "入口.md".into(),
         init_script: "scripts/init.sh".into(),
-        clone_command: format!(
-            "git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git"
-        ),
+        clone_command: format!("git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git"),
     };
 
     // 2. 读取入口文档预览
@@ -667,7 +665,8 @@ pub async fn join_knowledge(
         ## 核心协议
         - 五步门：查→干→验→记→交
         - 六步门(开发)：编译→测试→构建→CI→桌面→文档
-        - 铁律：只add自己的/禁stash/交付物必须完整/文档完整性/DR必检".into()
+        - 铁律：只add自己的/禁stash/交付物必须完整/文档完整性/DR必检"
+            .into()
     };
 
     // 3. 构建角色清单
