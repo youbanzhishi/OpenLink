@@ -122,10 +122,7 @@ impl EventClient {
         filter: EventFilter,
         callback_url: Option<String>,
     ) -> Result<SubscribeResponse, SdkError> {
-        let body = SubscribeRequest {
-            filter,
-            callback_url,
-        };
+        let body = SubscribeRequest { filter, callback_url };
         let req = self
             .client
             .post(self.config.api_url("/api/v1/events/subscribe"))
@@ -154,16 +151,11 @@ impl EventClient {
     }
 
     /// 拉取事件（轮询模式）
-    pub async fn poll_events(
-        &self,
-        subscription_id: &str,
-        limit: Option<usize>,
-    ) -> Result<Vec<Event>, SdkError> {
+    pub async fn poll_events(&self, subscription_id: &str, limit: Option<usize>) -> Result<Vec<Event>, SdkError> {
         let limit = limit.unwrap_or(50);
-        let url = self.config.api_url(&format!(
-            "/api/v1/events/poll/{}?limit={}",
-            subscription_id, limit
-        ));
+        let url = self
+            .config
+            .api_url(&format!("/api/v1/events/poll/{}?limit={}", subscription_id, limit));
         let req = self.client.get(&url);
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -173,11 +165,7 @@ impl EventClient {
     ///
     /// 这是一个辅助方法，先注册订阅，然后在后台轮询事件并调用回调。
     /// 返回订阅 ID，可用于取消订阅。
-    pub fn subscribe_with_callback<F>(
-        &self,
-        _filter: EventFilter,
-        _callback: F,
-    ) -> Result<String, SdkError>
+    pub fn subscribe_with_callback<F>(&self, _filter: EventFilter, _callback: F) -> Result<String, SdkError>
     where
         F: Fn(Event) + Send + Sync + 'static,
     {
@@ -187,9 +175,7 @@ impl EventClient {
         Ok(uuid::Uuid::new_v4().to_string())
     }
 
-    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(
-        resp: reqwest::Response,
-    ) -> Result<T, SdkError> {
+    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(resp: reqwest::Response) -> Result<T, SdkError> {
         let status = resp.status();
         let body = resp.text().await?;
 
@@ -261,7 +247,8 @@ mod tests {
 
     #[test]
     fn test_event_deserialization() {
-        let json = r#"{"id":"evt-1","event_type":"link_visited","payload":{"code":"abc"},"timestamp":"2024-01-01T00:00:00Z"}"#;
+        let json =
+            r#"{"id":"evt-1","event_type":"link_visited","payload":{"code":"abc"},"timestamp":"2024-01-01T00:00:00Z"}"#;
         let event: Event = serde_json::from_str(json).unwrap();
         assert_eq!(event.id, "evt-1");
         assert_eq!(event.event_type, "link_visited");
@@ -271,8 +258,7 @@ mod tests {
     fn test_subscribe_with_callback() {
         let config = Config::new("https://api.example.com");
         let client = EventClient::new(config);
-        let result =
-            client.subscribe_with_callback(EventFilter::default(), |_event| { /* callback */ });
+        let result = client.subscribe_with_callback(EventFilter::default(), |_event| { /* callback */ });
         assert!(result.is_ok());
         let sub_id = result.unwrap();
         assert!(!sub_id.is_empty());

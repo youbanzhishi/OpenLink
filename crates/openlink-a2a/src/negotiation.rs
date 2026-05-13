@@ -188,10 +188,7 @@ impl NegotiationEngine {
     }
 
     /// 发布任务提案
-    pub async fn publish_proposal(
-        &self,
-        proposal: TaskProposal,
-    ) -> Result<ProposalId, NegotiationError> {
+    pub async fn publish_proposal(&self, proposal: TaskProposal) -> Result<ProposalId, NegotiationError> {
         if proposal.status != ProposalStatus::Open {
             return Err(NegotiationError::InvalidStatus(
                 "New proposal must have Open status".to_string(),
@@ -276,10 +273,7 @@ impl NegotiationEngine {
     /// 选择中标者
     ///
     /// 评分策略：综合自信度、价格、能力匹配度。
-    pub async fn award_proposal(
-        &self,
-        proposal_id: &str,
-    ) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn award_proposal(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
         let (_proposal, winning_bid) = {
             let proposals = self.proposals.read().await;
             let proposal = proposals
@@ -312,9 +306,7 @@ impl NegotiationEngine {
                 }
                 // Lower price first
                 match (a.price, b.price) {
-                    (Some(ap), Some(bp)) => {
-                        ap.partial_cmp(&bp).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+                    (Some(ap), Some(bp)) => ap.partial_cmp(&bp).unwrap_or(std::cmp::Ordering::Equal),
                     (Some(_), None) => std::cmp::Ordering::Less,
                     (None, Some(_)) => std::cmp::Ordering::Greater,
                     (None, None) => std::cmp::Ordering::Equal,
@@ -357,11 +349,7 @@ impl NegotiationEngine {
     }
 
     /// 取消提案
-    pub async fn cancel_proposal(
-        &self,
-        proposal_id: &str,
-        canceller: &str,
-    ) -> Result<(), NegotiationError> {
+    pub async fn cancel_proposal(&self, proposal_id: &str, canceller: &str) -> Result<(), NegotiationError> {
         let mut proposals = self.proposals.write().await;
         let proposal = proposals
             .get_mut(proposal_id)
@@ -400,10 +388,7 @@ impl NegotiationEngine {
     }
 
     /// 标记任务完成
-    pub async fn complete_assignment(
-        &self,
-        proposal_id: &str,
-    ) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn complete_assignment(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
         let mut assignments = self.assignments.write().await;
         let assignment = assignments
             .get_mut(proposal_id)
@@ -422,10 +407,7 @@ impl NegotiationEngine {
     }
 
     /// 标记任务失败（支持重试）
-    pub async fn fail_assignment(
-        &self,
-        proposal_id: &str,
-    ) -> Result<TaskAssignment, NegotiationError> {
+    pub async fn fail_assignment(&self, proposal_id: &str) -> Result<TaskAssignment, NegotiationError> {
         let mut assignments = self.assignments.write().await;
         let assignment = assignments
             .get_mut(proposal_id)
@@ -627,10 +609,7 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        engine
-            .cancel_proposal(&proposal_id, "agent-1")
-            .await
-            .unwrap();
+        engine.cancel_proposal(&proposal_id, "agent-1").await.unwrap();
         let p = engine.get_proposal(&proposal_id).await.unwrap();
         assert_eq!(p.status, ProposalStatus::Cancelled);
     }
@@ -641,10 +620,7 @@ mod tests {
         let proposal = make_proposal("agent-1", 3600);
         let proposal_id = engine.publish_proposal(proposal).await.unwrap();
 
-        assert!(engine
-            .cancel_proposal(&proposal_id, "agent-2")
-            .await
-            .is_err());
+        assert!(engine.cancel_proposal(&proposal_id, "agent-2").await.is_err());
     }
 
     #[tokio::test]

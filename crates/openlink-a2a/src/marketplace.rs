@@ -93,9 +93,7 @@ impl MarketplaceRegistry {
     pub async fn register(&self, profile: AgentProfile) -> Result<(), MarketplaceError> {
         let mut profiles = self.profiles.write().await;
         if profiles.contains_key(&profile.agent_id) {
-            return Err(MarketplaceError::AlreadyRegistered(
-                profile.agent_id.clone(),
-            ));
+            return Err(MarketplaceError::AlreadyRegistered(profile.agent_id.clone()));
         }
         tracing::info!(
             agent_id = %profile.agent_id,
@@ -156,15 +154,9 @@ impl MarketplaceRegistry {
                     let matches_desc = p.description.to_lowercase().contains(&cap_lower);
 
                     match query.capability_type {
-                        Some(CapabilityType::Provided) if !matches_provided && !matches_desc => {
-                            return false
-                        }
-                        Some(CapabilityType::Needed) if !matches_needed && !matches_desc => {
-                            return false
-                        }
-                        None if !matches_provided && !matches_needed && !matches_desc => {
-                            return false
-                        }
+                        Some(CapabilityType::Provided) if !matches_provided && !matches_desc => return false,
+                        Some(CapabilityType::Needed) if !matches_needed && !matches_desc => return false,
+                        None if !matches_provided && !matches_needed && !matches_desc => return false,
                         _ => {}
                     }
                 }
@@ -189,11 +181,7 @@ impl MarketplaceRegistry {
             .collect();
 
         // 按评分降序排列
-        results.sort_by(|a, b| {
-            b.rating
-                .partial_cmp(&a.rating)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        results.sort_by(|a, b| b.rating.partial_cmp(&a.rating).unwrap_or(std::cmp::Ordering::Equal));
         results
     }
 
@@ -222,23 +210,16 @@ impl MarketplaceRegistry {
                 let their_needs_met = p
                     .needed_capabilities
                     .iter()
-                    .filter(|need| {
-                        my_profile
-                            .provided_capabilities
-                            .iter()
-                            .any(|prov| prov == *need)
-                    })
+                    .filter(|need| my_profile.provided_capabilities.iter().any(|prov| prov == *need))
                     .count();
 
-                let total_possible =
-                    my_profile.needed_capabilities.len() + p.needed_capabilities.len();
+                let total_possible = my_profile.needed_capabilities.len() + p.needed_capabilities.len();
 
                 if total_possible == 0 {
                     return None;
                 }
 
-                let complementarity =
-                    (my_needs_met + their_needs_met) as f64 / total_possible as f64;
+                let complementarity = (my_needs_met + their_needs_met) as f64 / total_possible as f64;
 
                 // 额外考虑评分和成功率
                 let rating_factor = p.rating / 5.0;
@@ -263,21 +244,13 @@ impl MarketplaceRegistry {
             .collect();
 
         // 按推荐分数降序排列
-        recommendations.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        recommendations.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
         recommendations.truncate(limit);
         recommendations
     }
 
     /// 记录使用（更新使用统计）
-    pub async fn record_usage(
-        &self,
-        agent_id: &str,
-        success: bool,
-    ) -> Result<(), MarketplaceError> {
+    pub async fn record_usage(&self, agent_id: &str, success: bool) -> Result<(), MarketplaceError> {
         let mut profiles = self.profiles.write().await;
         let profile = profiles
             .get_mut(agent_id)
@@ -298,11 +271,7 @@ impl MarketplaceRegistry {
     }
 
     /// 更新评分
-    pub async fn update_rating(
-        &self,
-        agent_id: &str,
-        new_rating: f64,
-    ) -> Result<(), MarketplaceError> {
+    pub async fn update_rating(&self, agent_id: &str, new_rating: f64) -> Result<(), MarketplaceError> {
         if new_rating < 0.0 || new_rating > 5.0 {
             return Err(MarketplaceError::InvalidRating(new_rating));
         }

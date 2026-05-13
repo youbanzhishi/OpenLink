@@ -26,9 +26,7 @@ impl ActionHandler for WebhookHandler {
             .params
             .get("url")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                CoreError::InvalidInput("Webhook action requires 'url' parameter".to_string())
-            })?
+            .ok_or_else(|| CoreError::InvalidInput("Webhook action requires 'url' parameter".to_string()))?
             .to_string();
 
         let method = target
@@ -38,11 +36,7 @@ impl ActionHandler for WebhookHandler {
             .unwrap_or("POST")
             .to_string();
 
-        let timeout_secs = target
-            .params
-            .get("timeout_secs")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(10);
+        let timeout_secs = target.params.get("timeout_secs").and_then(|v| v.as_u64()).unwrap_or(10);
 
         let result_mode = target
             .params
@@ -51,11 +45,7 @@ impl ActionHandler for WebhookHandler {
             .unwrap_or("ignore")
             .to_string();
 
-        let body_template = target
-            .params
-            .get("body")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null);
+        let body_template = target.params.get("body").cloned().unwrap_or(serde_json::Value::Null);
 
         // 构建 body：将 Context 信息注入模板
         let body = build_webhook_body(ctx, &body_template);
@@ -65,8 +55,7 @@ impl ActionHandler for WebhookHandler {
         let webhook_method = method.clone();
         tokio::spawn(async move {
             let client = reqwest_client();
-            let result =
-                send_webhook(&client, &webhook_url, &webhook_method, &body, timeout_secs).await;
+            let result = send_webhook(&client, &webhook_url, &webhook_method, &body, timeout_secs).await;
 
             match result {
                 Ok(status) => {

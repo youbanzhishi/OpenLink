@@ -131,37 +131,29 @@ impl NatTraversal {
             // 全锥型对全锥型，UDP 打洞
             (NatType::FullCone, NatType::FullCone) => TraversalStrategy::UdpHolePunching,
             // 全锥型对限制性，尝试 UDP 打洞
-            (NatType::FullCone, NatType::RestrictedCone)
-            | (NatType::RestrictedCone, NatType::FullCone) => TraversalStrategy::UdpHolePunching,
-            // 限制性对限制性，尝试 UDP 打洞（成功率较低）
-            (NatType::RestrictedCone, NatType::RestrictedCone) => {
+            (NatType::FullCone, NatType::RestrictedCone) | (NatType::RestrictedCone, NatType::FullCone) => {
                 TraversalStrategy::UdpHolePunching
             }
+            // 限制性对限制性，尝试 UDP 打洞（成功率较低）
+            (NatType::RestrictedCone, NatType::RestrictedCone) => TraversalStrategy::UdpHolePunching,
             // 端口限制性，TCP 回退
-            (NatType::PortRestrictedCone, _) | (_, NatType::PortRestrictedCone) => {
-                TraversalStrategy::TcpFallback
-            }
+            (NatType::PortRestrictedCone, _) | (_, NatType::PortRestrictedCone) => TraversalStrategy::TcpFallback,
             // 对称型 NAT，只能中继
             (NatType::Symmetric, _) | (_, NatType::Symmetric) => TraversalStrategy::Relay,
         }
     }
 
     /// 评估穿透成功率
-    pub fn evaluate_success_rate(
-        local_nat: &NatType,
-        remote_nat: &NatType,
-    ) -> TraversalSuccessRate {
+    pub fn evaluate_success_rate(local_nat: &NatType, remote_nat: &NatType) -> TraversalSuccessRate {
         let strategy = Self::select_strategy(local_nat, remote_nat);
         let success_rate = match (local_nat, remote_nat) {
             (NatType::Open, NatType::Open) => 1.0,
             (NatType::Open, _) | (_, NatType::Open) => 0.95,
             (NatType::FullCone, NatType::FullCone) => 0.9,
-            (NatType::FullCone, NatType::RestrictedCone)
-            | (NatType::RestrictedCone, NatType::FullCone) => 0.7,
+            (NatType::FullCone, NatType::RestrictedCone) | (NatType::RestrictedCone, NatType::FullCone) => 0.7,
             (NatType::RestrictedCone, NatType::RestrictedCone) => 0.5,
             (NatType::PortRestrictedCone, NatType::PortRestrictedCone) => 0.3,
-            (NatType::FullCone, NatType::PortRestrictedCone)
-            | (NatType::PortRestrictedCone, NatType::FullCone) => 0.4,
+            (NatType::FullCone, NatType::PortRestrictedCone) | (NatType::PortRestrictedCone, NatType::FullCone) => 0.4,
             (NatType::Symmetric, _) | (_, NatType::Symmetric) => 0.0,
             _ => 0.2,
         };
@@ -175,10 +167,7 @@ impl NatTraversal {
     }
 
     /// 模拟 UDP hole punching
-    pub fn try_udp_hole_punching(
-        local_public_addr: SocketAddr,
-        remote_public_addr: SocketAddr,
-    ) -> TraversalResult {
+    pub fn try_udp_hole_punching(local_public_addr: SocketAddr, remote_public_addr: SocketAddr) -> TraversalResult {
         let start = Instant::now();
         // 模拟打洞过程：双方同时向对方公网地址发送 UDP 包
         // 实际实现中需要信令服务器交换公网地址
@@ -199,10 +188,7 @@ impl NatTraversal {
     }
 
     /// 模拟 TCP fallback
-    pub fn try_tcp_fallback(
-        local_public_addr: SocketAddr,
-        remote_public_addr: SocketAddr,
-    ) -> TraversalResult {
+    pub fn try_tcp_fallback(local_public_addr: SocketAddr, remote_public_addr: SocketAddr) -> TraversalResult {
         let start = Instant::now();
         let success = true; // 模拟成功
 
@@ -264,8 +250,7 @@ mod tests {
 
     #[test]
     fn test_select_strategy_port_restricted() {
-        let strategy =
-            NatTraversal::select_strategy(&NatType::PortRestrictedCone, &NatType::FullCone);
+        let strategy = NatTraversal::select_strategy(&NatType::PortRestrictedCone, &NatType::FullCone);
         assert_eq!(strategy, TraversalStrategy::TcpFallback);
     }
 
@@ -273,10 +258,7 @@ mod tests {
     fn test_evaluate_success_rate() {
         let rate = NatTraversal::evaluate_success_rate(&NatType::Open, &NatType::Open);
         assert!((rate.success_rate - 1.0).abs() < 0.01);
-        assert_eq!(
-            rate.recommended_strategy,
-            TraversalStrategy::UdpHolePunching
-        );
+        assert_eq!(rate.recommended_strategy, TraversalStrategy::UdpHolePunching);
     }
 
     #[test]

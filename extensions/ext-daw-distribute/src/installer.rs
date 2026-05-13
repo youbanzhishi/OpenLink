@@ -144,12 +144,7 @@ impl PluginInstaller {
                 }
                 record.registered = true;
 
-                self.report_progress(
-                    progress_callback,
-                    InstallStep::Completed,
-                    1.0,
-                    "Installation complete",
-                );
+                self.report_progress(progress_callback, InstallStep::Completed, 1.0, "Installation complete");
 
                 InstallResult {
                     plugin_id,
@@ -162,12 +157,7 @@ impl PluginInstaller {
                 // Rollback on failure
                 self.rollback(&record, config).await;
 
-                self.report_progress(
-                    progress_callback,
-                    InstallStep::Failed,
-                    0.0,
-                    &format!("Failed: {}", e),
-                );
+                self.report_progress(progress_callback, InstallStep::Failed, 0.0, &format!("Failed: {}", e));
 
                 InstallResult {
                     plugin_id,
@@ -192,12 +182,7 @@ impl PluginInstaller {
             .ok_or_else(|| "No download URL".to_string())?;
 
         // Step 1: Download
-        self.report_progress(
-            progress_callback,
-            InstallStep::Downloading,
-            0.0,
-            "Downloading plugin",
-        );
+        self.report_progress(progress_callback, InstallStep::Downloading, 0.0, "Downloading plugin");
         let temp_dir = config
             .temp_dir
             .clone()
@@ -231,53 +216,25 @@ impl PluginInstaller {
             .map_err(|e| format!("Write temp file failed: {}", e))?;
         record.temp_file = Some(temp_file.clone());
 
-        self.report_progress(
-            progress_callback,
-            InstallStep::Downloading,
-            1.0,
-            "Download complete",
-        );
+        self.report_progress(progress_callback, InstallStep::Downloading, 1.0, "Download complete");
 
         // Step 2: Verify checksum
         if config.verify_checksum {
-            self.report_progress(
-                progress_callback,
-                InstallStep::Verifying,
-                0.0,
-                "Verifying checksum",
-            );
+            self.report_progress(progress_callback, InstallStep::Verifying, 0.0, "Verifying checksum");
             if let Some(ref expected) = config.expected_checksum {
                 let actual = sha256_hex(&bytes);
                 if actual != *expected {
-                    return Err(format!(
-                        "Checksum mismatch: expected {}, got {}",
-                        expected, actual
-                    ));
+                    return Err(format!("Checksum mismatch: expected {}, got {}", expected, actual));
                 }
             }
-            self.report_progress(
-                progress_callback,
-                InstallStep::Verifying,
-                1.0,
-                "Checksum verified",
-            );
+            self.report_progress(progress_callback, InstallStep::Verifying, 1.0, "Checksum verified");
         }
 
         // Step 3: Extract (simulate - just copy for now)
-        self.report_progress(
-            progress_callback,
-            InstallStep::Extracting,
-            0.0,
-            "Extracting plugin",
-        );
+        self.report_progress(progress_callback, InstallStep::Extracting, 0.0, "Extracting plugin");
 
         // Step 4: Install
-        self.report_progress(
-            progress_callback,
-            InstallStep::Installing,
-            0.0,
-            "Installing plugin",
-        );
+        self.report_progress(progress_callback, InstallStep::Installing, 0.0, "Installing plugin");
         let install_dir = config.install_dir.join(registration.format.extension());
         if let Err(e) = tokio::fs::create_dir_all(&install_dir).await {
             return Err(format!("Failed to create install dir: {}", e));
@@ -291,20 +248,10 @@ impl PluginInstaller {
             .map_err(|e| format!("Install copy failed: {}", e))?;
         record.installed_files.push(install_path.clone());
 
-        self.report_progress(
-            progress_callback,
-            InstallStep::Installing,
-            1.0,
-            "Plugin installed",
-        );
+        self.report_progress(progress_callback, InstallStep::Installing, 1.0, "Plugin installed");
 
         // Step 5: Register
-        self.report_progress(
-            progress_callback,
-            InstallStep::Registering,
-            0.0,
-            "Registering plugin",
-        );
+        self.report_progress(progress_callback, InstallStep::Registering, 0.0, "Registering plugin");
 
         Ok(install_path)
     }
@@ -333,13 +280,7 @@ impl PluginInstaller {
         }
     }
 
-    fn report_progress(
-        &self,
-        callback: Option<&ProgressCallback>,
-        step: InstallStep,
-        percent: f32,
-        message: &str,
-    ) {
+    fn report_progress(&self, callback: Option<&ProgressCallback>, step: InstallStep, percent: f32, message: &str) {
         if let Some(cb) = callback {
             cb(InstallProgress {
                 step,

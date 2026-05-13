@@ -338,12 +338,8 @@ mod tests {
     async fn test_broadcast() {
         let bus = MessageBus::default();
 
-        let (_, mut rx1) = bus
-            .subscribe("agent-b".to_string(), Some(A2AMessageType::Event))
-            .await;
-        let (_, mut rx2) = bus
-            .subscribe("agent-c".to_string(), Some(A2AMessageType::Event))
-            .await;
+        let (_, mut rx1) = bus.subscribe("agent-b".to_string(), Some(A2AMessageType::Event)).await;
+        let (_, mut rx2) = bus.subscribe("agent-c".to_string(), Some(A2AMessageType::Event)).await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),
@@ -366,9 +362,7 @@ mod tests {
     async fn test_broadcast_no_self_delivery() {
         let bus = MessageBus::default();
 
-        let (_, mut rx) = bus
-            .subscribe("agent-a".to_string(), Some(A2AMessageType::Event))
-            .await;
+        let (_, mut rx) = bus.subscribe("agent-a".to_string(), Some(A2AMessageType::Event)).await;
 
         let message = A2AMessage {
             id: uuid::Uuid::new_v4().to_string(),

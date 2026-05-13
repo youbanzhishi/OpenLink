@@ -200,8 +200,8 @@ impl AppConfig {
 
         for path in &config_paths {
             if let Ok(content) = std::fs::read_to_string(path) {
-                let config: AppConfig = toml::from_str(&content)
-                    .map_err(|e| format!("Failed to parse config {}: {}", path, e))?;
+                let config: AppConfig =
+                    toml::from_str(&content).map_err(|e| format!("Failed to parse config {}: {}", path, e))?;
                 tracing::info!(path = %path, "Loaded config from file");
                 return Ok(config);
             }

@@ -104,10 +104,7 @@ impl ProjectShareManager {
 
         // Build DAW deep link
         let deeplink = if request.project_url.starts_with("http") {
-            format!(
-                "opendaw://project?url={}",
-                urlencoding::encode(&request.project_url)
-            )
+            format!("opendaw://project?url={}", urlencoding::encode(&request.project_url))
         } else {
             format!("opendaw://project/{}", request.project_id)
         };

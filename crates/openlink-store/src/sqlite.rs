@@ -17,9 +17,7 @@ use crate::error::StoreError;
 use crate::traits::Store;
 use async_trait::async_trait;
 use chrono::Utc;
-use openlink_core::{
-    AccessLog, Action, Extension, Link, LinkStats, OverviewStats, Route, Target, TopLink,
-};
+use openlink_core::{AccessLog, Action, Extension, Link, LinkStats, OverviewStats, Route, Target, TopLink};
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 
 /// SQLite 存储实现
@@ -141,11 +139,9 @@ impl SqliteStore {
             .execute(&self.pool)
             .await?;
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_access_logs_device_type ON access_logs(device_type)",
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_access_logs_device_type ON access_logs(device_type)")
+            .execute(&self.pool)
+            .await?;
 
         tracing::info!("SQLite tables initialized");
         Ok(())
@@ -297,27 +293,24 @@ impl Store for SqliteStore {
     }
 
     async fn get_link_by_code(&self, code: &str) -> Result<Option<Link>, StoreError> {
-        let row =
-            sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE code = ? AND is_active = 1")
-                .bind(code)
-                .fetch_optional(&self.pool)
-                .await?;
+        let row = sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE code = ? AND is_active = 1")
+            .bind(code)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(row.map(Link::from))
     }
 
     async fn update_link(&self, link: &Link) -> Result<Link, StoreError> {
         let now = Utc::now().to_rfc3339();
-        sqlx::query(
-            "UPDATE links SET code = ?, payload = ?, metadata = ?, updated_at = ? WHERE id = ?",
-        )
-        .bind(&link.code)
-        .bind(serde_json::to_string(&link.payload)?)
-        .bind(serde_json::to_string(&link.metadata)?)
-        .bind(&now)
-        .bind(&link.id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("UPDATE links SET code = ?, payload = ?, metadata = ?, updated_at = ? WHERE id = ?")
+            .bind(&link.code)
+            .bind(serde_json::to_string(&link.payload)?)
+            .bind(serde_json::to_string(&link.metadata)?)
+            .bind(&now)
+            .bind(&link.id)
+            .execute(&self.pool)
+            .await?;
 
         self.get_link(&link.id)
             .await?
@@ -350,12 +343,10 @@ impl Store for SqliteStore {
                 .await?
             }
             None => {
-                sqlx::query_as::<_, LinkRow>(
-                    "SELECT * FROM links WHERE is_active = 1 ORDER BY created_at DESC LIMIT ?",
-                )
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
+                sqlx::query_as::<_, LinkRow>("SELECT * FROM links WHERE is_active = 1 ORDER BY created_at DESC LIMIT ?")
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
             }
         };
 
@@ -394,12 +385,10 @@ impl Store for SqliteStore {
     }
 
     async fn get_route_by_link_id(&self, link_id: &str) -> Result<Option<Route>, StoreError> {
-        let row = sqlx::query_as::<_, RouteRow>(
-            "SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC LIMIT 1",
-        )
-        .bind(link_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row = sqlx::query_as::<_, RouteRow>("SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC LIMIT 1")
+            .bind(link_id)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(row.map(Route::from))
     }
@@ -437,12 +426,10 @@ impl Store for SqliteStore {
     async fn list_routes(&self, link_id: Option<&str>) -> Result<Vec<Route>, StoreError> {
         let rows = match link_id {
             Some(lid) => {
-                sqlx::query_as::<_, RouteRow>(
-                    "SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC",
-                )
-                .bind(lid)
-                .fetch_all(&self.pool)
-                .await?
+                sqlx::query_as::<_, RouteRow>("SELECT * FROM routes WHERE link_id = ? ORDER BY version DESC")
+                    .bind(lid)
+                    .fetch_all(&self.pool)
+                    .await?
             }
             None => {
                 sqlx::query_as::<_, RouteRow>("SELECT * FROM routes ORDER BY created_at DESC")
@@ -457,10 +444,9 @@ impl Store for SqliteStore {
     // ─── Extension 操作 ─────────────────────────────────────
 
     async fn list_extensions(&self) -> Result<Vec<Extension>, StoreError> {
-        let rows =
-            sqlx::query_as::<_, ExtensionRow>("SELECT * FROM extensions WHERE is_active = 1")
-                .fetch_all(&self.pool)
-                .await?;
+        let rows = sqlx::query_as::<_, ExtensionRow>("SELECT * FROM extensions WHERE is_active = 1")
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(rows.into_iter().map(Extension::from).collect())
     }
@@ -516,11 +502,7 @@ impl Store for SqliteStore {
         Ok(())
     }
 
-    async fn get_access_logs(
-        &self,
-        link_id: &str,
-        limit: usize,
-    ) -> Result<Vec<AccessLog>, StoreError> {
+    async fn get_access_logs(&self, link_id: &str, limit: usize) -> Result<Vec<AccessLog>, StoreError> {
         let rows = sqlx::query_as::<_, AccessLogRow>(
             "SELECT * FROM access_logs WHERE link_id = ? ORDER BY created_at DESC LIMIT ?",
         )
@@ -559,22 +541,18 @@ impl Store for SqliteStore {
         .await?;
 
         // 24h 访问次数
-        let h24: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM access_logs WHERE link_id = ? AND created_at >= ?",
-        )
-        .bind(link_id)
-        .bind(&_24h_ago)
-        .fetch_one(&self.pool)
-        .await?;
+        let h24: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE link_id = ? AND created_at >= ?")
+            .bind(link_id)
+            .bind(&_24h_ago)
+            .fetch_one(&self.pool)
+            .await?;
 
         // 7d 访问次数
-        let d7: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM access_logs WHERE link_id = ? AND created_at >= ?",
-        )
-        .bind(link_id)
-        .bind(&_7d_ago)
-        .fetch_one(&self.pool)
-        .await?;
+        let d7: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE link_id = ? AND created_at >= ?")
+            .bind(link_id)
+            .bind(&_7d_ago)
+            .fetch_one(&self.pool)
+            .await?;
 
         // Phase 2: 设备分布
         let device_rows: Vec<(String, i64)> = sqlx::query_as(
@@ -634,11 +612,10 @@ impl Store for SqliteStore {
             .await?;
 
         // 今日访问次数
-        let accesses_today: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE created_at >= ?")
-                .bind(&today_start)
-                .fetch_one(&self.pool)
-                .await?;
+        let accesses_today: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM access_logs WHERE created_at >= ?")
+            .bind(&today_start)
+            .fetch_one(&self.pool)
+            .await?;
 
         // 热门链接 Top 5
         let top_rows: Vec<(String, String, i64)> = sqlx::query_as(

@@ -195,10 +195,7 @@ impl ConditionHandler for AgentMatchCondition {
 
         // 匹配 agent_type（精确匹配）
         if let Some(agent_type) = params.get("agent_type").and_then(|v| v.as_str()) {
-            let type_match = effective_agent_type
-                .as_ref()
-                .map(|t| t == agent_type)
-                .unwrap_or(false)
+            let type_match = effective_agent_type.as_ref().map(|t| t == agent_type).unwrap_or(false)
                 || header_agent_type.as_deref() == Some(agent_type);
 
             if !type_match {
@@ -209,10 +206,7 @@ impl ConditionHandler for AgentMatchCondition {
         // 匹配 agent_types（任一匹配）
         if let Some(agent_types) = params.get("agent_types").and_then(|v| v.as_array()) {
             let type_match = agent_types.iter().filter_map(|v| v.as_str()).any(|t| {
-                effective_agent_type
-                    .as_ref()
-                    .map(|et| et == t)
-                    .unwrap_or(false)
+                effective_agent_type.as_ref().map(|et| et == t).unwrap_or(false)
                     || header_agent_type.as_deref() == Some(t)
             });
 
@@ -346,11 +340,7 @@ mod tests {
         ctx
     }
 
-    fn make_agent_ctx(
-        headers: HashMap<String, String>,
-        agent_id: &str,
-        agent_type: Option<&str>,
-    ) -> Context {
+    fn make_agent_ctx(headers: HashMap<String, String>, agent_id: &str, agent_type: Option<&str>) -> Context {
         let mut ctx = make_ctx_with_headers(headers);
         ctx.identity = Identity {
             id: agent_id.to_string(),

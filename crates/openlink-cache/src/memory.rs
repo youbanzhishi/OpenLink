@@ -125,11 +125,7 @@ impl Cache for MemoryCache {
 
         let total = internal.total_requests;
         let hits = internal.hits;
-        let hit_rate = if total > 0 {
-            hits as f64 / total as f64
-        } else {
-            0.0
-        };
+        let hit_rate = if total > 0 { hits as f64 / total as f64 } else { 0.0 };
 
         Ok(CacheStats {
             entries: cache.len(),
@@ -361,11 +357,7 @@ mod tests {
     async fn test_warmup() {
         let cache = MemoryCache::new(100);
         cache
-            .warmup(vec![
-                ("k1", "v1", 3600),
-                ("k2", "v2", 3600),
-                ("k3", "v3", 3600),
-            ])
+            .warmup(vec![("k1", "v1", 3600), ("k2", "v2", 3600), ("k3", "v3", 3600)])
             .await
             .unwrap();
 
@@ -394,10 +386,7 @@ mod tests {
         cache.set("b", "2", 3600).await.unwrap();
         cache.set("c", "3", 3600).await.unwrap();
 
-        let deleted = cache
-            .delete_batch(&["a", "b", "nonexistent"])
-            .await
-            .unwrap();
+        let deleted = cache.delete_batch(&["a", "b", "nonexistent"]).await.unwrap();
         assert_eq!(deleted, 2);
     }
 
@@ -405,10 +394,7 @@ mod tests {
     async fn test_layered_cache() {
         let layered = LayeredCache::new(50, None); // 无 L2
         layered.set("key1", "value1", 3600).await.unwrap();
-        assert_eq!(
-            layered.get("key1").await.unwrap(),
-            Some("value1".to_string())
-        );
+        assert_eq!(layered.get("key1").await.unwrap(), Some("value1".to_string()));
         assert_eq!(layered.cache_type(), "layered");
     }
 }

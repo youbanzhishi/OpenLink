@@ -107,11 +107,7 @@ pub struct WasmModuleInfo {
 #[async_trait]
 pub trait WasmSandbox: Send + Sync {
     /// 编译 WASM 模块
-    async fn compile_module(
-        &self,
-        module_id: &str,
-        wasm_bytes: &[u8],
-    ) -> Result<WasmModuleInfo, SandboxError>;
+    async fn compile_module(&self, module_id: &str, wasm_bytes: &[u8]) -> Result<WasmModuleInfo, SandboxError>;
 
     /// 执行重定向决策函数
     ///
@@ -175,11 +171,7 @@ impl Default for MockSandbox {
 
 #[async_trait]
 impl WasmSandbox for MockSandbox {
-    async fn compile_module(
-        &self,
-        module_id: &str,
-        wasm_bytes: &[u8],
-    ) -> Result<WasmModuleInfo, SandboxError> {
+    async fn compile_module(&self, module_id: &str, wasm_bytes: &[u8]) -> Result<WasmModuleInfo, SandboxError> {
         // 检查大小限制
         if wasm_bytes.len() > self.config.max_memory_bytes {
             return Err(SandboxError::MemoryLimitExceeded(
@@ -274,10 +266,7 @@ mod tests {
         let sandbox = MockSandbox::default();
         let wasm_bytes = b"WASM_BINARY_PLACEHOLDER";
 
-        let info = sandbox
-            .compile_module("test-module", wasm_bytes)
-            .await
-            .unwrap();
+        let info = sandbox.compile_module("test-module", wasm_bytes).await.unwrap();
         assert_eq!(info.id, "test-module");
         assert_eq!(info.size_bytes, wasm_bytes.len());
         assert!(info.exports.contains(&"redirect".to_string()));
@@ -286,13 +275,8 @@ mod tests {
     #[tokio::test]
     async fn test_mock_sandbox_execute() {
         let sandbox = MockSandbox::default();
-        sandbox
-            .compile_module("test-module", b"fake")
-            .await
-            .unwrap();
-        sandbox
-            .add_mock_rule("test-module", "abc", "https://example.com")
-            .await;
+        sandbox.compile_module("test-module", b"fake").await.unwrap();
+        sandbox.add_mock_rule("test-module", "abc", "https://example.com").await;
 
         let request = EdgeRequest {
             code: "abc".to_string(),
@@ -304,10 +288,7 @@ mod tests {
             headers: HashMap::new(),
         };
 
-        let decision = sandbox
-            .execute_redirect("test-module", &request)
-            .await
-            .unwrap();
+        let decision = sandbox.execute_redirect("test-module", &request).await.unwrap();
         assert!(decision.is_some());
         assert_eq!(decision.unwrap().target_url, "https://example.com");
     }
@@ -315,10 +296,7 @@ mod tests {
     #[tokio::test]
     async fn test_mock_sandbox_unload() {
         let sandbox = MockSandbox::default();
-        sandbox
-            .compile_module("test-module", b"fake")
-            .await
-            .unwrap();
+        sandbox.compile_module("test-module", b"fake").await.unwrap();
 
         assert!(sandbox.unload_module("test-module").await.is_ok());
         assert!(sandbox.unload_module("nonexistent").await.is_err());

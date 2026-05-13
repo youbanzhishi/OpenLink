@@ -573,10 +573,7 @@ mod tests {
     #[test]
     fn test_action_as_str() {
         assert_eq!(Action::Redirect.as_str(), "redirect");
-        assert_eq!(
-            Action::Custom("my-action".to_string()).as_str(),
-            "my-action"
-        );
+        assert_eq!(Action::Custom("my-action".to_string()).as_str(), "my-action");
         assert_eq!(Action::JsonData.as_str(), "json_data");
     }
 
@@ -584,10 +581,7 @@ mod tests {
     fn test_detect_identity_type() {
         assert_eq!(detect_identity_type("curl/7.88.1"), IdentityType::Service);
         assert_eq!(detect_identity_type("wget/1.21.4"), IdentityType::Service);
-        assert_eq!(
-            detect_identity_type("python-requests/2.31.0"),
-            IdentityType::Service
-        );
+        assert_eq!(detect_identity_type("python-requests/2.31.0"), IdentityType::Service);
         assert_eq!(
             detect_identity_type("Mozilla/5.0 (Windows NT 10.0)"),
             IdentityType::Human
@@ -598,14 +592,8 @@ mod tests {
 
     #[test]
     fn test_detect_device_type() {
-        assert_eq!(
-            detect_device_type("curl/7.88.1"),
-            Some("server".to_string())
-        );
-        assert_eq!(
-            detect_device_type("Mozilla/5.0 (iPhone)"),
-            Some("mobile".to_string())
-        );
+        assert_eq!(detect_device_type("curl/7.88.1"), Some("server".to_string()));
+        assert_eq!(detect_device_type("Mozilla/5.0 (iPhone)"), Some("mobile".to_string()));
         assert_eq!(
             detect_device_type("Mozilla/5.0 (Windows NT 10.0)"),
             Some("desktop".to_string())
@@ -672,10 +660,7 @@ mod tests {
 
     #[test]
     fn test_context_from_request_browser() {
-        let ctx = Context::from_request(
-            Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"),
-            Some("127.0.0.1"),
-        );
+        let ctx = Context::from_request(Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"), Some("127.0.0.1"));
         assert_eq!(ctx.identity.identity_type, IdentityType::Human);
         assert_eq!(ctx.device.device_type.as_deref(), Some("desktop"));
     }

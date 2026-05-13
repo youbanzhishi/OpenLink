@@ -51,10 +51,7 @@ impl DawDeeplink {
 
                 Ok(Self {
                     deeplink_type: DawDeeplinkType::OpenProject,
-                    project_url: params.and_then(|p| {
-                        p.get("url")
-                            .map(|s| urlencoding::decode(s).unwrap().to_string())
-                    }),
+                    project_url: params.and_then(|p| p.get("url").map(|s| urlencoding::decode(s).unwrap().to_string())),
                     plugin_id: None,
                     script: None,
                 })
@@ -109,10 +106,7 @@ mod tests {
     fn test_deeplink_from_url() {
         let url = "opendaw://project?url=https%3A%2F%2Fexample.com%2Fproj.opendaw";
         let deeplink = DawDeeplink::from_url(url).unwrap();
-        assert!(matches!(
-            deeplink.deeplink_type,
-            DawDeeplinkType::OpenProject
-        ));
+        assert!(matches!(deeplink.deeplink_type, DawDeeplinkType::OpenProject));
     }
 
     #[test]

@@ -107,13 +107,10 @@ pub struct UpdateRouteRequest {
 
 /// 将 RuleInput 转换为 Rule
 fn rule_input_to_rule(input: RuleInput) -> Rule {
-    let condition = input
-        .condition
-        .map(Condition::from)
-        .unwrap_or_else(|| Condition {
-            condition_type: "always".to_string(),
-            params: serde_json::Value::Null,
-        });
+    let condition = input.condition.map(Condition::from).unwrap_or_else(|| Condition {
+        condition_type: "always".to_string(),
+        params: serde_json::Value::Null,
+    });
 
     let conditions: Vec<Condition> = input.conditions.into_iter().map(Condition::from).collect();
 
@@ -144,12 +141,7 @@ pub async fn create_route(
         .params
         .get("link_id")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            (
-                StatusCode::BAD_REQUEST,
-                "Missing link_id in default_target".to_string(),
-            )
-        })?
+        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Missing link_id in default_target".to_string()))?
         .to_string();
 
     // 验证链接存在
@@ -158,12 +150,7 @@ pub async fn create_route(
         .get_link(&link_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or_else(|| {
-            (
-                StatusCode::NOT_FOUND,
-                format!("Link '{}' not found", link_id),
-            )
-        })?;
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", link_id)))?;
 
     // 检查是否已有路由
     if state
@@ -173,10 +160,7 @@ pub async fn create_route(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .is_some()
     {
-        return Err((
-            StatusCode::CONFLICT,
-            "Route already exists for this link".to_string(),
-        ));
+        return Err((StatusCode::CONFLICT, "Route already exists for this link".to_string()));
     }
 
     // 构建路由
@@ -224,10 +208,7 @@ pub async fn update_route(
         req.rules.into_iter().map(rule_input_to_rule).collect()
     };
 
-    let default_target = req
-        .default_target
-        .map(Target::from)
-        .unwrap_or(current.default_target);
+    let default_target = req.default_target.map(Target::from).unwrap_or(current.default_target);
 
     let updated = state
         .store
@@ -253,14 +234,10 @@ pub async fn delete_route(
     State(state): State<Arc<AppState>>,
     Path(route_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state
-        .store
-        .delete_route(&route_id)
-        .await
-        .map_err(|e| match e {
-            openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+    state.store.delete_route(&route_id).await.map_err(|e| match e {
+        openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    })?;
 
     tracing::info!(route_id = %route_id, "Route deleted");
     Ok(StatusCode::NO_CONTENT)

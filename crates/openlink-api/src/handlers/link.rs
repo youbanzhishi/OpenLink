@@ -223,14 +223,10 @@ pub async fn update_link(
         is_active: existing.is_active,
     };
 
-    let updated = state
-        .store
-        .update_link(&updated_link)
-        .await
-        .map_err(|e| match e {
-            openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+    let updated = state.store.update_link(&updated_link).await.map_err(|e| match e {
+        openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    })?;
 
     tracing::info!(id = %id, "Link updated");
     Ok(Json(LinkResponse::from(updated)))

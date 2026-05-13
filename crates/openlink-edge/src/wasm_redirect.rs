@@ -119,10 +119,7 @@ impl EdgeRedirectEngine {
     pub fn from_rules(rules: Vec<EdgeRedirectRule>) -> Self {
         let mut rules_by_code: HashMap<String, Vec<EdgeRedirectRule>> = HashMap::new();
         for rule in rules {
-            rules_by_code
-                .entry(rule.code.clone())
-                .or_default()
-                .push(rule);
+            rules_by_code.entry(rule.code.clone()).or_default().push(rule);
         }
 
         // 对每个 code 的规则按优先级排序（降序）
@@ -223,8 +220,7 @@ impl EdgeRedirectEngine {
                         return false;
                     }
                     request.headers.iter().any(|(k, v)| {
-                        k.eq_ignore_ascii_case(header_name)
-                            && v.to_lowercase().contains(&pattern.to_lowercase())
+                        k.eq_ignore_ascii_case(header_name) && v.to_lowercase().contains(&pattern.to_lowercase())
                     })
                 }
             },
@@ -445,8 +441,7 @@ mod tests {
         let engine = EdgeRedirectEngine::from_rules(rules);
 
         let mut req = make_request("api");
-        req.headers
-            .insert("X-Agent".to_string(), "OpenAI/1.0".to_string());
+        req.headers.insert("X-Agent".to_string(), "OpenAI/1.0".to_string());
         let decision = engine.resolve(&req).unwrap();
         assert_eq!(decision.target_url, "https://ai.example.com");
     }

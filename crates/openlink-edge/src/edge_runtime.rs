@@ -131,18 +131,14 @@ impl EdgeRuntime {
     /// 处理请求（管道模式：接收→路由→执行→响应）
     pub async fn handle_request(&self, request: RuntimeRequest) -> EdgeResponse {
         let start = Instant::now();
-        self.total_requests
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        self.active_requests
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.active_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         let result = self.process_pipeline(&request).await;
 
-        self.active_requests
-            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        self.active_requests.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
         if result.status_code >= 400 {
-            self.total_errors
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            self.total_errors.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         }
 
         result
@@ -151,11 +147,7 @@ impl EdgeRuntime {
     /// 请求处理管道
     async fn process_pipeline(&self, request: &RuntimeRequest) -> EdgeResponse {
         let start = Instant::now();
-        let timeout = Duration::from_secs(
-            request
-                .timeout_secs
-                .min(self.config.default_timeout_secs * 2),
-        );
+        let timeout = Duration::from_secs(request.timeout_secs.min(self.config.default_timeout_secs * 2));
 
         // 获取并发许可
         let permit = match tokio::time::timeout(timeout, self.concurrency_limiter.acquire()).await {
@@ -217,12 +209,8 @@ impl EdgeRuntime {
     /// 获取运行时统计
     pub fn runtime_stats(&self) -> RuntimeStats {
         RuntimeStats {
-            active_requests: self
-                .active_requests
-                .load(std::sync::atomic::Ordering::Relaxed),
-            total_requests: self
-                .total_requests
-                .load(std::sync::atomic::Ordering::Relaxed),
+            active_requests: self.active_requests.load(std::sync::atomic::Ordering::Relaxed),
+            total_requests: self.total_requests.load(std::sync::atomic::Ordering::Relaxed),
             total_errors: self.total_errors.load(std::sync::atomic::Ordering::Relaxed),
             max_concurrency: self.config.max_concurrency,
             available_permits: self.concurrency_limiter.available_permits(),

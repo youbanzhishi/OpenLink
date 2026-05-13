@@ -3,9 +3,7 @@
 //! 基于节点拓扑的最短路径路由、多路径冗余、降级策略。
 //! 路由表维护和自动更新。
 
-use crate::gossip::{
-    GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus,
-};
+use crate::gossip::{GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -122,8 +120,7 @@ impl RoutingTable {
         let now = chrono::Utc::now().timestamp();
         let should_update = match self.entries.get(&entry.destination) {
             Some(existing) => {
-                entry.total_latency_ms < existing.total_latency_ms
-                    || entry.updated_at > existing.updated_at
+                entry.total_latency_ms < existing.total_latency_ms || entry.updated_at > existing.updated_at
             }
             None => true,
         };
@@ -202,11 +199,7 @@ pub struct DecentralizedRouter {
 
 impl DecentralizedRouter {
     /// 创建路由引擎
-    pub fn new(
-        local_node_id: NodeId,
-        gossip_config: GossipConfig,
-        strategy: RouteStrategy,
-    ) -> Self {
+    pub fn new(local_node_id: NodeId, gossip_config: GossipConfig, strategy: RouteStrategy) -> Self {
         let membership = GossipMembership::new(local_node_id.clone(), gossip_config);
         let routing_table = RoutingTable::new(local_node_id);
         Self {
@@ -341,12 +334,7 @@ impl DecentralizedRouter {
     }
 
     /// 回溯找到下一跳
-    fn find_next_hop(
-        &self,
-        source: &NodeId,
-        dest: &NodeId,
-        prev: &HashMap<NodeId, NodeId>,
-    ) -> Option<NodeId> {
+    fn find_next_hop(&self, source: &NodeId, dest: &NodeId, prev: &HashMap<NodeId, NodeId>) -> Option<NodeId> {
         let mut current = dest.clone();
         let mut next_hop = None;
 
@@ -418,10 +406,7 @@ impl DecentralizedRouter {
             // 获取带宽信息
             let links = self.membership.link_states();
             let bw = links
-                .get(&(
-                    self.routing_table.local_node_id.clone(),
-                    entry.next_hop.clone(),
-                ))
+                .get(&(self.routing_table.local_node_id.clone(), entry.next_hop.clone()))
                 .and_then(|l| l.bandwidth_mbps)
                 .unwrap_or(0.0);
 
@@ -435,10 +420,7 @@ impl DecentralizedRouter {
         } else {
             // 无可达路径，降级为直连
             RoutePath {
-                nodes: vec![
-                    self.routing_table.local_node_id.clone(),
-                    destination.clone(),
-                ],
+                nodes: vec![self.routing_table.local_node_id.clone(), destination.clone()],
                 total_latency_ms: f64::INFINITY,
                 min_bandwidth_mbps: 0.0,
                 available: false,
@@ -625,11 +607,8 @@ mod tests {
 
     #[test]
     fn test_multi_path_routing() {
-        let mut router = DecentralizedRouter::new(
-            "node-1".to_string(),
-            GossipConfig::default(),
-            RouteStrategy::MultiPath,
-        );
+        let mut router =
+            DecentralizedRouter::new("node-1".to_string(), GossipConfig::default(), RouteStrategy::MultiPath);
 
         let join2 = GossipMessage::Join {
             node_id: "node-2".to_string(),

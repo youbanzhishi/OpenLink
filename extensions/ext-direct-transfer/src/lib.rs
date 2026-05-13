@@ -136,9 +136,8 @@ impl DirectTransferAction {
     }
 
     fn parse_params(params: &serde_json::Value) -> Result<DirectTransferParams, CoreError> {
-        serde_json::from_value(params.clone()).map_err(|e| {
-            CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e))
-        })
+        serde_json::from_value(params.clone())
+            .map_err(|e| CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e)))
     }
 
     /// 执行 LAN 发现
@@ -147,25 +146,16 @@ impl DirectTransferAction {
     }
 
     /// 选择最优节点
-    fn select_best_peer<'a>(
-        params: &DirectTransferParams,
-        peers: &'a [LanPeer],
-    ) -> Option<&'a LanPeer> {
+    fn select_best_peer<'a>(params: &DirectTransferParams, peers: &'a [LanPeer]) -> Option<&'a LanPeer> {
         if let Some(ref target_id) = params.target_node_id {
             peers.iter().find(|p| p.node_id.as_str() == target_id)
         } else {
-            peers
-                .iter()
-                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX))
+            peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX))
         }
     }
 
     /// 构建直传响应
-    fn build_response(
-        params: &DirectTransferParams,
-        peer: Option<&LanPeer>,
-        cloud_fallback: bool,
-    ) -> TransferResponse {
+    fn build_response(params: &DirectTransferParams, peer: Option<&LanPeer>, cloud_fallback: bool) -> TransferResponse {
         match peer {
             Some(p) => TransferResponse {
                 response_type: "lan_direct_transfer".to_string(),

@@ -537,13 +537,10 @@ async fn check_upstream_connectivity(url: &str) -> Result<(), String> {
 
     // Attempt TCP connection
     let addr = format!("{}:{}", host, port);
-    tokio::time::timeout(
-        Duration::from_secs(3),
-        tokio::net::TcpStream::connect(&addr),
-    )
-    .await
-    .map_err(|_| "Connection timed out".to_string())?
-    .map_err(|e| format!("Connection failed: {}", e))?;
+    tokio::time::timeout(Duration::from_secs(3), tokio::net::TcpStream::connect(&addr))
+        .await
+        .map_err(|_| "Connection timed out".to_string())?
+        .map_err(|e| format!("Connection failed: {}", e))?;
 
     Ok(())
 }
@@ -643,9 +640,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_all_healthy() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck {
-            name: "db".to_string(),
-        }));
+        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
         checker.register(Arc::new(AlwaysHealthyCheck {
             name: "cache".to_string(),
         }));
@@ -673,9 +668,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_checker_non_critical_unhealthy() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck {
-            name: "db".to_string(),
-        }));
+        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
         checker.register(Arc::new(AlwaysUnhealthyCheck {
             name: "cache".to_string(),
             critical: false,
@@ -688,9 +681,7 @@ mod tests {
     #[tokio::test]
     async fn test_readiness_probe() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck {
-            name: "db".to_string(),
-        }));
+        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
 
         let probe = ReadinessProbe::new(Arc::new(checker));
         let result = probe.check().await;
@@ -740,9 +731,7 @@ mod tests {
     #[tokio::test]
     async fn test_health_endpoint() {
         let mut checker = HealthChecker::new("0.2.0");
-        checker.register(Arc::new(AlwaysHealthyCheck {
-            name: "db".to_string(),
-        }));
+        checker.register(Arc::new(AlwaysHealthyCheck { name: "db".to_string() }));
 
         let endpoint = HealthEndpoint::new(Arc::new(checker));
         let health = endpoint.health().await;

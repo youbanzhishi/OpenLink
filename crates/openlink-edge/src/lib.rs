@@ -35,18 +35,13 @@ pub mod wasm_redirect;
 
 pub use cache::EdgeCache;
 pub use config::EdgeConfig;
-pub use edge_metrics::{
-    EdgeMetricsCollector, EdgeMetricsSnapshot, LatencyStats, RequestTimer, ResourceUsage,
-};
+pub use edge_metrics::{EdgeMetricsCollector, EdgeMetricsSnapshot, LatencyStats, RequestTimer, ResourceUsage};
 pub use edge_runtime::{
-    EdgeResponse, EdgeRuntime, PipelineStage, RequestPriority, RuntimeConfig, RuntimeRequest,
-    RuntimeStats,
+    EdgeResponse, EdgeRuntime, PipelineStage, RequestPriority, RuntimeConfig, RuntimeRequest, RuntimeStats,
 };
 pub use file_transfer::FileTransferService;
 pub use geo::{GeoRouteConfig, GeoRouter, NodeEndpoint};
-pub use health_check::{
-    HealthCheckConfig, HealthChecker, HealthReport, HealthStatus, NodeHealthInfo,
-};
+pub use health_check::{HealthCheckConfig, HealthChecker, HealthReport, HealthStatus, NodeHealthInfo};
 pub use router::EdgeRouter;
 pub use sandbox::{MockSandbox, SandboxConfig, SandboxError, WasmModuleInfo, WasmSandbox};
 pub use wasm_redirect::{EdgeRedirectEngine, EdgeRedirectRule, EdgeRequest, RedirectDecision};

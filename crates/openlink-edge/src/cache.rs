@@ -103,8 +103,7 @@ impl EdgeCache {
 
     /// 创建新缓存（带热链配置）
     pub fn with_hot_config(max_entries: usize, ttl_secs: u64, hot_config: HotLinkConfig) -> Self {
-        let cache =
-            LruCache::new(NonZeroUsize::new(max_entries.max(1)).unwrap_or(NonZeroUsize::MIN));
+        let cache = LruCache::new(NonZeroUsize::new(max_entries.max(1)).unwrap_or(NonZeroUsize::MIN));
         Self {
             cache: Arc::new(Mutex::new(cache)),
             ttl_secs,
@@ -139,8 +138,8 @@ impl EdgeCache {
             // 热链检测：达到阈值后标记并延长 TTL
             if !entry.is_hot && entry.access_count >= self.hot_config.hot_threshold {
                 entry.mark_hot();
-                entry.expires_at = chrono::Utc::now().timestamp()
-                    + (self.ttl_secs as i64 * self.hot_config.hot_ttl_multiplier as i64);
+                entry.expires_at =
+                    chrono::Utc::now().timestamp() + (self.ttl_secs as i64 * self.hot_config.hot_ttl_multiplier as i64);
                 tracing::info!(
                     code = %code,
                     access_count = entry.access_count,
@@ -169,13 +168,7 @@ impl EdgeCache {
     }
 
     /// 插入缓存条目（带自定义 TTL）
-    pub async fn put_with_ttl(
-        &self,
-        code: String,
-        target_url: String,
-        status_code: u16,
-        ttl_secs: u64,
-    ) {
+    pub async fn put_with_ttl(&self, code: String, target_url: String, status_code: u16, ttl_secs: u64) {
         let mut cache = self.cache.lock().await;
         let entry = CacheEntry::new(target_url, status_code, ttl_secs);
         cache.put(code, entry);
@@ -245,11 +238,7 @@ impl EdgeCache {
         let expirations = *self.expirations.lock().await;
         let invalidations = *self.invalidations.lock().await;
         let total = hits + misses;
-        let hit_rate = if total > 0 {
-            hits as f64 / total as f64
-        } else {
-            0.0
-        };
+        let hit_rate = if total > 0 { hits as f64 / total as f64 } else { 0.0 };
 
         // 统计热链数量
         let hot_count = cache.iter().filter(|(_, v)| v.is_hot).count();
@@ -317,12 +306,7 @@ mod tests {
     async fn test_cache_expiry() {
         let cache = EdgeCache::new(100, 3600);
         cache
-            .put_with_ttl(
-                "ttl1".to_string(),
-                "https://example.com".to_string(),
-                302,
-                1,
-            )
+            .put_with_ttl("ttl1".to_string(), "https://example.com".to_string(), 302, 1)
             .await;
 
         // 短暂等待让 TTL 过期
@@ -384,15 +368,9 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidate_prefix() {
         let cache = EdgeCache::new(100, 3600);
-        cache
-            .put("abc_1".to_string(), "https://a.com".to_string(), 302)
-            .await;
-        cache
-            .put("abc_2".to_string(), "https://b.com".to_string(), 302)
-            .await;
-        cache
-            .put("xyz_1".to_string(), "https://c.com".to_string(), 302)
-            .await;
+        cache.put("abc_1".to_string(), "https://a.com".to_string(), 302).await;
+        cache.put("abc_2".to_string(), "https://b.com".to_string(), 302).await;
+        cache.put("xyz_1".to_string(), "https://c.com".to_string(), 302).await;
 
         let removed = cache.invalidate_prefix("abc_").await;
         assert_eq!(removed, 2);

@@ -276,9 +276,7 @@ mod tests {
 
     #[test]
     fn test_builder_https_url_valid() {
-        let result = LinkClientBuilder::new()
-            .url("https://api.openlink.dev")
-            .build();
+        let result = LinkClientBuilder::new().url("https://api.openlink.dev").build();
         assert!(result.is_ok());
     }
 }

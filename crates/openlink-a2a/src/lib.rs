@@ -36,22 +36,19 @@ pub mod trust;
 // Phase 6 re-exports
 pub use handshake::HandshakeEngine;
 pub use heartbeat::{HeartbeatConfig, HeartbeatMonitor};
-pub use message_bus::{
-    BroadcastResult, MessageBus, MessageBusConfig, MessageBusError, MessageBusStats,
-};
+pub use message_bus::{BroadcastResult, MessageBus, MessageBusConfig, MessageBusError, MessageBusStats};
 pub use registry::AgentRegistry;
 pub use types::*;
 
 // Phase 10 re-exports — MCP
 pub use mcp::{
-    McpClient, McpClientConfig, McpError, McpParser, McpProtocolError, McpRequest, McpResponse,
-    McpServer, McpServerInfo, McpTool, McpTransport,
+    McpClient, McpClientConfig, McpError, McpParser, McpProtocolError, McpRequest, McpResponse, McpServer,
+    McpServerInfo, McpTool, McpTransport,
 };
 
 // Phase 10 re-exports — Marketplace
 pub use marketplace::{
-    AgentProfile, CapabilityType, MarketplaceError, MarketplaceQuery, MarketplaceRegistry,
-    Recommendation,
+    AgentProfile, CapabilityType, MarketplaceError, MarketplaceQuery, MarketplaceRegistry, Recommendation,
 };
 
 // Phase 10 re-exports — Trust
@@ -59,18 +56,18 @@ pub use trust::{ListEntry, ListType, TrustConfig, TrustManager, TrustScore};
 
 // Phase 10 re-exports — Negotiation
 pub use negotiation::{
-    AssignmentStatus, NegotiationConfig, NegotiationEngine, NegotiationError, ProposalStatus,
-    TaskAssignment, TaskBid, TaskProposal,
+    AssignmentStatus, NegotiationConfig, NegotiationEngine, NegotiationError, ProposalStatus, TaskAssignment, TaskBid,
+    TaskProposal,
 };
 
 // Phase 10 re-exports — Decentralized
 pub use decentralized::{
-    CapabilityAnnouncement, CapabilityGossip, CapabilityProvider, CapabilityRoute,
-    DecentralizedCapabilityRouter, DhtKey, DhtValue, PartitionPolicy, PartitionStatus,
+    CapabilityAnnouncement, CapabilityGossip, CapabilityProvider, CapabilityRoute, DecentralizedCapabilityRouter,
+    DhtKey, DhtValue, PartitionPolicy, PartitionStatus,
 };
 
 // Phase 10 re-exports — Bridge
 pub use bridge::{
-    A2ABridge, BridgeError, HttpBridge, McpBridge, NegotiatedProtocol, ProtocolBridge,
-    ProtocolCapabilities, ProtocolGateway, ProtocolNegotiator, ProtocolType, UnifiedMessage,
+    A2ABridge, BridgeError, HttpBridge, McpBridge, NegotiatedProtocol, ProtocolBridge, ProtocolCapabilities,
+    ProtocolGateway, ProtocolNegotiator, ProtocolType, UnifiedMessage,
 };

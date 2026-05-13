@@ -203,30 +203,19 @@ impl DecentralizedCapabilityRouter {
     // ─── 能力路由 ───────────────────────────────────────────
 
     /// 注册能力提供者
-    pub async fn register_capability(
-        &self,
-        provider: CapabilityProvider,
-        cap_id: &str,
-        cap_name: &str,
-    ) {
+    pub async fn register_capability(&self, provider: CapabilityProvider, cap_id: &str, cap_name: &str) {
         let mut routes = self.capability_routes.write().await;
         let now = chrono::Utc::now().timestamp();
 
-        let route = routes
-            .entry(cap_id.to_string())
-            .or_insert_with(|| CapabilityRoute {
-                capability_id: cap_id.to_string(),
-                capability_name: cap_name.to_string(),
-                providers: vec![],
-                updated_at: now,
-            });
+        let route = routes.entry(cap_id.to_string()).or_insert_with(|| CapabilityRoute {
+            capability_id: cap_id.to_string(),
+            capability_name: cap_name.to_string(),
+            providers: vec![],
+            updated_at: now,
+        });
 
         // 检查是否已存在
-        if let Some(existing) = route
-            .providers
-            .iter_mut()
-            .find(|p| p.node_id == provider.node_id)
-        {
+        if let Some(existing) = route.providers.iter_mut().find(|p| p.node_id == provider.node_id) {
             *existing = provider;
         } else {
             route.providers.push(provider);
@@ -239,10 +228,7 @@ impl DecentralizedCapabilityRouter {
     /// 查找最佳能力提供者
     ///
     /// 综合考虑延迟、负载和置信度。
-    pub async fn find_capability_provider(
-        &self,
-        capability_id: &str,
-    ) -> Option<CapabilityProvider> {
+    pub async fn find_capability_provider(&self, capability_id: &str) -> Option<CapabilityProvider> {
         let routes = self.capability_routes.read().await;
         let route = routes.get(capability_id)?;
 
@@ -255,9 +241,7 @@ impl DecentralizedCapabilityRouter {
         sorted.sort_by(|a, b| {
             let score_a = a.confidence * (1.0 - a.load_factor) / (a.avg_latency_ms.max(1.0));
             let score_b = b.confidence * (1.0 - b.load_factor) / (b.avg_latency_ms.max(1.0));
-            score_b
-                .partial_cmp(&score_a)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         sorted.first().cloned().cloned()
@@ -278,21 +262,9 @@ impl DecentralizedCapabilityRouter {
                 return Some(CapabilityProvider {
                     node_id: value.stored_at.clone(),
                     endpoint: endpoint.to_string(),
-                    confidence: value
-                        .data
-                        .get("confidence")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.5),
-                    avg_latency_ms: value
-                        .data
-                        .get("latency_ms")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(100.0),
-                    load_factor: value
-                        .data
-                        .get("load")
-                        .and_then(|v| v.as_f64())
-                        .unwrap_or(0.5),
+                    confidence: value.data.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.5),
+                    avg_latency_ms: value.data.get("latency_ms").and_then(|v| v.as_f64()).unwrap_or(100.0),
+                    load_factor: value.data.get("load").and_then(|v| v.as_f64()).unwrap_or(0.5),
                 });
             }
         }
@@ -303,10 +275,7 @@ impl DecentralizedCapabilityRouter {
     // ─── Gossip 能力传播 ──────────────────────────────────────
 
     /// 创建能力 Gossip 消息
-    pub async fn create_capability_gossip(
-        &self,
-        capabilities: Vec<CapabilityAnnouncement>,
-    ) -> CapabilityGossip {
+    pub async fn create_capability_gossip(&self, capabilities: Vec<CapabilityAnnouncement>) -> CapabilityGossip {
         let mut seq = self.gossip_seq.write().await;
         *seq += 1;
 
@@ -342,11 +311,7 @@ impl DecentralizedCapabilityRouter {
                 load_factor: 0.0,
             };
 
-            if let Some(existing) = route
-                .providers
-                .iter_mut()
-                .find(|p| p.node_id == provider.node_id)
-            {
+            if let Some(existing) = route.providers.iter_mut().find(|p| p.node_id == provider.node_id) {
                 *existing = provider;
             } else {
                 route.providers.push(provider);
@@ -413,9 +378,7 @@ impl DecentralizedCapabilityRouter {
         match *status {
             PartitionStatus::Normal => DegradationStrategy::P2P,
             PartitionStatus::Minor => DegradationStrategy::DirectTransfer,
-            PartitionStatus::Major | PartitionStatus::Isolated => {
-                self.partition_policy.degradation.clone()
-            }
+            PartitionStatus::Major | PartitionStatus::Isolated => self.partition_policy.degradation.clone(),
         }
     }
 
@@ -439,12 +402,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_dht_put_and_get() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
-        router
-            .dht_put("key1".to_string(), serde_json::json!("value1"))
-            .await;
+        router.dht_put("key1".to_string(), serde_json::json!("value1")).await;
         let value = router.dht_get("key1").await.unwrap();
         assert_eq!(value.data, serde_json::json!("value1"));
         assert_eq!(value.version, 1);
@@ -452,15 +412,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_dht_version_increment() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
-        router
-            .dht_put("key1".to_string(), serde_json::json!("v1"))
-            .await;
-        router
-            .dht_put("key1".to_string(), serde_json::json!("v2"))
-            .await;
+        router.dht_put("key1".to_string(), serde_json::json!("v1")).await;
+        router.dht_put("key1".to_string(), serde_json::json!("v2")).await;
 
         let value = router.dht_get("key1").await.unwrap();
         assert_eq!(value.version, 2);
@@ -469,12 +424,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_dht_remove() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
-        router
-            .dht_put("key1".to_string(), serde_json::json!("value1"))
-            .await;
+        router.dht_put("key1".to_string(), serde_json::json!("value1")).await;
         let removed = router.dht_remove("key1").await;
         assert!(removed.is_some());
         assert!(router.dht_get("key1").await.is_none());
@@ -482,8 +434,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_and_find_capability() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         let provider = CapabilityProvider {
             node_id: "node-2".to_string(),
@@ -503,8 +454,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_best_capability_provider() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         // Provider 1: high latency, high load
         let p1 = CapabilityProvider {
@@ -524,12 +474,8 @@ mod tests {
             load_factor: 0.1,
         };
 
-        router
-            .register_capability(p1, "text-gen", "Text Generation")
-            .await;
-        router
-            .register_capability(p2, "text-gen", "Text Generation")
-            .await;
+        router.register_capability(p1, "text-gen", "Text Generation").await;
+        router.register_capability(p2, "text-gen", "Text Generation").await;
 
         let found = router.find_capability_provider("text-gen").await.unwrap();
         assert_eq!(found.node_id, "node-3"); // Better overall score
@@ -537,8 +483,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_capability_gossip() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         let gossip = router
             .create_capability_gossip(vec![CapabilityAnnouncement {
@@ -558,8 +503,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_capability_gossip() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         let gossip = CapabilityGossip {
             source_node: "node-2".to_string(),
@@ -578,17 +522,13 @@ mod tests {
         let updated = router.handle_capability_gossip(&gossip).await;
         assert_eq!(updated, 1);
 
-        let found = router
-            .find_capability_provider("image-analysis")
-            .await
-            .unwrap();
+        let found = router.find_capability_provider("image-analysis").await.unwrap();
         assert_eq!(found.node_id, "node-2");
     }
 
     #[tokio::test]
     async fn test_partition_detection() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         // Normal: 10 known, 9 reachable
         router.update_network_state(10, 9).await;
@@ -609,20 +549,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_degradation_strategy_by_partition() {
-        let router =
-            DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
+        let router = DecentralizedCapabilityRouter::new("node-1".to_string(), PartitionPolicy::default());
 
         router.update_network_state(10, 9).await;
-        assert_eq!(
-            router.degradation_strategy().await,
-            DegradationStrategy::P2P
-        );
+        assert_eq!(router.degradation_strategy().await, DegradationStrategy::P2P);
 
         router.update_network_state(10, 2).await;
         // Major partition -> use policy degradation (CloudRelay by default)
-        assert_eq!(
-            router.degradation_strategy().await,
-            DegradationStrategy::CloudRelay
-        );
+        assert_eq!(router.degradation_strategy().await, DegradationStrategy::CloudRelay);
     }
 }

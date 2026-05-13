@@ -132,8 +132,8 @@ impl ProtocolBridge for A2ABridge {
     }
 
     async fn decode(&self, data: &[u8]) -> Result<UnifiedMessage, BridgeError> {
-        let a2a_msg: A2AMessage = serde_json::from_slice(data)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))?;
+        let a2a_msg: A2AMessage =
+            serde_json::from_slice(data).map_err(|e| BridgeError::ConversionError(e.to_string()))?;
 
         Ok(UnifiedMessage {
             id: a2a_msg.id,
@@ -175,13 +175,11 @@ impl ProtocolBridge for McpBridge {
             method: message.method.clone(),
             params: message.payload.clone(),
         };
-        McpParser::serialize_request(&mcp_request)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))
+        McpParser::serialize_request(&mcp_request).map_err(|e| BridgeError::ConversionError(e.to_string()))
     }
 
     async fn decode(&self, data: &[u8]) -> Result<UnifiedMessage, BridgeError> {
-        let mcp_request = McpParser::parse_request(data)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))?;
+        let mcp_request = McpParser::parse_request(data).map_err(|e| BridgeError::ConversionError(e.to_string()))?;
 
         Ok(UnifiedMessage {
             id: match mcp_request.id {
@@ -239,41 +237,26 @@ impl ProtocolBridge for HttpBridge {
     }
 
     async fn decode(&self, data: &[u8]) -> Result<UnifiedMessage, BridgeError> {
-        let http_msg: serde_json::Value = serde_json::from_slice(data)
-            .map_err(|e| BridgeError::ConversionError(e.to_string()))?;
+        let http_msg: serde_json::Value =
+            serde_json::from_slice(data).map_err(|e| BridgeError::ConversionError(e.to_string()))?;
 
         let body = http_msg
             .get("body")
             .ok_or_else(|| BridgeError::ConversionError("Missing body".to_string()))?;
 
         Ok(UnifiedMessage {
-            id: body
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string(),
+            id: body.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
             source_protocol: ProtocolType::Http,
             target_protocol: ProtocolType::Http,
-            from: body
-                .get("from")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string(),
-            to: body
-                .get("to")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string(),
+            from: body.get("from").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            to: body.get("to").and_then(|v| v.as_str()).unwrap_or("").to_string(),
             method: http_msg
                 .get("path")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .trim_start_matches("/api/")
                 .to_string(),
-            payload: body
-                .get("payload")
-                .cloned()
-                .unwrap_or(serde_json::Value::Null),
+            payload: body.get("payload").cloned().unwrap_or(serde_json::Value::Null),
             metadata: http_msg
                 .get("headers")
                 .and_then(|v| v.as_object())
@@ -320,11 +303,7 @@ impl ProtocolNegotiator {
     }
 
     /// 协商最优协议
-    pub fn negotiate(
-        &self,
-        local: &ProtocolCapabilities,
-        remote: &ProtocolCapabilities,
-    ) -> NegotiatedProtocol {
+    pub fn negotiate(&self, local: &ProtocolCapabilities, remote: &ProtocolCapabilities) -> NegotiatedProtocol {
         // 找到双方都支持的协议
         let common: Vec<&ProtocolType> = local
             .supported_protocols
@@ -443,11 +422,7 @@ impl ProtocolGateway {
     }
 
     /// 协商协议
-    pub fn negotiate(
-        &self,
-        local: &ProtocolCapabilities,
-        remote: &ProtocolCapabilities,
-    ) -> NegotiatedProtocol {
+    pub fn negotiate(&self, local: &ProtocolCapabilities, remote: &ProtocolCapabilities) -> NegotiatedProtocol {
         self.negotiator.negotiate(local, remote)
     }
 

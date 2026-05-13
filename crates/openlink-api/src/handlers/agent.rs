@@ -105,9 +105,7 @@ pub async fn batch_resolve(
                     .map(|r| serde_json::to_value(&r.default_target).ok())
                     .flatten();
 
-                let action = route
-                    .as_ref()
-                    .map(|r| r.default_target.action.as_str().to_string());
+                let action = route.as_ref().map(|r| r.default_target.action.as_str().to_string());
 
                 results.push(ResolveResult {
                     code,
@@ -196,10 +194,7 @@ fn build_agent_context(headers: &HeaderMap) -> Context {
         .and_then(|v| v.to_str().ok())
         .map(String::from);
 
-    let mut ctx = Context::from_request(
-        headers.get("user-agent").and_then(|v| v.to_str().ok()),
-        None,
-    );
+    let mut ctx = Context::from_request(headers.get("user-agent").and_then(|v| v.to_str().ok()), None);
 
     // 设置 Agent 身份
     if agent_id.is_some() || agent_type.is_some() {
@@ -232,10 +227,7 @@ mod tests {
 
         let ctx = build_agent_context(&headers);
 
-        assert_eq!(
-            ctx.identity.identity_type,
-            openlink_core::IdentityType::Agent
-        );
+        assert_eq!(ctx.identity.identity_type, openlink_core::IdentityType::Agent);
         assert_eq!(ctx.identity.id, "test-agent");
         assert_eq!(ctx.identity.agent_type.as_deref(), Some("assistant"));
     }
@@ -390,14 +382,12 @@ pub async fn person_agent(
     let config_path = std::path::Path::new("config/agent.json");
 
     let content = if config_path.exists() {
-        fs::read_to_string(config_path)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to read agent.json: {}", e),
-                )
-            })?
+        fs::read_to_string(config_path).await.map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to read agent.json: {}", e),
+            )
+        })?
     } else {
         let default = PersonAgent {
             schema_version: "0.2.0".into(),
@@ -417,16 +407,11 @@ pub async fn person_agent(
             auth: None,
             links: None,
         };
-        serde_json::to_string_pretty(&default)
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        serde_json::to_string_pretty(&default).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     };
 
-    let value: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Invalid agent.json: {}", e),
-        )
-    })?;
+    let value: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid agent.json: {}", e)))?;
 
     tracing::info!("Served .well-known/agent.json");
     Ok(Json(value))
@@ -444,10 +429,7 @@ pub async fn config_service(
         .unwrap_or("anonymous");
 
     if agent_id == "anonymous" {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            "X-Agent-ID header required".into(),
-        ));
+        return Err((StatusCode::UNAUTHORIZED, "X-Agent-ID header required".into()));
     }
 
     let service_id = req.service.id.clone();
@@ -501,10 +483,7 @@ pub async fn config_service(
             "index" | "scan" | "clone" => ConfigActionResult {
                 action: action.clone(),
                 status: "pending".into(),
-                message: Some(format!(
-                    "{} requires external API call, queued",
-                    action
-                )),
+                message: Some(format!("{} requires external API call, queued", action)),
             },
             _ => ConfigActionResult {
                 action: action.clone(),
@@ -529,9 +508,9 @@ pub async fn config_service(
                 if let Some(services) = agent.get_mut("services") {
                     if let Some(list) = services.get_mut(list_key) {
                         if let Some(arr) = list.as_array_mut() {
-                            let exists = arr.iter().any(|s| {
-                                s.get("id").and_then(|v| v.as_str()) == Some(&service_id)
-                            });
+                            let exists = arr
+                                .iter()
+                                .any(|s| s.get("id").and_then(|v| v.as_str()) == Some(&service_id));
                             if !exists {
                                 arr.push(service_value);
                             }

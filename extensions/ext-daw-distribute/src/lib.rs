@@ -117,10 +117,7 @@ impl DawDistributeAction {
     }
 
     /// 处理插件分发
-    async fn handle_distribute_plugin(
-        &self,
-        params: &DawDistributeParams,
-    ) -> Result<ActionResult, CoreError> {
+    async fn handle_distribute_plugin(&self, params: &DawDistributeParams) -> Result<ActionResult, CoreError> {
         let plugin = params
             .plugin
             .as_ref()
@@ -150,10 +147,7 @@ impl DawDistributeAction {
     }
 
     /// 处理 JSFX 脚本加载
-    async fn handle_load_jsfx(
-        &self,
-        params: &DawDistributeParams,
-    ) -> Result<ActionResult, CoreError> {
+    async fn handle_load_jsfx(&self, params: &DawDistributeParams) -> Result<ActionResult, CoreError> {
         let script_name = params.jsfx_name.as_deref().unwrap_or("Untitled.jsfx");
         let content = params
             .jsfx_content
@@ -161,8 +155,7 @@ impl DawDistributeAction {
             .ok_or_else(|| CoreError::ExtensionError("jsfx_content required".to_string()))?;
 
         // 验证 JSFX 内容（基本检查）
-        if !content.contains("@init") && !content.contains("@sample") && !content.contains("@block")
-        {
+        if !content.contains("@init") && !content.contains("@sample") && !content.contains("@block") {
             return Err(CoreError::ExtensionError(
                 "Invalid JSFX content: missing @init/@sample/@block".to_string(),
             ));
@@ -189,17 +182,12 @@ impl DawDistributeAction {
     }
 
     /// 处理项目分享
-    async fn handle_share_project(
-        &self,
-        params: &DawDistributeParams,
-    ) -> Result<ActionResult, CoreError> {
+    async fn handle_share_project(&self, params: &DawDistributeParams) -> Result<ActionResult, CoreError> {
         let project_url = params
             .project_url
             .as_ref()
             .or(params.project_id.as_ref())
-            .ok_or_else(|| {
-                CoreError::ExtensionError("project_url or project_id required".to_string())
-            })?;
+            .ok_or_else(|| CoreError::ExtensionError("project_url or project_id required".to_string()))?;
 
         tracing::info!(
             project = %project_url,
@@ -224,10 +212,7 @@ impl DawDistributeAction {
     }
 
     /// 处理插件列表查询
-    async fn handle_list_plugins(
-        &self,
-        params: &DawDistributeParams,
-    ) -> Result<ActionResult, CoreError> {
+    async fn handle_list_plugins(&self, params: &DawDistributeParams) -> Result<ActionResult, CoreError> {
         tracing::info!(
             target = ?params.target_device,
             "Listing installed plugins on DAW"
@@ -246,10 +231,7 @@ impl DawDistributeAction {
     }
 
     /// 处理插件移除
-    async fn handle_remove_plugin(
-        &self,
-        params: &DawDistributeParams,
-    ) -> Result<ActionResult, CoreError> {
+    async fn handle_remove_plugin(&self, params: &DawDistributeParams) -> Result<ActionResult, CoreError> {
         let plugin = params
             .plugin
             .as_ref()
@@ -320,15 +302,10 @@ impl ConditionHandler for DawDeviceCondition {
         let allowed_devices: Vec<String> = params
             .get("allowed_devices")
             .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(String::from))
-                    .collect()
-            })
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
             .unwrap_or_default();
 
-        let device_matches =
-            allowed_devices.is_empty() || allowed_devices.contains(&ctx.identity.id);
+        let device_matches = allowed_devices.is_empty() || allowed_devices.contains(&ctx.identity.id);
 
         Ok((is_daw || has_daw_marker) && device_matches)
     }

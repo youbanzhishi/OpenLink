@@ -229,11 +229,7 @@ impl PeerConnection {
     /// 更新连接质量
     pub fn update_quality(&mut self, latency_ms: f64, packet_loss: f64) {
         let bandwidth_mbps = self.bandwidth_estimator.estimate_mbps();
-        self.quality = Some(ConnectionQuality::calculate(
-            latency_ms,
-            packet_loss,
-            bandwidth_mbps,
-        ));
+        self.quality = Some(ConnectionQuality::calculate(latency_ms, packet_loss, bandwidth_mbps));
     }
 
     /// 获取连接统计信息

@@ -16,10 +16,7 @@ use std::sync::Arc;
 ///
 /// 检查请求的 Authorization header 是否包含有效的 Bearer Token。
 /// 如果认证未启用（auth.enabled = false），所有请求都通过。
-pub async fn require_auth(
-    headers: HeaderMap,
-    state: Arc<AppState>,
-) -> Result<(), (StatusCode, &'static str)> {
+pub async fn require_auth(headers: HeaderMap, state: Arc<AppState>) -> Result<(), (StatusCode, &'static str)> {
     if !state.config.auth.enabled {
         return Ok(());
     }
@@ -57,22 +54,17 @@ pub async fn auth_middleware(req: Request, next: Next) -> Response {
 
     if let Some(state) = state {
         if state.config.auth.enabled {
-            let auth_header = req
-                .headers()
-                .get("authorization")
-                .and_then(|v| v.to_str().ok());
+            let auth_header = req.headers().get("authorization").and_then(|v| v.to_str().ok());
 
             match auth_header {
                 Some(h) if h.starts_with("Bearer ") => {
                     let token = h[7..].trim();
                     if state.config.auth.validate_token(token).is_none() {
-                        return (StatusCode::UNAUTHORIZED, "Invalid or unauthorized token")
-                            .into_response();
+                        return (StatusCode::UNAUTHORIZED, "Invalid or unauthorized token").into_response();
                     }
                 }
                 _ => {
-                    return (StatusCode::UNAUTHORIZED, "Missing Authorization header")
-                        .into_response();
+                    return (StatusCode::UNAUTHORIZED, "Missing Authorization header").into_response();
                 }
             }
         }

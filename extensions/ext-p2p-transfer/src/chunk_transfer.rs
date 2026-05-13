@@ -108,10 +108,7 @@ impl ChunkTransferTask {
 
     /// 获取已完成的 chunk 数
     pub fn completed_chunks(&self) -> u32 {
-        self.chunks
-            .iter()
-            .filter(|c| c.state == ChunkState::Completed)
-            .count() as u32
+        self.chunks.iter().filter(|c| c.state == ChunkState::Completed).count() as u32
     }
 
     /// 获取进度百分比 (0.0 - 1.0)
@@ -326,12 +323,7 @@ mod tests {
 
     #[test]
     fn test_chunk_progress() {
-        let mut task = ChunkTransferTask::new(
-            "task-3".to_string(),
-            "file-3".to_string(),
-            3_000_000,
-            1_000_000,
-        );
+        let mut task = ChunkTransferTask::new("task-3".to_string(), "file-3".to_string(), 3_000_000, 1_000_000);
         assert!((task.progress() - 0.0).abs() < 0.01);
 
         task.start_chunk(0, "peer-1");
@@ -341,12 +333,7 @@ mod tests {
 
     #[test]
     fn test_chunk_fail_and_retry() {
-        let mut task = ChunkTransferTask::new(
-            "task-4".to_string(),
-            "file-4".to_string(),
-            2_000_000,
-            1_000_000,
-        );
+        let mut task = ChunkTransferTask::new("task-4".to_string(), "file-4".to_string(), 2_000_000, 1_000_000);
         task.start_chunk(0, "peer-1");
         task.fail_chunk(0);
         // Chunk 0 should be back to Pending
@@ -356,12 +343,7 @@ mod tests {
 
     #[test]
     fn test_parallel_download_scheduler() {
-        let mut task = ChunkTransferTask::new(
-            "task-5".to_string(),
-            "file-5".to_string(),
-            5_000_000,
-            1_000_000,
-        );
+        let mut task = ChunkTransferTask::new("task-5".to_string(), "file-5".to_string(), 5_000_000, 1_000_000);
         task.peers = vec!["peer-1".to_string(), "peer-2".to_string()];
 
         let mut scheduler = ParallelDownloadScheduler::new(task, 2);
@@ -373,12 +355,7 @@ mod tests {
 
     #[test]
     fn test_verify_chunks() {
-        let mut task = ChunkTransferTask::new(
-            "task-6".to_string(),
-            "file-6".to_string(),
-            2_000_000,
-            1_000_000,
-        );
+        let mut task = ChunkTransferTask::new("task-6".to_string(), "file-6".to_string(), 2_000_000, 1_000_000);
         task.start_chunk(0, "peer-1");
         task.complete_chunk(0, Some("sha256:abc".to_string()));
         task.start_chunk(1, "peer-1");

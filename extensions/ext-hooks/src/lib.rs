@@ -31,28 +31,24 @@ impl HookHandler for IdentityInjectHook {
         // 从 User-Agent 检测身份
         if let Some(ref ua) = ctx.device.user_agent_raw {
             let ua_lower = ua.to_lowercase();
-            let new_identity_type = if ua_lower.contains("curl/")
-                || ua_lower.contains("wget/")
-                || ua_lower.contains("python-requests/")
-            {
-                IdentityType::Service
-            } else if ua_lower.contains("openai")
-                || ua_lower.contains("anthropic")
-                || ua_lower.contains("claude")
-                || ua_lower.contains("agent")
-                || ua_lower.contains("bot")
-            {
-                IdentityType::Agent
-            } else {
-                IdentityType::Human
-            };
+            let new_identity_type =
+                if ua_lower.contains("curl/") || ua_lower.contains("wget/") || ua_lower.contains("python-requests/") {
+                    IdentityType::Service
+                } else if ua_lower.contains("openai")
+                    || ua_lower.contains("anthropic")
+                    || ua_lower.contains("claude")
+                    || ua_lower.contains("agent")
+                    || ua_lower.contains("bot")
+                {
+                    IdentityType::Agent
+                } else {
+                    IdentityType::Human
+                };
 
             ctx.identity.identity_type = new_identity_type.clone();
 
             // 同时更新 device_type
-            if new_identity_type == IdentityType::Service
-                && ctx.device.device_type.as_deref() != Some("server")
-            {
+            if new_identity_type == IdentityType::Service && ctx.device.device_type.as_deref() != Some("server") {
                 ctx.device.device_type = Some("server".to_string());
             }
         }

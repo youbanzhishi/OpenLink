@@ -33,10 +33,7 @@ pub enum RetryPolicy {
     /// Fixed interval: constant wait between retries
     FixedInterval { max_retries: u32, interval_ms: u64 },
     /// Custom policy with user-defined parameters
-    Custom {
-        max_retries: u32,
-        delays_ms: Vec<u64>,
-    },
+    Custom { max_retries: u32, delays_ms: Vec<u64> },
 }
 
 impl Default for RetryPolicy {
@@ -52,11 +49,7 @@ impl Default for RetryPolicy {
 
 impl RetryPolicy {
     /// Create an exponential backoff policy.
-    pub fn exponential_backoff(
-        max_retries: u32,
-        initial_backoff_ms: u64,
-        max_backoff_ms: u64,
-    ) -> Self {
+    pub fn exponential_backoff(max_retries: u32, initial_backoff_ms: u64, max_backoff_ms: u64) -> Self {
         Self::ExponentialBackoff {
             max_retries,
             initial_backoff_ms,
@@ -75,10 +68,7 @@ impl RetryPolicy {
 
     /// Create a custom policy with explicit delay values.
     pub fn custom(max_retries: u32, delays_ms: Vec<u64>) -> Self {
-        Self::Custom {
-            max_retries,
-            delays_ms,
-        }
+        Self::Custom { max_retries, delays_ms }
     }
 
     /// Get the maximum number of retries.
@@ -93,9 +83,7 @@ impl RetryPolicy {
     /// Get the initial backoff in milliseconds (for exponential).
     pub fn initial_backoff_ms(&self) -> u64 {
         match self {
-            Self::ExponentialBackoff {
-                initial_backoff_ms, ..
-            } => *initial_backoff_ms,
+            Self::ExponentialBackoff { initial_backoff_ms, .. } => *initial_backoff_ms,
             Self::FixedInterval { interval_ms, .. } => *interval_ms,
             Self::Custom { delays_ms, .. } => delays_ms.first().copied().unwrap_or(100),
         }
@@ -113,9 +101,7 @@ impl RetryPolicy {
     /// Get the backoff multiplier (for exponential).
     pub fn backoff_multiplier(&self) -> f64 {
         match self {
-            Self::ExponentialBackoff {
-                backoff_multiplier, ..
-            } => *backoff_multiplier,
+            Self::ExponentialBackoff { backoff_multiplier, .. } => *backoff_multiplier,
             _ => 1.0,
         }
     }
@@ -129,8 +115,7 @@ impl RetryPolicy {
                 backoff_multiplier,
                 ..
             } => {
-                let delay_ms =
-                    (*initial_backoff_ms as f64 * backoff_multiplier.powi(attempt as i32)) as u64;
+                let delay_ms = (*initial_backoff_ms as f64 * backoff_multiplier.powi(attempt as i32)) as u64;
                 Duration::from_millis(delay_ms.min(*max_backoff_ms))
             }
             Self::FixedInterval { interval_ms, .. } => Duration::from_millis(*interval_ms),

@@ -13,15 +13,12 @@ pub struct RedisCache {
 impl RedisCache {
     /// 创建 Redis 缓存
     pub fn new(url: &str) -> Self {
-        Self {
-            url: url.to_string(),
-        }
+        Self { url: url.to_string() }
     }
 
     /// 获取 Redis 连接
     async fn get_conn(&self) -> Result<redis::aio::MultiplexedConnection, CacheError> {
-        let client = redis::Client::open(self.url.as_str())
-            .map_err(|e| CacheError::Connection(e.to_string()))?;
+        let client = redis::Client::open(self.url.as_str()).map_err(|e| CacheError::Connection(e.to_string()))?;
 
         client
             .get_multiplexed_async_connection()
@@ -108,10 +105,7 @@ impl Cache for RedisCache {
             .await
             .map_err(|e| CacheError::Backend(e.to_string()))?;
 
-        let hits = db_stats
-            .get("keyspace_hits")
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0);
+        let hits = db_stats.get("keyspace_hits").and_then(|v| v.parse().ok()).unwrap_or(0);
 
         let misses = db_stats
             .get("keyspace_misses")
@@ -119,11 +113,7 @@ impl Cache for RedisCache {
             .unwrap_or(0);
 
         let total = hits + misses;
-        let hit_rate = if total > 0 {
-            hits as f64 / total as f64
-        } else {
-            0.0
-        };
+        let hit_rate = if total > 0 { hits as f64 / total as f64 } else { 0.0 };
 
         Ok(CacheStats {
             entries: 0, // Redis 不提供实时计数

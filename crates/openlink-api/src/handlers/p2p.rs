@@ -120,10 +120,7 @@ pub async fn get_status(_state: State<Arc<AppState>>) -> Response {
 }
 
 /// POST /api/v1/p2p/connect — 建立P2P连接
-pub async fn connect(
-    _state: State<Arc<AppState>>,
-    axum::Json(req): axum::Json<ConnectRequest>,
-) -> Response {
+pub async fn connect(_state: State<Arc<AppState>>, axum::Json(req): axum::Json<ConnectRequest>) -> Response {
     let mode = req.mode.as_deref().unwrap_or("auto");
 
     let response = ConnectResponse {
@@ -131,10 +128,7 @@ pub async fn connect(
         peer_id: req.peer_node_id.clone(),
         strategy: mode.to_string(),
         estimated_latency_ms: Some(20.0),
-        message: format!(
-            "P2P connection to {} established via {}",
-            req.peer_node_id, mode
-        ),
+        message: format!("P2P connection to {} established via {}", req.peer_node_id, mode),
     };
 
     Response::builder()

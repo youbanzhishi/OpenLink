@@ -79,11 +79,7 @@ impl WorkflowAction {
     }
 
     /// 执行单个步骤
-    async fn execute_step(
-        &self,
-        ctx: &Context,
-        step: &WorkflowStep,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute_step(&self, ctx: &Context, step: &WorkflowStep) -> Result<ActionResult, CoreError> {
         let target = Target {
             action: openlink_core::Action::Custom(step.action.clone()),
             params: step.params.clone(),
@@ -93,9 +89,7 @@ impl WorkflowAction {
         let handler = self
             .registry
             .get_action_handler(&step.action)
-            .ok_or_else(|| {
-                CoreError::ExtensionError(format!("Action handler not found: {}", step.action))
-            })?;
+            .ok_or_else(|| CoreError::ExtensionError(format!("Action handler not found: {}", step.action)))?;
 
         handler.execute(ctx, &target).await
     }

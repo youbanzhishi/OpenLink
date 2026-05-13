@@ -64,10 +64,7 @@ pub async fn register_extension(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if existing.iter().any(|e| e.name == req.name) {
-        return Err((
-            StatusCode::CONFLICT,
-            format!("Extension '{}' already exists", req.name),
-        ));
+        return Err((StatusCode::CONFLICT, format!("Extension '{}' already exists", req.name)));
     }
 
     let ext = Extension {
@@ -119,12 +116,10 @@ pub async fn delete_extension(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let ext = exts.iter().find(|e| e.name == name).ok_or_else(|| {
-        (
-            StatusCode::NOT_FOUND,
-            format!("Extension '{}' not found", name),
-        )
-    })?;
+    let ext = exts
+        .iter()
+        .find(|e| e.name == name)
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Extension '{}' not found", name)))?;
 
     // 创建已禁用的版本并保存
     let disabled_ext = Extension {

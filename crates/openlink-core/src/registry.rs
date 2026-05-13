@@ -138,10 +138,7 @@ impl ExtensionRegistry {
     // ─── Condition 注册与查询 ───────────────────────────────
 
     /// 注册 Condition 处理器
-    pub fn register_condition(
-        &mut self,
-        handler: Arc<dyn ConditionHandler>,
-    ) -> Result<(), CoreError> {
+    pub fn register_condition(&mut self, handler: Arc<dyn ConditionHandler>) -> Result<(), CoreError> {
         let name = handler.name().to_string();
         if self.condition_handlers.contains_key(&name) {
             return Err(CoreError::ExtensionError(format!(
@@ -226,11 +223,7 @@ mod tests {
 
     #[async_trait]
     impl ActionHandler for TestActionHandler {
-        async fn execute(
-            &self,
-            _ctx: &Context,
-            target: &Target,
-        ) -> Result<ActionResult, CoreError> {
+        async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
             Ok(ActionResult::Json(serde_json::json!({
                 "action": self.name,
                 "params": target.params,
@@ -247,11 +240,7 @@ mod tests {
 
     #[async_trait]
     impl ConditionHandler for TestConditionHandler {
-        async fn evaluate(
-            &self,
-            ctx: &Context,
-            params: &serde_json::Value,
-        ) -> Result<bool, CoreError> {
+        async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
             let target_type = params.get("type").and_then(|v| v.as_str()).unwrap_or("");
             Ok(ctx.identity.identity_type == IdentityType::Human && target_type == "human")
         }
@@ -327,9 +316,7 @@ mod tests {
     #[tokio::test]
     async fn test_condition_handler() {
         let mut registry = ExtensionRegistry::new();
-        registry
-            .register_condition(Arc::new(TestConditionHandler))
-            .unwrap();
+        registry.register_condition(Arc::new(TestConditionHandler)).unwrap();
 
         let handler = registry.get_condition_handler("test-condition").unwrap();
         let ctx = Context::from_request(None, None); // Default is Human

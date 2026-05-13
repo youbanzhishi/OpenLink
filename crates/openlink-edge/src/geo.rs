@@ -130,11 +130,7 @@ impl CidrMatch {
         let prefix_len: u32 = parts[1].parse().ok()?;
 
         let addr = parse_ipv4(ip_str)?;
-        let mask = if prefix_len == 0 {
-            0
-        } else {
-            !0u32 << (32 - prefix_len)
-        };
+        let mask = if prefix_len == 0 { 0 } else { !0u32 << (32 - prefix_len) };
 
         Some(Self {
             network_addr: addr & mask,
@@ -154,12 +150,7 @@ fn parse_ipv4(s: &str) -> Option<u32> {
     if octets.len() != 4 {
         return None;
     }
-    Some(
-        ((octets[0] as u32) << 24)
-            | ((octets[1] as u32) << 16)
-            | ((octets[2] as u32) << 8)
-            | (octets[3] as u32),
-    )
+    Some(((octets[0] as u32) << 24) | ((octets[1] as u32) << 16) | ((octets[2] as u32) << 8) | (octets[3] as u32))
 }
 
 /// 将 IpAddr 转为 u32（仅支持 IPv4）

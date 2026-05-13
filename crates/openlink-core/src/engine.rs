@@ -40,11 +40,7 @@ impl RoutingEngine {
     /// 解析路由 — 核心调度方法
     ///
     /// 完整流程：Hook → Rule匹配 → Action执行 → Hook
-    pub async fn resolve(
-        &self,
-        ctx: &mut Context,
-        route: &Route,
-    ) -> Result<RouteResult, CoreError> {
+    pub async fn resolve(&self, ctx: &mut Context, route: &Route) -> Result<RouteResult, CoreError> {
         let start = std::time::Instant::now();
 
         // 1. 运行 BeforeRoute Hooks（改写 Context）
@@ -92,11 +88,7 @@ impl RoutingEngine {
     }
 
     /// 匹配规则 — 按优先级排序后依次评估，命中即停
-    async fn match_rules<'a>(
-        &self,
-        ctx: &Context,
-        rules: &'a [Rule],
-    ) -> Result<Option<(&'a Rule, String)>, CoreError> {
+    async fn match_rules<'a>(&self, ctx: &Context, rules: &'a [Rule]) -> Result<Option<(&'a Rule, String)>, CoreError> {
         if rules.is_empty() {
             return Ok(None);
         }
@@ -152,11 +144,7 @@ impl RoutingEngine {
     }
 
     /// 评估条件 — 通过 Extension Registry 查找 Condition Handler
-    async fn evaluate_condition(
-        &self,
-        ctx: &Context,
-        condition: &Condition,
-    ) -> Result<bool, CoreError> {
+    async fn evaluate_condition(&self, ctx: &Context, condition: &Condition) -> Result<bool, CoreError> {
         // 内置条件：always（永远匹配）
         if condition.condition_type == "always" {
             return Ok(true);
@@ -164,21 +152,13 @@ impl RoutingEngine {
 
         // 内置条件：identity-type
         if condition.condition_type == "identity-type" {
-            let target_type = condition
-                .params
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let target_type = condition.params.get("type").and_then(|v| v.as_str()).unwrap_or("");
             return Ok(format!("{:?}", ctx.identity.identity_type).to_lowercase() == target_type);
         }
 
         // 内置条件：device-type
         if condition.condition_type == "device-type" {
-            let target_type = condition
-                .params
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let target_type = condition.params.get("type").and_then(|v| v.as_str()).unwrap_or("");
             return Ok(ctx
                 .device
                 .device_type
@@ -198,10 +178,7 @@ impl RoutingEngine {
         }
 
         // 查找注册的 Condition Handler
-        if let Some(handler) = self
-            .registry
-            .get_condition_handler(&condition.condition_type)
-        {
+        if let Some(handler) = self.registry.get_condition_handler(&condition.condition_type) {
             return handler.evaluate(ctx, &condition.params).await;
         }
 
@@ -215,11 +192,7 @@ impl RoutingEngine {
 
     /// 评估 header-match 条件
     /// 检查 HTTP Header 是否匹配指定模式
-    fn evaluate_header_match(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    fn evaluate_header_match(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         let header_name = params
             .get("header")
             .and_then(|v| v.as_str())
@@ -259,11 +232,7 @@ impl RoutingEngine {
     }
 
     /// 评估 geo-match 条件（Phase 2: 预留接口，可配置）
-    fn evaluate_geo_match(
-        &self,
-        ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
+    fn evaluate_geo_match(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 支持按国家/地区/城市匹配
         if let Some(country) = params.get("country").and_then(|v| v.as_str()) {
             if let Some(ref ctx_country) = ctx.location.country {
@@ -291,20 +260,14 @@ impl RoutingEngine {
     }
 
     /// 执行 Action — 通过 Extension Registry 查找 Action Handler
-    async fn execute_action(
-        &self,
-        ctx: &Context,
-        target: &Target,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute_action(&self, ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let action_name = target.action.as_str();
 
         // 查找 Action Handler
         let handler = self
             .registry
             .get_action_handler(action_name)
-            .ok_or_else(|| {
-                CoreError::ExtensionError(format!("Action handler '{}' not found", action_name))
-            })?;
+            .ok_or_else(|| CoreError::ExtensionError(format!("Action handler '{}' not found", action_name)))?;
 
         tracing::debug!(action = %action_name, "Executing action");
         handler.execute(ctx, target).await
@@ -360,11 +323,7 @@ mod tests {
     use super::*;
     use crate::primitives::{Action, DeviceInfo, Identity, IdentityType};
 
-    fn make_test_ctx(
-        identity_type: IdentityType,
-        device_type: Option<&str>,
-        ua: Option<&str>,
-    ) -> Context {
+    fn make_test_ctx(identity_type: IdentityType, device_type: Option<&str>, ua: Option<&str>) -> Context {
         Context {
             identity: Identity {
                 id: "test".to_string(),

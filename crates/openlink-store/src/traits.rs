@@ -28,11 +28,7 @@ pub trait Store: Send + Sync {
     // ─── Access Log 操作 ──────────────────────────────────────
 
     async fn log_access(&self, log: &AccessLog) -> Result<(), StoreError>;
-    async fn get_access_logs(
-        &self,
-        link_id: &str,
-        limit: usize,
-    ) -> Result<Vec<AccessLog>, StoreError>;
+    async fn get_access_logs(&self, link_id: &str, limit: usize) -> Result<Vec<AccessLog>, StoreError>;
 
     // ─── Stats 操作 ───────────────────────────────────────────
 

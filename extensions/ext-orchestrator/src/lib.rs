@@ -30,9 +30,8 @@
 use async_trait::async_trait;
 use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use openlink_orchestrator::{
-    AggregationStrategy, Dag, DagExecutor, DagNode, EdgeCondition, ExecutionResult,
-    ExecutionStatus, ParallelConfig, ParallelDagExecutor, ResultAggregator, SimpleTaskExecutor,
-    TemplateRegistry,
+    AggregationStrategy, Dag, DagExecutor, DagNode, EdgeCondition, ExecutionResult, ExecutionStatus, ParallelConfig,
+    ParallelDagExecutor, ResultAggregator, SimpleTaskExecutor, TemplateRegistry,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -47,9 +46,7 @@ pub struct OrchestrateAction {
 
 impl OrchestrateAction {
     pub fn new(executor: Arc<DagExecutor>) -> Self {
-        let parallel_executor = Arc::new(ParallelDagExecutor::new(Arc::new(
-            SimpleTaskExecutor::new(),
-        )));
+        let parallel_executor = Arc::new(ParallelDagExecutor::new(Arc::new(SimpleTaskExecutor::new())));
         Self {
             executor,
             parallel_executor,
@@ -59,10 +56,7 @@ impl OrchestrateAction {
     }
 
     /// 创建带并行执行器的编排 Action
-    pub fn with_parallel(
-        executor: Arc<DagExecutor>,
-        parallel_executor: Arc<ParallelDagExecutor>,
-    ) -> Self {
+    pub fn with_parallel(executor: Arc<DagExecutor>, parallel_executor: Arc<ParallelDagExecutor>) -> Self {
         Self {
             executor,
             parallel_executor,
@@ -85,11 +79,7 @@ impl OrchestrateAction {
 
     /// 解析聚合策略
     fn parse_aggregation_strategy(params: &serde_json::Value) -> AggregationStrategy {
-        match params
-            .get("aggregation")
-            .and_then(|v| v.as_str())
-            .unwrap_or("merge")
-        {
+        match params.get("aggregation").and_then(|v| v.as_str()).unwrap_or("merge") {
             "last" => AggregationStrategy::Last,
             "collect" => AggregationStrategy::Collect,
             "merge" => AggregationStrategy::Merge,
@@ -107,11 +97,7 @@ impl ActionHandler for OrchestrateAction {
         }
 
         // 检查是否使用并行执行
-        let parallel = target
-            .params
-            .get("parallel")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
+        let parallel = target.params.get("parallel").and_then(|v| v.as_bool()).unwrap_or(false);
 
         // 直接执行 DAG
         let dag_value = target
@@ -122,9 +108,10 @@ impl ActionHandler for OrchestrateAction {
         let dag = Self::parse_dag(dag_value)?;
 
         let result = if parallel {
-            self.parallel_executor.execute(&dag).await.map_err(|e| {
-                CoreError::ExtensionError(format!("Parallel DAG execution failed: {}", e))
-            })?
+            self.parallel_executor
+                .execute(&dag)
+                .await
+                .map_err(|e| CoreError::ExtensionError(format!("Parallel DAG execution failed: {}", e)))?
         } else {
             self.executor
                 .execute(&dag)
@@ -170,15 +157,11 @@ impl ActionHandler for OrchestrateAction {
 
 impl OrchestrateAction {
     /// 从模板执行
-    async fn execute_template(
-        &self,
-        template_id: &str,
-        params: &serde_json::Value,
-    ) -> Result<ActionResult, CoreError> {
+    async fn execute_template(&self, template_id: &str, params: &serde_json::Value) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
-        let template = templates.get(template_id).ok_or_else(|| {
-            CoreError::InvalidInput(format!("Template '{}' not found", template_id))
-        })?;
+        let template = templates
+            .get(template_id)
+            .ok_or_else(|| CoreError::InvalidInput(format!("Template '{}' not found", template_id)))?;
 
         tracing::info!(
             template_id = %template_id,
@@ -291,10 +274,7 @@ impl ActionHandler for ValidateDagAction {
 }
 
 /// 注册编排扩展到 Extension Registry
-pub fn register(
-    registry: &mut ExtensionRegistry,
-    executor: Arc<DagExecutor>,
-) -> Result<(), CoreError> {
+pub fn register(registry: &mut ExtensionRegistry, executor: Arc<DagExecutor>) -> Result<(), CoreError> {
     let templates = Arc::new(RwLock::new(TemplateRegistry::new()));
 
     let action = OrchestrateAction::new(executor);

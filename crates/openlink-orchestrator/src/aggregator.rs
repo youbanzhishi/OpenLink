@@ -100,9 +100,7 @@ pub struct ResultAggregator {
 impl ResultAggregator {
     /// 创建聚合器
     pub fn new() -> Self {
-        Self {
-            callbacks: Vec::new(),
-        }
+        Self { callbacks: Vec::new() }
     }
 
     /// 添加回调
@@ -111,13 +109,8 @@ impl ResultAggregator {
     }
 
     /// 聚合执行结果
-    pub fn aggregate(
-        &self,
-        execution_result: &ExecutionResult,
-        strategy: &AggregationStrategy,
-    ) -> AggregatedResult {
-        let (success_count, failure_count, skipped_count) =
-            self.count_results(&execution_result.node_results);
+    pub fn aggregate(&self, execution_result: &ExecutionResult, strategy: &AggregationStrategy) -> AggregatedResult {
+        let (success_count, failure_count, skipped_count) = self.count_results(&execution_result.node_results);
 
         let result = match strategy {
             AggregationStrategy::Merge => self.merge_results(&execution_result.node_results),
@@ -186,14 +179,9 @@ impl ResultAggregator {
 
     /// 发送 HTTP 回调
     #[cfg(feature = "http-callback")]
-    async fn send_http_callback(
-        &self,
-        callback: &CallbackConfig,
-        event: &CallbackEvent,
-    ) -> Result<(), String> {
+    async fn send_http_callback(&self, callback: &CallbackConfig, event: &CallbackEvent) -> Result<(), String> {
         let client = reqwest::Client::new();
-        let body =
-            serde_json::to_string(event).map_err(|e| format!("Serialization error: {}", e))?;
+        let body = serde_json::to_string(event).map_err(|e| format!("Serialization error: {}", e))?;
 
         let request = match callback.method.to_uppercase().as_str() {
             "POST" => client.post(&callback.url),
@@ -201,18 +189,13 @@ impl ResultAggregator {
             _ => client.post(&callback.url),
         };
 
-        let mut request = request
-            .header("Content-Type", "application/json")
-            .body(body);
+        let mut request = request.header("Content-Type", "application/json").body(body);
 
         for (key, value) in &callback.headers {
             request = request.header(key.as_str(), value.as_str());
         }
 
-        let response = request
-            .send()
-            .await
-            .map_err(|e| format!("HTTP error: {}", e))?;
+        let response = request.send().await.map_err(|e| format!("HTTP error: {}", e))?;
 
         if !response.status().is_success() {
             return Err(format!("Callback returned status: {}", response.status()));
@@ -366,10 +349,7 @@ mod tests {
         let aggregator = ResultAggregator::new();
         let result = make_execution_result();
 
-        let aggregated = aggregator.aggregate(
-            &result,
-            &AggregationStrategy::Custom("my-aggregator".to_string()),
-        );
+        let aggregated = aggregator.aggregate(&result, &AggregationStrategy::Custom("my-aggregator".to_string()));
         assert_eq!(
             aggregated.strategy,
             AggregationStrategy::Custom("my-aggregator".to_string())

@@ -175,10 +175,7 @@ mod tests {
             discovered_at: chrono::Utc::now(),
             latency_ms: Some(5),
         };
-        assert_eq!(
-            node.file_service_url(),
-            "http://192.168.1.100:8080/openlink/files"
-        );
+        assert_eq!(node.file_service_url(), "http://192.168.1.100:8080/openlink/files");
     }
 
     #[test]

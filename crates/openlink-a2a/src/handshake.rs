@@ -89,10 +89,7 @@ impl HandshakeEngine {
         }
 
         // 检查请求的能力是否可用
-        let available_ids: Vec<&str> = available_capabilities
-            .iter()
-            .map(|c| c.id.as_str())
-            .collect();
+        let available_ids: Vec<&str> = available_capabilities.iter().map(|c| c.id.as_str()).collect();
         let provided: Vec<String> = request
             .requested_capabilities
             .iter()
@@ -292,9 +289,7 @@ mod tests {
             params: serde_json::Value::Null,
         }];
 
-        let response = engine
-            .handle_handshake_request(&request, &capabilities)
-            .await;
+        let response = engine.handle_handshake_request(&request, &capabilities).await;
         assert!(response.accepted);
         assert!(response.session_token.is_some());
         assert_eq!(response.provided_capabilities, vec!["image-analysis"]);

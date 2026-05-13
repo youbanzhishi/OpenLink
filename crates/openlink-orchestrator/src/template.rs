@@ -183,8 +183,7 @@ impl TemplateRegistry {
         self.register(WorkflowTemplate {
             id: "map-reduce".to_string(),
             name: "Map-Reduce".to_string(),
-            description: "将任务分片到多个 Agent 并行处理（Map），然后汇总结果（Reduce）"
-                .to_string(),
+            description: "将任务分片到多个 Agent 并行处理（Map），然后汇总结果（Reduce）".to_string(),
             category: "parallel".to_string(),
             parameters: vec![
                 TemplateParameter {
@@ -287,10 +286,7 @@ impl TemplateRegistry {
 
     /// 按类别列出模板
     pub fn list_by_category(&self, category: &str) -> Vec<&WorkflowTemplate> {
-        self.templates
-            .values()
-            .filter(|t| t.category == category)
-            .collect()
+        self.templates.values().filter(|t| t.category == category).collect()
     }
 
     /// 从模板创建 DAG（串行流水线）
@@ -594,14 +590,7 @@ mod tests {
 
     #[test]
     fn test_create_map_reduce() {
-        let dag = TemplateRegistry::create_map_reduce(
-            "test-mr",
-            "agent-mapper",
-            "agent-reducer",
-            4,
-            "map",
-            "reduce",
-        );
+        let dag = TemplateRegistry::create_map_reduce("test-mr", "agent-mapper", "agent-reducer", 4, "map", "reduce");
 
         assert!(dag.validate().is_ok());
         assert_eq!(dag.nodes.len(), 5); // 4 mappers + 1 reducer

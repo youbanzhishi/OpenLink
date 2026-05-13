@@ -53,21 +53,10 @@ pub async fn redirect(
             // 这是传统短链的最简形态
             if let Some(url) = link.payload.get("target_url").and_then(|v| v.as_str()) {
                 // 记录访问日志（增强版）
-                let _ = log_redirect_access(
-                    &state,
-                    &link,
-                    &headers,
-                    url,
-                    start.elapsed().as_millis() as i64,
-                )
-                .await;
+                let _ = log_redirect_access(&state, &link, &headers, url, start.elapsed().as_millis() as i64).await;
                 return Redirect::temporary(url).into_response();
             }
-            return (
-                StatusCode::NOT_FOUND,
-                "No route or target_url for this link",
-            )
-                .into_response();
+            return (StatusCode::NOT_FOUND, "No route or target_url for this link").into_response();
         }
         Err(e) => {
             tracing::error!(link_id = %link.id, error = %e, "Failed to lookup route");
@@ -119,9 +108,7 @@ pub async fn redirect(
                         Redirect::temporary(&url).into_response()
                     }
                 }
-                ActionResult::Json(val) => {
-                    ([("content-type", "application/json")], val.to_string()).into_response()
-                }
+                ActionResult::Json(val) => ([("content-type", "application/json")], val.to_string()).into_response(),
                 ActionResult::Custom { content_type, body } => {
                     ([("content-type", content_type.as_str())], body).into_response()
                 }

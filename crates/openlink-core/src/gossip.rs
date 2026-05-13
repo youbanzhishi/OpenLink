@@ -25,11 +25,7 @@ pub enum GossipMessage {
     /// 节点离开网络
     Leave { node_id: NodeId, timestamp: i64 },
     /// 心跳
-    Heartbeat {
-        node_id: NodeId,
-        seq: u64,
-        timestamp: i64,
-    },
+    Heartbeat { node_id: NodeId, seq: u64, timestamp: i64 },
     /// 链路状态更新
     LinkState {
         from: NodeId,
@@ -156,14 +152,7 @@ impl GossipMembership {
                 available,
                 bandwidth_mbps,
                 timestamp,
-            } => self.handle_link_state(
-                from,
-                to,
-                *latency_ms,
-                *available,
-                *bandwidth_mbps,
-                *timestamp,
-            ),
+            } => self.handle_link_state(from, to, *latency_ms, *available, *bandwidth_mbps, *timestamp),
             GossipMessage::FullSync {
                 nodes,
                 links,
@@ -233,12 +222,7 @@ impl GossipMembership {
     }
 
     /// 处理心跳
-    fn handle_heartbeat(
-        &mut self,
-        node_id: &NodeId,
-        _seq: u64,
-        _timestamp: i64,
-    ) -> Vec<GossipMessage> {
+    fn handle_heartbeat(&mut self, node_id: &NodeId, _seq: u64, _timestamp: i64) -> Vec<GossipMessage> {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.last_heartbeat = chrono::Utc::now().timestamp();
             node.status = NodeStatus::Alive;
@@ -291,11 +275,7 @@ impl GossipMembership {
     }
 
     /// 处理全量同步
-    fn handle_full_sync(
-        &mut self,
-        nodes: Vec<NodeInfo>,
-        links: Vec<LinkStateEntry>,
-    ) -> Vec<GossipMessage> {
+    fn handle_full_sync(&mut self, nodes: Vec<NodeInfo>, links: Vec<LinkStateEntry>) -> Vec<GossipMessage> {
         for node in nodes {
             if node.node_id != self.local_node_id {
                 self.nodes.insert(node.node_id.clone(), node);
@@ -364,10 +344,7 @@ impl GossipMembership {
 
     /// 获取存活节点列表
     pub fn alive_nodes(&self) -> Vec<&NodeInfo> {
-        self.nodes
-            .values()
-            .filter(|n| n.status == NodeStatus::Alive)
-            .collect()
+        self.nodes.values().filter(|n| n.status == NodeStatus::Alive).collect()
     }
 
     /// 获取所有节点
@@ -516,10 +493,7 @@ mod tests {
         let hb2 = membership.generate_heartbeat();
 
         match (&hb1, &hb2) {
-            (
-                GossipMessage::Heartbeat { seq: s1, .. },
-                GossipMessage::Heartbeat { seq: s2, .. },
-            ) => {
+            (GossipMessage::Heartbeat { seq: s1, .. }, GossipMessage::Heartbeat { seq: s2, .. }) => {
                 assert_eq!(*s2, *s1 + 1);
             }
             _ => panic!("Expected Heartbeat messages"),

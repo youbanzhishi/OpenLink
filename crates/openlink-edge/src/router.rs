@@ -111,11 +111,7 @@ impl EdgeRouter {
                 return Some(RedirectResult {
                     target_url: decision.target_url,
                     status_code: decision.status_code,
-                    source: if decision.cache_hit {
-                        "hot_link"
-                    } else {
-                        "wasm_rule"
-                    },
+                    source: if decision.cache_hit { "hot_link" } else { "wasm_rule" },
                 });
             }
         }
@@ -137,9 +133,7 @@ impl EdgeRouter {
 
         if let Some((target_url, status_code)) = url {
             // 回填缓存
-            self.cache
-                .put(code.to_string(), target_url.clone(), status_code)
-                .await;
+            self.cache.put(code.to_string(), target_url.clone(), status_code).await;
 
             return Some(RedirectResult {
                 target_url,
@@ -173,11 +167,7 @@ impl EdgeRouter {
     }
 
     /// 构建重定向响应（保留兼容）
-    pub fn build_redirect_response(
-        &self,
-        target_url: &str,
-        status_code: u16,
-    ) -> Response<Cursor<Vec<u8>>> {
+    pub fn build_redirect_response(&self, target_url: &str, status_code: u16) -> Response<Cursor<Vec<u8>>> {
         let status = if status_code == 301 {
             StatusCode(301)
         } else {
@@ -204,10 +194,7 @@ pub struct RedirectResult {
 /// 从 User-Agent 检测身份类型（边缘简化版）
 fn detect_identity_type(ua: &str) -> Option<String> {
     let ua_lower = ua.to_lowercase();
-    if ua_lower.contains("curl/")
-        || ua_lower.contains("wget/")
-        || ua_lower.contains("python-requests/")
-    {
+    if ua_lower.contains("curl/") || ua_lower.contains("wget/") || ua_lower.contains("python-requests/") {
         Some("service".to_string())
     } else if ua_lower.contains("openai")
         || ua_lower.contains("anthropic")

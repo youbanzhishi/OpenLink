@@ -22,12 +22,10 @@
 
 use async_trait::async_trait;
 use openlink_a2a::{
-    AgentInfo, AgentRegistry, AgentStatus, Capability, DiscoveryQuery, HandshakeEngine,
-    HeartbeatMessage, HeartbeatMonitor,
+    AgentInfo, AgentRegistry, AgentStatus, Capability, DiscoveryQuery, HandshakeEngine, HeartbeatMessage,
+    HeartbeatMonitor,
 };
-use openlink_core::{
-    ActionHandler, ActionResult, ConditionHandler, Context, CoreError, ExtensionRegistry, Target,
-};
+use openlink_core::{ActionHandler, ActionResult, ConditionHandler, Context, CoreError, ExtensionRegistry, Target};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -47,11 +45,7 @@ impl A2aDiscoveryAction {
 #[async_trait]
 impl ActionHandler for A2aDiscoveryAction {
     async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
-        let capability = target
-            .params
-            .get("capability")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let capability = target.params.get("capability").and_then(|v| v.as_str()).unwrap_or("");
 
         let status = target
             .params
@@ -111,10 +105,7 @@ pub struct A2aHandshakeAction {
 
 impl A2aHandshakeAction {
     pub fn new(handshake: Arc<HandshakeEngine>, registry: Arc<AgentRegistry>) -> Self {
-        Self {
-            handshake,
-            registry,
-        }
+        Self { handshake, registry }
     }
 }
 
@@ -131,22 +122,14 @@ impl ActionHandler for A2aHandshakeAction {
             .params
             .get("offered_capabilities")
             .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect()
-            })
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
             .unwrap_or_default();
 
         let requested: Vec<String> = target
             .params
             .get("requested_capabilities")
             .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                    .collect()
-            })
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
             .unwrap_or_default();
 
         // 创建握手请求
@@ -159,10 +142,7 @@ impl ActionHandler for A2aHandshakeAction {
         let capabilities = agent_info.map(|a| a.capabilities).unwrap_or_default();
 
         // 处理握手
-        let response = self
-            .handshake
-            .handle_handshake_request(&request, &capabilities)
-            .await;
+        let response = self.handshake.handle_handshake_request(&request, &capabilities).await;
 
         Ok(ActionResult::Json(serde_json::json!({
             "accepted": response.accepted,
@@ -211,17 +191,9 @@ impl ActionHandler for A2aRegisterAction {
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("endpoint is required".to_string()))?;
 
-        let version = target
-            .params
-            .get("version")
-            .and_then(|v| v.as_str())
-            .unwrap_or("1.0.0");
+        let version = target.params.get("version").and_then(|v| v.as_str()).unwrap_or("1.0.0");
 
-        let description = target
-            .params
-            .get("description")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let description = target.params.get("description").and_then(|v| v.as_str()).unwrap_or("");
 
         // 解析能力列表
         let capabilities: Vec<Capability> = target
@@ -234,11 +206,7 @@ impl ActionHandler for A2aRegisterAction {
                         let cap_id = v.get("id")?.as_str()?.to_string();
                         Some(Capability {
                             id: cap_id,
-                            name: v
-                                .get("name")
-                                .and_then(|n| n.as_str())
-                                .unwrap_or("")
-                                .to_string(),
+                            name: v.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string(),
                             description: String::new(),
                             input_format: String::new(),
                             output_format: String::new(),
@@ -301,11 +269,7 @@ impl ActionHandler for A2aHeartbeatAction {
             .and_then(|v| v.as_str())
             .ok_or_else(|| CoreError::InvalidInput("agent_id is required".to_string()))?;
 
-        let status_str = target
-            .params
-            .get("status")
-            .and_then(|v| v.as_str())
-            .unwrap_or("online");
+        let status_str = target.params.get("status").and_then(|v| v.as_str()).unwrap_or("online");
 
         let status = match status_str {
             "online" => AgentStatus::Online,
@@ -314,11 +278,7 @@ impl ActionHandler for A2aHeartbeatAction {
             _ => AgentStatus::Online,
         };
 
-        let active_tasks = target
-            .params
-            .get("active_tasks")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
+        let active_tasks = target.params.get("active_tasks").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
 
         // 创建心跳消息
         let heartbeat = HeartbeatMessage {
@@ -361,20 +321,10 @@ impl AgentCapabilityCondition {
 
 #[async_trait]
 impl ConditionHandler for AgentCapabilityCondition {
-    async fn evaluate(
-        &self,
-        _ctx: &Context,
-        params: &serde_json::Value,
-    ) -> Result<bool, CoreError> {
-        let agent_id = params
-            .get("agent_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+    async fn evaluate(&self, _ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
+        let agent_id = params.get("agent_id").and_then(|v| v.as_str()).unwrap_or("");
 
-        let capability = params
-            .get("capability")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let capability = params.get("capability").and_then(|v| v.as_str()).unwrap_or("");
 
         if agent_id.is_empty() || capability.is_empty() {
             return Ok(false);

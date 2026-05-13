@@ -139,11 +139,7 @@ impl CachePreloader {
                 tracing::error!(error = %e, "Batch warmup failed, falling back to individual sets");
                 // 逐个加载
                 for entry in &entries {
-                    match self
-                        .cache
-                        .set(&entry.key, &entry.value, entry.ttl_secs)
-                        .await
-                    {
+                    match self.cache.set(&entry.key, &entry.value, entry.ttl_secs).await {
                         Ok(()) => loaded += 1,
                         Err(e) => {
                             tracing::warn!(key = %entry.key, error = %e, "Failed to preload entry");

@@ -116,10 +116,7 @@ impl FileTransferAction {
 
     /// 处理上传操作
     async fn handle_upload(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
-        let file_id = params
-            .file_id
-            .clone()
-            .unwrap_or_else(Self::generate_file_id);
+        let file_id = params.file_id.clone().unwrap_or_else(Self::generate_file_id);
 
         // 如果需要返回上传 URL
         if params.upload_url.unwrap_or(false) {
@@ -145,13 +142,11 @@ impl FileTransferAction {
     }
 
     /// 处理下载操作
-    async fn handle_download(
-        &self,
-        params: &FileTransferParams,
-    ) -> Result<ActionResult, CoreError> {
-        let file_id = params.file_id.as_ref().ok_or_else(|| {
-            CoreError::ExtensionError("file_id required for download".to_string())
-        })?;
+    async fn handle_download(&self, params: &FileTransferParams) -> Result<ActionResult, CoreError> {
+        let file_id = params
+            .file_id
+            .as_ref()
+            .ok_or_else(|| CoreError::ExtensionError("file_id required for download".to_string()))?;
 
         // 生成预签名下载 URL
         let ttl = params.share_ttl.unwrap_or(3600);
@@ -176,10 +171,7 @@ impl FileTransferAction {
             .as_ref()
             .ok_or_else(|| CoreError::ExtensionError("file_id required for share".to_string()))?;
 
-        let share_code = params
-            .share_code
-            .clone()
-            .unwrap_or_else(Self::generate_share_code);
+        let share_code = params.share_code.clone().unwrap_or_else(Self::generate_share_code);
         let ttl = params.share_ttl.unwrap_or(3600 * 24 * 7); // 默认 7 天
 
         // 生成分享 URL
@@ -205,10 +197,7 @@ impl FileTransferAction {
         let exists = self.storage_router.download(file_id).await.is_ok();
 
         if !exists {
-            return Err(CoreError::ExtensionError(format!(
-                "File not found: {}",
-                file_id
-            )));
+            return Err(CoreError::ExtensionError(format!("File not found: {}", file_id)));
         }
 
         Ok(ActionResult::Json(serde_json::json!({

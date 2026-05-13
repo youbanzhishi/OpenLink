@@ -168,11 +168,7 @@ impl EdgeMetricsCollector {
         let hits = self.cache_hits.load(Ordering::Relaxed);
         let misses = self.cache_misses.load(Ordering::Relaxed);
 
-        let error_rate = if total > 0 {
-            errors as f64 / total as f64
-        } else {
-            0.0
-        };
+        let error_rate = if total > 0 { errors as f64 / total as f64 } else { 0.0 };
 
         let cache_hit_rate = if (hits + misses) > 0 {
             hits as f64 / (hits + misses) as f64
@@ -251,9 +247,7 @@ pub struct RequestTimer {
 
 impl RequestTimer {
     pub fn new() -> Self {
-        Self {
-            start: Instant::now(),
-        }
+        Self { start: Instant::now() }
     }
 
     pub fn elapsed_ms(&self) -> f64 {

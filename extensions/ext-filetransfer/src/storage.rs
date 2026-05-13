@@ -61,22 +61,13 @@ fn base64_encode(input: &[u8]) -> String {
 #[async_trait]
 pub trait StorageBackend: Send + Sync {
     /// 上传文件
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        content_type: &str,
-    ) -> Result<(), StorageError>;
+    async fn upload(&self, file_id: &str, data: Vec<u8>, content_type: &str) -> Result<(), StorageError>;
 
     /// 下载文件
     async fn download(&self, file_id: &str) -> Result<Vec<u8>, StorageError>;
 
     /// 生成预签名 URL
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        expires_in_secs: u64,
-    ) -> Result<String, StorageError>;
+    async fn presigned_url(&self, file_id: &str, expires_in_secs: u64) -> Result<String, StorageError>;
 
     /// 删除文件
     async fn delete(&self, file_id: &str) -> Result<(), StorageError>;
@@ -126,12 +117,7 @@ impl LocalStorageBackend {
 
 #[async_trait]
 impl StorageBackend for LocalStorageBackend {
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        _content_type: &str,
-    ) -> Result<(), StorageError> {
+    async fn upload(&self, file_id: &str, data: Vec<u8>, _content_type: &str) -> Result<(), StorageError> {
         let path = self.file_path(file_id);
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -151,11 +137,7 @@ impl StorageBackend for LocalStorageBackend {
         Ok(data)
     }
 
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        _expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    async fn presigned_url(&self, file_id: &str, _expires_in_secs: u64) -> Result<String, StorageError> {
         let path = self.file_path(file_id);
         Ok(format!("file://{}", path.display()))
     }
@@ -202,14 +184,10 @@ impl R2StorageConfig {
             return Err(StorageError::Config("account_id is required".to_string()));
         }
         if self.access_key_id.is_empty() {
-            return Err(StorageError::Config(
-                "access_key_id is required".to_string(),
-            ));
+            return Err(StorageError::Config("access_key_id is required".to_string()));
         }
         if self.secret_access_key.is_empty() {
-            return Err(StorageError::Config(
-                "secret_access_key is required".to_string(),
-            ));
+            return Err(StorageError::Config("secret_access_key is required".to_string()));
         }
         if self.bucket.is_empty() {
             return Err(StorageError::Config("bucket is required".to_string()));
@@ -243,15 +221,9 @@ impl R2StorageBackend {
     fn sign_request(&self, method: &str, path: &str) -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
 
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        let string_to_sign = format!(
-            "{}\n{}\n{}\n{}",
-            method, path, timestamp, self.config.account_id
-        );
+        let string_to_sign = format!("{}\n{}\n{}\n{}", method, path, timestamp, self.config.account_id);
 
         use hmac::{Hmac, Mac};
         use sha2::Sha256;
@@ -274,12 +246,7 @@ impl R2StorageBackend {
 
 #[async_trait]
 impl StorageBackend for R2StorageBackend {
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        content_type: &str,
-    ) -> Result<(), StorageError> {
+    async fn upload(&self, file_id: &str, data: Vec<u8>, content_type: &str) -> Result<(), StorageError> {
         let url = self.api_url(file_id);
         let signed_auth = self.sign_request("PUT", &format!("/{}", file_id));
 
@@ -298,10 +265,7 @@ impl StorageBackend for R2StorageBackend {
             tracing::info!(file_id = %file_id, "File uploaded to R2");
             Ok(())
         } else {
-            Err(StorageError::Backend(format!(
-                "Upload failed: {}",
-                response.status()
-            )))
+            Err(StorageError::Backend(format!("Upload failed: {}", response.status())))
         }
     }
 
@@ -322,10 +286,7 @@ impl StorageBackend for R2StorageBackend {
         }
 
         if !response.status().is_success() {
-            return Err(StorageError::Backend(format!(
-                "Download failed: {}",
-                response.status()
-            )));
+            return Err(StorageError::Backend(format!("Download failed: {}", response.status())));
         }
 
         let bytes = response
@@ -337,17 +298,9 @@ impl StorageBackend for R2StorageBackend {
         Ok(bytes.to_vec())
     }
 
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    async fn presigned_url(&self, file_id: &str, expires_in_secs: u64) -> Result<String, StorageError> {
         let _expiry = chrono::Utc::now() + chrono::Duration::seconds(expires_in_secs as i64);
-        let public_url = format!(
-            "{}/{}",
-            self.config.public_url.trim_end_matches('/'),
-            file_id
-        );
+        let public_url = format!("{}/{}", self.config.public_url.trim_end_matches('/'), file_id);
 
         tracing::debug!(file_id = %file_id, "Generated presigned URL");
         Ok(public_url)
@@ -369,10 +322,7 @@ impl StorageBackend for R2StorageBackend {
             tracing::info!(file_id = %file_id, "File deleted from R2");
             Ok(())
         } else {
-            Err(StorageError::Backend(format!(
-                "Delete failed: {}",
-                response.status()
-            )))
+            Err(StorageError::Backend(format!("Delete failed: {}", response.status())))
         }
     }
 
@@ -417,14 +367,10 @@ pub struct OssStorageConfig {
 impl OssStorageConfig {
     pub fn validate(&self) -> Result<(), StorageError> {
         if self.access_key_id.is_empty() {
-            return Err(StorageError::Config(
-                "access_key_id is required".to_string(),
-            ));
+            return Err(StorageError::Config("access_key_id is required".to_string()));
         }
         if self.access_key_secret.is_empty() {
-            return Err(StorageError::Config(
-                "access_key_secret is required".to_string(),
-            ));
+            return Err(StorageError::Config("access_key_secret is required".to_string()));
         }
         if self.bucket.is_empty() {
             return Err(StorageError::Config("bucket is required".to_string()));
@@ -458,8 +404,8 @@ impl OssStorageConfig {
 
         let string_to_sign = format!("{}\n\n{}\n{}\n{}", method, content_type, date, resource);
 
-        let mut mac = HmacSha1::new_from_slice(self.access_key_secret.as_bytes())
-            .expect("HMAC can take key of any size");
+        let mut mac =
+            HmacSha1::new_from_slice(self.access_key_secret.as_bytes()).expect("HMAC can take key of any size");
         mac.update(string_to_sign.as_bytes());
 
         let result = mac.finalize();
@@ -495,20 +441,13 @@ impl OssStorageBackend {
     }
 
     fn format_date() -> String {
-        chrono::Utc::now()
-            .format("%a, %d %b %Y %H:%M:%S GMT")
-            .to_string()
+        chrono::Utc::now().format("%a, %d %b %Y %H:%M:%S GMT").to_string()
     }
 }
 
 #[async_trait]
 impl StorageBackend for OssStorageBackend {
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        content_type: &str,
-    ) -> Result<(), StorageError> {
+    async fn upload(&self, file_id: &str, data: Vec<u8>, content_type: &str) -> Result<(), StorageError> {
         let url = self.object_url(file_id);
         let date = Self::format_date();
         let resource = self.resource_path(file_id);
@@ -574,11 +513,7 @@ impl StorageBackend for OssStorageBackend {
         Ok(bytes.to_vec())
     }
 
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    async fn presigned_url(&self, file_id: &str, expires_in_secs: u64) -> Result<String, StorageError> {
         let expires = chrono::Utc::now().timestamp() as u64 + expires_in_secs;
         let resource = self.resource_path(file_id);
 
@@ -587,8 +522,8 @@ impl StorageBackend for OssStorageBackend {
         type HmacSha1 = Hmac<Sha1>;
 
         let string_to_sign = format!("GET\n\n\n{}\n{}", expires, resource);
-        let mut mac = HmacSha1::new_from_slice(self.config.access_key_secret.as_bytes())
-            .expect("HMAC can take key of any size");
+        let mut mac =
+            HmacSha1::new_from_slice(self.config.access_key_secret.as_bytes()).expect("HMAC can take key of any size");
         mac.update(string_to_sign.as_bytes());
         let result = mac.finalize();
         let signature = base64_encode(&result.into_bytes());
@@ -733,10 +668,7 @@ impl WebdavStorageBackend {
         if resp.status().is_success() || resp.status().as_u16() == 405 {
             Ok(())
         } else {
-            Err(StorageError::Backend(format!(
-                "MKCOL failed: {}",
-                resp.status()
-            )))
+            Err(StorageError::Backend(format!("MKCOL failed: {}", resp.status())))
         }
     }
 
@@ -755,16 +687,10 @@ impl WebdavStorageBackend {
             .map_err(|e| StorageError::Backend(e.to_string()))?;
 
         if !resp.status().is_success() && resp.status().as_u16() != 207 {
-            return Err(StorageError::Backend(format!(
-                "PROPFIND failed: {}",
-                resp.status()
-            )));
+            return Err(StorageError::Backend(format!("PROPFIND failed: {}", resp.status())));
         }
 
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| StorageError::Backend(e.to_string()))?;
+        let body = resp.text().await.map_err(|e| StorageError::Backend(e.to_string()))?;
 
         // Simple XML parsing: extract href values from <d:response> elements
         let mut files = Vec::new();
@@ -796,12 +722,7 @@ pub struct WebdavFileInfo {
 
 #[async_trait]
 impl StorageBackend for WebdavStorageBackend {
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        content_type: &str,
-    ) -> Result<(), StorageError> {
+    async fn upload(&self, file_id: &str, data: Vec<u8>, content_type: &str) -> Result<(), StorageError> {
         let url = self.object_url(file_id);
 
         // Ensure parent directory exists
@@ -854,18 +775,11 @@ impl StorageBackend for WebdavStorageBackend {
             )));
         }
 
-        let bytes = resp
-            .bytes()
-            .await
-            .map_err(|e| StorageError::Backend(e.to_string()))?;
+        let bytes = resp.bytes().await.map_err(|e| StorageError::Backend(e.to_string()))?;
         Ok(bytes.to_vec())
     }
 
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        _expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    async fn presigned_url(&self, file_id: &str, _expires_in_secs: u64) -> Result<String, StorageError> {
         // WebDAV doesn't natively support presigned URLs; return direct URL
         Ok(self.object_url(file_id))
     }
@@ -945,9 +859,7 @@ impl SftpStorageConfig {
             return Err(StorageError::Config("username is required".to_string()));
         }
         if self.password.is_none() && self.key_path.is_none() {
-            return Err(StorageError::Config(
-                "password or key_path is required".to_string(),
-            ));
+            return Err(StorageError::Config("password or key_path is required".to_string()));
         }
         Ok(())
     }
@@ -974,12 +886,11 @@ impl SftpStorageBackend {
 
     /// 创建到 SFTP 服务器的连接
     fn connect(&self) -> Result<(ssh2::Session, ssh2::Sftp), StorageError> {
-        let tcp =
-            std::net::TcpStream::connect(format!("{}:{}", self.config.host, self.config.port))
-                .map_err(|e| StorageError::Backend(format!("TCP connect failed: {}", e)))?;
+        let tcp = std::net::TcpStream::connect(format!("{}:{}", self.config.host, self.config.port))
+            .map_err(|e| StorageError::Backend(format!("TCP connect failed: {}", e)))?;
 
-        let mut sess = ssh2::Session::new()
-            .map_err(|e| StorageError::Backend(format!("SSH session create failed: {}", e)))?;
+        let mut sess =
+            ssh2::Session::new().map_err(|e| StorageError::Backend(format!("SSH session create failed: {}", e)))?;
         sess.set_tcp_stream(tcp);
         sess.handshake()
             .map_err(|e| StorageError::Backend(format!("SSH handshake failed: {}", e)))?;
@@ -999,9 +910,7 @@ impl SftpStorageBackend {
         }
 
         if !sess.authenticated() {
-            return Err(StorageError::Backend(
-                "SSH authentication failed".to_string(),
-            ));
+            return Err(StorageError::Backend("SSH authentication failed".to_string()));
         }
 
         let sftp = sess
@@ -1014,12 +923,7 @@ impl SftpStorageBackend {
 
 #[async_trait]
 impl StorageBackend for SftpStorageBackend {
-    async fn upload(
-        &self,
-        file_id: &str,
-        data: Vec<u8>,
-        _content_type: &str,
-    ) -> Result<(), StorageError> {
+    async fn upload(&self, file_id: &str, data: Vec<u8>, _content_type: &str) -> Result<(), StorageError> {
         let remote_path = self.remote_path(file_id);
         let config = self.config.clone();
 
@@ -1069,11 +973,7 @@ impl StorageBackend for SftpStorageBackend {
         .map_err(|e| StorageError::Backend(format!("Task join error: {}", e)))?
     }
 
-    async fn presigned_url(
-        &self,
-        file_id: &str,
-        _expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    async fn presigned_url(&self, file_id: &str, _expires_in_secs: u64) -> Result<String, StorageError> {
         // SFTP doesn't support presigned URLs; return sftp:// scheme
         Ok(format!(
             "sftp://{}@{}:{}/{}",
@@ -1146,11 +1046,7 @@ impl SftpStorageBackend {
             let files = entries
                 .into_iter()
                 .map(|(path, stat)| {
-                    let name = path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("?")
-                        .to_string();
+                    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?").to_string();
                     let is_dir = stat.is_dir();
                     let size = stat.size.unwrap_or(0);
                     SftpFileInfo {
@@ -1260,13 +1156,15 @@ impl StorageRouter {
             .as_ref()
             .map(|cfg| Arc::new(OssStorageBackend::new(cfg.clone()).expect("Invalid OSS config")));
 
-        let webdav = config.webdav_config.as_ref().map(|cfg| {
-            Arc::new(WebdavStorageBackend::new(cfg.clone()).expect("Invalid WebDAV config"))
-        });
+        let webdav = config
+            .webdav_config
+            .as_ref()
+            .map(|cfg| Arc::new(WebdavStorageBackend::new(cfg.clone()).expect("Invalid WebDAV config")));
 
-        let sftp = config.sftp_config.as_ref().map(|cfg| {
-            Arc::new(SftpStorageBackend::new(cfg.clone()).expect("Invalid SFTP config"))
-        });
+        let sftp = config
+            .sftp_config
+            .as_ref()
+            .map(|cfg| Arc::new(SftpStorageBackend::new(cfg.clone()).expect("Invalid SFTP config")));
 
         Self {
             config,
@@ -1360,11 +1258,7 @@ impl StorageRouter {
         Err(StorageError::NotFound(file_id.to_string()))
     }
 
-    pub async fn presigned_url(
-        &self,
-        file_id: &str,
-        expires_in_secs: u64,
-    ) -> Result<String, StorageError> {
+    pub async fn presigned_url(&self, file_id: &str, expires_in_secs: u64) -> Result<String, StorageError> {
         if let Some(ref r2) = self.r2 {
             if r2.exists(file_id).await.unwrap_or(false) {
                 return r2.presigned_url(file_id, expires_in_secs).await;
@@ -1414,9 +1308,7 @@ impl StorageRouter {
             + self.sftp.is_some() as usize;
 
         if errors.len() >= total_backends {
-            return Err(StorageError::Backend(
-                "Failed to delete from all backends".to_string(),
-            ));
+            return Err(StorageError::Backend("Failed to delete from all backends".to_string()));
         }
 
         Ok(())
@@ -1576,12 +1468,7 @@ mod tests {
             endpoint: "oss-cn-hangzhou.aliyuncs.com".to_string(),
             public_url: None,
         };
-        let auth = config.sign_v1(
-            "GET",
-            "/bucket/test.txt",
-            "Sun, 01 Jan 2024 00:00:00 GMT",
-            "",
-        );
+        let auth = config.sign_v1("GET", "/bucket/test.txt", "Sun, 01 Jan 2024 00:00:00 GMT", "");
         assert!(auth.starts_with("OSS LTAI:"));
     }
 
@@ -1596,10 +1483,7 @@ mod tests {
             base_dir: "/data/files".to_string(),
         };
         let backend = SftpStorageBackend::new(config).unwrap();
-        assert_eq!(
-            backend.remote_path("dir/file.txt"),
-            "/data/files/dir/file.txt"
-        );
+        assert_eq!(backend.remote_path("dir/file.txt"), "/data/files/dir/file.txt");
     }
 
     #[test]
@@ -1655,10 +1539,7 @@ mod tests {
         let file_id = "test-file.txt";
         let data = b"Hello, World!".to_vec();
 
-        backend
-            .upload(file_id, data.clone(), "text/plain")
-            .await
-            .unwrap();
+        backend.upload(file_id, data.clone(), "text/plain").await.unwrap();
         assert!(backend.exists(file_id).await.unwrap());
 
         let downloaded = backend.download(file_id).await.unwrap();

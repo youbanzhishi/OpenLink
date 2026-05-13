@@ -32,8 +32,8 @@ pub mod stun;
 pub mod transfer;
 
 pub use chunk_transfer::{
-    calculate_chunk_count, compute_chunk_checksum, ChunkInfo, ChunkState, ChunkTransferTask,
-    ChunkVerifyResult, ParallelDownloadScheduler, DEFAULT_CHUNK_SIZE,
+    calculate_chunk_count, compute_chunk_checksum, ChunkInfo, ChunkState, ChunkTransferTask, ChunkVerifyResult,
+    ParallelDownloadScheduler, DEFAULT_CHUNK_SIZE,
 };
 pub use nat::{NatInfo, NatType};
 pub use nat_traversal::{NatTraversal, TraversalResult, TraversalStrategy, TraversalSuccessRate};

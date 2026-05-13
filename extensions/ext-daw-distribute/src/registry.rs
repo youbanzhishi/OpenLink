@@ -19,11 +19,7 @@ pub struct SemVer {
 
 impl SemVer {
     pub fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self {
-            major,
-            minor,
-            patch,
-        }
+        Self { major, minor, patch }
     }
 
     pub fn parse(s: &str) -> Option<Self> {
@@ -185,9 +181,7 @@ impl PluginRegistry {
                 // Filter by keyword
                 if let Some(ref keyword) = query.keyword {
                     let kw = keyword.to_lowercase();
-                    if !p.name.to_lowercase().contains(&kw)
-                        && !p.description.to_lowercase().contains(&kw)
-                    {
+                    if !p.name.to_lowercase().contains(&kw) && !p.description.to_lowercase().contains(&kw) {
                         return false;
                     }
                 }
@@ -320,9 +314,7 @@ mod tests {
         registry
             .register(make_plugin("eq-1", "Parametric EQ", "1.0.0"))
             .unwrap();
-        registry
-            .register(make_plugin("comp-1", "Compressor", "1.0.0"))
-            .unwrap();
+        registry.register(make_plugin("comp-1", "Compressor", "1.0.0")).unwrap();
 
         let query = PluginSearchQuery {
             keyword: Some("parametric".to_string()),
@@ -368,9 +360,7 @@ mod tests {
     #[test]
     fn test_registry_version_upgrade() {
         let registry = PluginRegistry::new();
-        registry
-            .register(make_plugin("eq-1", "EQ", "1.0.0"))
-            .unwrap();
+        registry.register(make_plugin("eq-1", "EQ", "1.0.0")).unwrap();
         let v2 = make_plugin("eq-1", "EQ", "2.0.0");
         registry.register(v2).unwrap();
 
@@ -381,9 +371,7 @@ mod tests {
     #[test]
     fn test_registry_version_downgrade_rejected() {
         let registry = PluginRegistry::new();
-        registry
-            .register(make_plugin("eq-1", "EQ", "2.0.0"))
-            .unwrap();
+        registry.register(make_plugin("eq-1", "EQ", "2.0.0")).unwrap();
         let result = registry.register(make_plugin("eq-1", "EQ", "1.0.0"));
         assert!(result.is_err());
     }
@@ -391,9 +379,7 @@ mod tests {
     #[test]
     fn test_registry_unregister() {
         let registry = PluginRegistry::new();
-        registry
-            .register(make_plugin("eq-1", "EQ", "1.0.0"))
-            .unwrap();
+        registry.register(make_plugin("eq-1", "EQ", "1.0.0")).unwrap();
         let removed = registry.unregister("eq-1").unwrap();
         assert_eq!(removed.name, "EQ");
         assert!(registry.get("eq-1").is_none());

@@ -208,8 +208,7 @@ impl McpParser {
 
     /// 序列化响应
     pub fn serialize_response(response: &McpResponse) -> Result<Vec<u8>, McpProtocolError> {
-        serde_json::to_vec(response)
-            .map_err(|e| McpProtocolError::SerializationError(e.to_string()))
+        serde_json::to_vec(response).map_err(|e| McpProtocolError::SerializationError(e.to_string()))
     }
 }
 
@@ -251,9 +250,7 @@ impl McpServer {
         let builtin_tools = vec![
             McpTool {
                 name: "openlink.route".to_string(),
-                description:
-                    "Route a request through the OpenLink network to the best available agent"
-                        .to_string(),
+                description: "Route a request through the OpenLink network to the best available agent".to_string(),
                 input_schema: serde_json::json!({
                     "type": "object",
                     "properties": {
@@ -374,11 +371,7 @@ impl McpServer {
                 )
             }
             "tools/call" => {
-                let tool_name = request
-                    .params
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let tool_name = request.params.get("name").and_then(|v| v.as_str()).unwrap_or("");
                 let tools = self.tools.read().await;
                 if tools.contains_key(tool_name) {
                     McpParser::build_success_response(
@@ -440,10 +433,7 @@ impl McpClient {
     }
 
     /// 注册外部 MCP Server
-    pub async fn register_server(
-        &self,
-        server_info: McpServerInfo,
-    ) -> Result<(), McpProtocolError> {
+    pub async fn register_server(&self, server_info: McpServerInfo) -> Result<(), McpProtocolError> {
         let name = server_info.name.clone();
         tracing::info!(server = %name, transport = ?server_info.transport, "MCP Server registered");
         let mut servers = self.servers.write().await;

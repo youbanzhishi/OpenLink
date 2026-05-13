@@ -70,10 +70,7 @@ impl LanDiscovery {
 
     /// 获取指定节点
     pub async fn get_peer(&self, node_id: &str) -> Option<LanPeer> {
-        self.discover_peers()
-            .await
-            .into_iter()
-            .find(|p| p.node_id == node_id)
+        self.discover_peers().await.into_iter().find(|p| p.node_id == node_id)
     }
 
     /// 检查是否有任何 LAN 节点
@@ -117,9 +114,6 @@ mod tests {
             supports_encryption: true,
         };
         assert_eq!(peer.file_url(), "http://192.168.1.50:8080/openlink/files");
-        assert_eq!(
-            peer.transfer_url(),
-            "http://192.168.1.50:8080/openlink/transfer"
-        );
+        assert_eq!(peer.transfer_url(), "http://192.168.1.50:8080/openlink/transfer");
     }
 }

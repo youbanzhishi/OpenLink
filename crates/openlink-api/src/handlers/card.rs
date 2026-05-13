@@ -262,10 +262,7 @@ pub async fn get_card(
     // 验证是名片类型
     let payload_type = link.payload.get("type").and_then(|v| v.as_str());
     if payload_type != Some("identity_card") {
-        return Err((
-            StatusCode::NOT_FOUND,
-            format!("'{}' is not an identity card", code),
-        ));
+        return Err((StatusCode::NOT_FOUND, format!("'{}' is not an identity card", code)));
     }
 
     let card_data = link.payload.get("card").cloned().unwrap_or_default();
@@ -297,10 +294,7 @@ pub async fn update_card(
     // 验证是名片类型
     let payload_type = existing.payload.get("type").and_then(|v| v.as_str());
     if payload_type != Some("identity_card") {
-        return Err((
-            StatusCode::NOT_FOUND,
-            format!("'{}' is not an identity card", code),
-        ));
+        return Err((StatusCode::NOT_FOUND, format!("'{}' is not an identity card", code)));
     }
 
     // 合并更新 card 数据
@@ -376,10 +370,7 @@ pub async fn delete_card(
     // 验证是名片类型
     let payload_type = link.payload.get("type").and_then(|v| v.as_str());
     if payload_type != Some("identity_card") {
-        return Err((
-            StatusCode::NOT_FOUND,
-            format!("'{}' is not an identity card", code),
-        ));
+        return Err((StatusCode::NOT_FOUND, format!("'{}' is not an identity card", code)));
     }
 
     // 删除关联的路由
@@ -390,14 +381,10 @@ pub async fn delete_card(
     }
 
     // 删除 Link
-    state
-        .store
-        .delete_link(&link.id)
-        .await
-        .map_err(|e| match e {
-            openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
-        })?;
+    state.store.delete_link(&link.id).await.map_err(|e| match e {
+        openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    })?;
 
     tracing::info!(code = %code, "Identity card deleted");
     Ok(StatusCode::NO_CONTENT)
@@ -406,9 +393,7 @@ pub async fn delete_card(
 /// 列出所有名片
 ///
 /// GET /api/v1/cards
-pub async fn list_cards(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+pub async fn list_cards(State(state): State<Arc<AppState>>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let links = state
         .store
         .list_links(None, 100)
@@ -418,12 +403,7 @@ pub async fn list_cards(
     // 过滤出 identity_card 类型的 Link
     let cards: Vec<CardResponse> = links
         .into_iter()
-        .filter(|l| {
-            l.payload
-                .get("type")
-                .and_then(|v| v.as_str())
-                == Some("identity_card")
-        })
+        .filter(|l| l.payload.get("type").and_then(|v| v.as_str()) == Some("identity_card"))
         .map(|l| {
             let card_data = l.payload.get("card").cloned().unwrap_or_default();
             CardResponse {
@@ -483,46 +463,37 @@ pub async fn render_card(
     let card_data = link.payload.get("card").cloned().unwrap_or_default();
 
     // 判断返回类型：Accept header 优先，然后看 User-Agent
-    let accept = headers
-        .get("accept")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    let user_agent = headers
-        .get("user-agent")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+    let accept = headers.get("accept").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok()).unwrap_or("");
 
-    let wants_json_ld = accept.contains("application/ld+json")
-        || accept.contains("application/json");
+    let wants_json_ld = accept.contains("application/ld+json") || accept.contains("application/json");
     let wants_html = accept.contains("text/html");
-    let is_browser_ua = user_agent.contains("Mozilla/")
-        && !user_agent.contains("curl/")
-        && !user_agent.contains("wget/");
+    let is_browser_ua =
+        user_agent.contains("Mozilla/") && !user_agent.contains("curl/") && !user_agent.contains("wget/");
 
     // 记录访问日志
-    let _ = log_card_access(&state, &link, &headers, "render_card", start.elapsed().as_millis() as i64).await;
+    let _ = log_card_access(
+        &state,
+        &link,
+        &headers,
+        "render_card",
+        start.elapsed().as_millis() as i64,
+    )
+    .await;
 
     if wants_json_ld || (!wants_html && !is_browser_ua) {
         // 返回 JSON-LD
         let json_ld = build_json_ld(&code, &card_data);
         (
             StatusCode::OK,
-            [(
-                "content-type",
-                "application/ld+json; charset=utf-8",
-            )],
+            [("content-type", "application/ld+json; charset=utf-8")],
             json_ld,
         )
             .into_response()
     } else {
         // 返回 HTML 名片
         let html = render_card_html(&code, &card_data);
-        (
-            StatusCode::OK,
-            [("content-type", "text/html; charset=utf-8")],
-            html,
-        )
-            .into_response()
+        (StatusCode::OK, [("content-type", "text/html; charset=utf-8")], html).into_response()
     }
 }
 
@@ -559,10 +530,7 @@ pub async fn card_social_redirect(
     let social = card_data.get("social").cloned().unwrap_or_default();
 
     // 查找社交平台 handle
-    let handle = social
-        .get(&platform)
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let handle = social.get(&platform).and_then(|v| v.as_str()).unwrap_or("");
 
     if handle.is_empty() {
         return (
@@ -632,30 +600,16 @@ pub async fn card_qr(
     // 记录访问日志
     let _ = log_card_access(&state, &link, &headers, "qr_code", start.elapsed().as_millis() as i64).await;
 
-    (
-        StatusCode::OK,
-        [("content-type", "image/svg+xml")],
-        svg,
-    )
-        .into_response()
+    (StatusCode::OK, [("content-type", "image/svg+xml")], svg).into_response()
 }
 
 // ─── 辅助函数 ───────────────────────────────────────────────
 
 /// 构建 JSON-LD 结构化数据（Schema.org Person）
 fn build_json_ld(code: &str, card: &serde_json::Value) -> String {
-    let display_name = card
-        .get("display_name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
-    let bio = card
-        .get("bio")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let avatar = card
-        .get("avatar")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let display_name = card.get("display_name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let bio = card.get("bio").and_then(|v| v.as_str()).unwrap_or("");
+    let avatar = card.get("avatar").and_then(|v| v.as_str()).unwrap_or("");
 
     // 构建 sameAs 链接
     let social = card.get("social").cloned().unwrap_or_default();
@@ -677,11 +631,7 @@ fn build_json_ld(code: &str, card: &serde_json::Value) -> String {
     let tags: Vec<String> = card
         .get("tags")
         .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
         .unwrap_or_default();
 
     let card_url = format!("https://card.openlink.dev/{}", code);
@@ -704,30 +654,14 @@ fn build_json_ld(code: &str, card: &serde_json::Value) -> String {
 fn render_card_html(code: &str, card: &serde_json::Value) -> String {
     let template = include_str!("../templates/card.html");
 
-    let display_name = card
-        .get("display_name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
-    let bio = card
-        .get("bio")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let avatar = card
-        .get("avatar")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let theme = card
-        .get("theme")
-        .and_then(|v| v.as_str())
-        .unwrap_or("dark");
+    let display_name = card.get("display_name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let bio = card.get("bio").and_then(|v| v.as_str()).unwrap_or("");
+    let avatar = card.get("avatar").and_then(|v| v.as_str()).unwrap_or("");
+    let theme = card.get("theme").and_then(|v| v.as_str()).unwrap_or("dark");
     let card_url = format!("/card/{}", code);
 
     // 头像 fallback：取名字首字
-    let avatar_fallback = display_name
-        .chars()
-        .next()
-        .unwrap_or('?')
-        .to_string();
+    let avatar_fallback = display_name.chars().next().unwrap_or('?').to_string();
 
     // 社交链接区
     let social_section = build_social_section(code, card);
@@ -800,7 +734,10 @@ fn build_projects_section(card: &serde_json::Value) -> String {
 
     let badges: Vec<String> = projects
         .iter()
-        .filter_map(|v| v.as_str().map(|s| format!(r#"<span class="project-badge">{}</span>"#, s)))
+        .filter_map(|v| {
+            v.as_str()
+                .map(|s| format!(r#"<span class="project-badge">{}</span>"#, s))
+        })
         .collect();
 
     format!(
@@ -862,9 +799,7 @@ async fn log_card_access(
     action: &str,
     response_time_ms: i64,
 ) -> Result<(), openlink_store::StoreError> {
-    let user_agent = headers
-        .get("user-agent")
-        .and_then(|v| v.to_str().ok());
+    let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok());
     let ip = headers
         .get("x-forwarded-for")
         .or_else(|| headers.get("x-real-ip"))

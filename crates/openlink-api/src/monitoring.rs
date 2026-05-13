@@ -10,8 +10,7 @@
 //! - 活跃连接数 (gauge)
 
 use prometheus::{
-    Counter, CounterVec, Encoder, Gauge, Histogram, HistogramOpts, HistogramVec, Opts, Registry,
-    TextEncoder,
+    Counter, CounterVec, Encoder, Gauge, Histogram, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder,
 };
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -56,11 +55,8 @@ impl AppMetrics {
 
         // 请求延迟
         let request_duration = HistogramVec::new(
-            HistogramOpts::new("openlink_request_duration_seconds", "Request duration").buckets(
-                vec![
-                    0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0,
-                ],
-            ),
+            HistogramOpts::new("openlink_request_duration_seconds", "Request duration")
+                .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]),
             &["method", "endpoint"],
         )
         .expect("Failed to create duration histogram");
@@ -79,21 +75,21 @@ impl AppMetrics {
             .expect("Failed to register errors counter");
 
         // 缓存命中率
-        let cache_hits = Gauge::new("openlink_cache_hits_total", "Cache hits")
-            .expect("Failed to create cache hits gauge");
+        let cache_hits =
+            Gauge::new("openlink_cache_hits_total", "Cache hits").expect("Failed to create cache hits gauge");
         registry
             .register(Box::new(cache_hits.clone()))
             .expect("Failed to register cache hits gauge");
 
-        let cache_misses = Gauge::new("openlink_cache_misses_total", "Cache misses")
-            .expect("Failed to create cache misses gauge");
+        let cache_misses =
+            Gauge::new("openlink_cache_misses_total", "Cache misses").expect("Failed to create cache misses gauge");
         registry
             .register(Box::new(cache_misses.clone()))
             .expect("Failed to register cache misses gauge");
 
         // 活跃请求
-        let active_requests = Gauge::new("openlink_active_requests", "Active requests")
-            .expect("Failed to create active requests gauge");
+        let active_requests =
+            Gauge::new("openlink_active_requests", "Active requests").expect("Failed to create active requests gauge");
         registry
             .register(Box::new(active_requests.clone()))
             .expect("Failed to register active requests gauge");
@@ -122,9 +118,7 @@ impl AppMetrics {
 
     /// 记录错误
     pub fn record_error(&self, error_type: &str, endpoint: &str) {
-        self.errors_total
-            .with_label_values(&[error_type, endpoint])
-            .inc();
+        self.errors_total.with_label_values(&[error_type, endpoint]).inc();
     }
 
     /// 记录缓存命中

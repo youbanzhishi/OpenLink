@@ -14,18 +14,15 @@ pub mod storage;
 
 pub use actions::FileTransferAction;
 pub use storage::{
-    LocalStorageBackend, LocalStorageConfig, OssStorageBackend, OssStorageConfig, R2StorageBackend,
-    R2StorageConfig, SftpFileInfo, SftpStorageBackend, SftpStorageConfig, StorageBackend,
-    StorageError, StorageRouter, StorageStrategy, WebdavFileInfo, WebdavStorageBackend,
-    WebdavStorageConfig,
+    LocalStorageBackend, LocalStorageConfig, OssStorageBackend, OssStorageConfig, R2StorageBackend, R2StorageConfig,
+    SftpFileInfo, SftpStorageBackend, SftpStorageConfig, StorageBackend, StorageError, StorageRouter, StorageStrategy,
+    WebdavFileInfo, WebdavStorageBackend, WebdavStorageConfig,
 };
 
 // ─── Re-exports for convenience ─────────────────────────────
 
 /// 注册所有文件传输扩展到 Extension Registry
-pub fn register(
-    registry: &mut openlink_core::ExtensionRegistry,
-) -> Result<(), openlink_core::CoreError> {
+pub fn register(registry: &mut openlink_core::ExtensionRegistry) -> Result<(), openlink_core::CoreError> {
     use std::sync::Arc;
 
     // 创建存储路由

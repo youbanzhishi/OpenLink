@@ -17,8 +17,6 @@ pub mod template;
 
 pub use aggregator::{AggregationStrategy, ResultAggregator};
 pub use dag::{Dag, DagEdge, DagNode, EdgeCondition, NodeId};
-pub use executor::{
-    DagExecutor, ExecutionResult, ExecutionStatus, NodeResult, SimpleTaskExecutor, TaskExecutor,
-};
+pub use executor::{DagExecutor, ExecutionResult, ExecutionStatus, NodeResult, SimpleTaskExecutor, TaskExecutor};
 pub use parallel_executor::{ParallelConfig, ParallelDagExecutor};
 pub use template::{TemplateRegistry, WorkflowTemplate};

@@ -160,11 +160,7 @@ impl DagExecutor {
             let inputs: HashMap<NodeId, serde_json::Value> = dag
                 .predecessors(node_id)
                 .iter()
-                .filter_map(|pred| {
-                    node_outputs
-                        .get(&pred.id)
-                        .map(|v| (pred.id.clone(), v.clone()))
-                })
+                .filter_map(|pred| node_outputs.get(&pred.id).map(|v| (pred.id.clone(), v.clone())))
                 .collect();
 
             // 执行任务（带重试）
@@ -249,10 +245,7 @@ impl DagExecutor {
         let overall_status = if failed.is_empty() {
             ExecutionStatus::Success
         } else {
-            ExecutionStatus::Failed(format!(
-                "Nodes failed: {:?}",
-                failed.iter().collect::<Vec<_>>()
-            ))
+            ExecutionStatus::Failed(format!("Nodes failed: {:?}", failed.iter().collect::<Vec<_>>()))
         };
 
         Ok(ExecutionResult {
@@ -264,13 +257,7 @@ impl DagExecutor {
     }
 
     /// 检查节点是否可以执行
-    fn can_execute(
-        &self,
-        dag: &Dag,
-        node_id: &str,
-        completed: &HashSet<NodeId>,
-        failed: &HashSet<NodeId>,
-    ) -> bool {
+    fn can_execute(&self, dag: &Dag, node_id: &str, completed: &HashSet<NodeId>, failed: &HashSet<NodeId>) -> bool {
         let predecessors = dag.predecessors(node_id);
         if predecessors.is_empty() {
             return true; // 入口节点

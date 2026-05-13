@@ -24,8 +24,7 @@ pub use eviction::{BackgroundEviction, EvictionConfig, EvictionResult};
 pub use memory::LayeredCache;
 pub use memory::MemoryCache;
 pub use preload::{
-    CachePreloader, FilePreloadSource, PreloadEntry, PreloadError, PreloadResult, PreloadSource,
-    StaticPreloadSource,
+    CachePreloader, FilePreloadSource, PreloadEntry, PreloadError, PreloadResult, PreloadSource, StaticPreloadSource,
 };
 pub use traits::{Cache, CacheEntry, CacheError, CacheStats};
 

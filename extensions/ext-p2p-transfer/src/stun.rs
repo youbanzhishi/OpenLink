@@ -41,10 +41,7 @@ impl StunClient {
     /// 创建 STUN 客户端
     pub fn new() -> Self {
         Self {
-            servers: STUN_SERVERS
-                .iter()
-                .map(|(h, p)| (h.to_string(), *p))
-                .collect(),
+            servers: STUN_SERVERS.iter().map(|(h, p)| (h.to_string(), *p)).collect(),
             timeout_ms: 3000,
         }
     }
@@ -144,9 +141,9 @@ impl StunClient {
 
     /// 查询单个服务器
     fn query_server(&self, host: &str, port: u16) -> Result<SocketAddr, std::io::Error> {
-        let server_addr: SocketAddr = format!("{}:{}", host, port).parse().map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid server address")
-        })?;
+        let server_addr: SocketAddr = format!("{}:{}", host, port)
+            .parse()
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid server address"))?;
 
         // 创建 UDP socket
         let socket = UdpSocket::bind("0.0.0.0:0")?;
@@ -161,9 +158,8 @@ impl StunClient {
         let (len, _) = socket.recv_from(&mut buf)?;
 
         // 解析 MAPPED-ADDRESS
-        parse_mapped_address(&buf[..len]).ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "No MAPPED-ADDRESS")
-        })
+        parse_mapped_address(&buf[..len])
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "No MAPPED-ADDRESS"))
     }
 }
 
@@ -236,21 +232,11 @@ fn parse_mapped_address(data: &[u8]) -> Option<SocketAddr> {
             };
 
             let ip = if attr_type == STUN_ATTR_XOR_MAPPED_ADDRESS {
-                let xored = u32::from_be_bytes([
-                    data[pos + 8],
-                    data[pos + 9],
-                    data[pos + 10],
-                    data[pos + 11],
-                ]);
+                let xored = u32::from_be_bytes([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]]);
                 let magic = u32::from_be_bytes([0x21, 0x12, 0xA4, 0x42]);
                 std::net::Ipv4Addr::from(xored ^ magic)
             } else {
-                std::net::Ipv4Addr::from([
-                    data[pos + 8],
-                    data[pos + 9],
-                    data[pos + 10],
-                    data[pos + 11],
-                ])
+                std::net::Ipv4Addr::from([data[pos + 8], data[pos + 9], data[pos + 10], data[pos + 11]])
             };
 
             return SocketAddr::from((ip, port)).into();

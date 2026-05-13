@@ -63,8 +63,7 @@ impl HeartbeatMonitor {
         let timed_out: Vec<AgentId> = agents
             .iter()
             .filter(|agent| {
-                agent.status != AgentStatus::Offline
-                    && (now - agent.last_heartbeat) > self.config.timeout_secs as i64
+                agent.status != AgentStatus::Offline && (now - agent.last_heartbeat) > self.config.timeout_secs as i64
             })
             .map(|agent| agent.id.clone())
             .collect();
@@ -95,8 +94,7 @@ impl HeartbeatMonitor {
         let to_remove: Vec<AgentId> = agents
             .iter()
             .filter(|agent| {
-                agent.status == AgentStatus::Offline
-                    && (now - agent.last_heartbeat) > self.config.cleanup_secs as i64
+                agent.status == AgentStatus::Offline && (now - agent.last_heartbeat) > self.config.cleanup_secs as i64
             })
             .map(|agent| agent.id.clone())
             .collect();

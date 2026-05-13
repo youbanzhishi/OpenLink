@@ -41,8 +41,8 @@ pub use config::{CircuitBreaker, CircuitBreakerConfig, CircuitState, Config, Ret
 pub use error::SdkError;
 pub use event::{Event, EventClient, EventFilter, EventType, SubscribeResponse};
 pub use middleware::{
-    AuthMiddleware, LoggingMiddleware, MetricsMiddleware, Middleware, MiddlewareChain,
-    RequestContext, RequestMetrics, ResponseContext,
+    AuthMiddleware, LoggingMiddleware, MetricsMiddleware, Middleware, MiddlewareChain, RequestContext, RequestMetrics,
+    ResponseContext,
 };
 pub use models::*;
 pub use retry::{RetryCondition, RetryPolicy};

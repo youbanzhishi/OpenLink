@@ -124,10 +124,7 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let body = body.clone();
             async move {
-                let req = self
-                    .client
-                    .post(self.config.api_url("/api/v1/links"))
-                    .json(&body);
+                let req = self.client.post(self.config.api_url("/api/v1/links")).json(&body);
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
@@ -161,9 +158,7 @@ impl LinkClient {
         self.execute_with_resilience(|| {
             let code = code.clone();
             async move {
-                let req = self
-                    .client
-                    .get(self.config.api_url(&format!("/api/v1/links/{}", code)));
+                let req = self.client.get(self.config.api_url(&format!("/api/v1/links/{}", code)));
 
                 let resp = self.auth_headers(req).send().await?;
                 Self::handle_response(resp).await
@@ -249,10 +244,7 @@ impl LinkClient {
     }
 
     /// 批量解析短链
-    pub async fn batch_resolve(
-        &self,
-        codes: Vec<String>,
-    ) -> Result<BatchResolveResponse, SdkError> {
+    pub async fn batch_resolve(&self, codes: Vec<String>) -> Result<BatchResolveResponse, SdkError> {
         let body = BatchResolveRequest { codes };
         let req = self
             .client
@@ -288,14 +280,8 @@ impl LinkClient {
     // ─── 路由操作 ───────────────────────────────────────────
 
     /// 创建路由规则
-    pub async fn create_route(
-        &self,
-        request: CreateRouteRequest,
-    ) -> Result<RouteResponse, SdkError> {
-        let req = self
-            .client
-            .post(self.config.api_url("/api/v1/routes"))
-            .json(&request);
+    pub async fn create_route(&self, request: CreateRouteRequest) -> Result<RouteResponse, SdkError> {
+        let req = self.client.post(self.config.api_url("/api/v1/routes")).json(&request);
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -314,9 +300,7 @@ impl LinkClient {
 
     // ─── 响应处理 ───────────────────────────────────────────
 
-    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(
-        resp: reqwest::Response,
-    ) -> Result<T, SdkError> {
+    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(resp: reqwest::Response) -> Result<T, SdkError> {
         let status = resp.status();
         let body = resp.text().await?;
 
@@ -377,10 +361,7 @@ impl FileClient {
     }
 
     /// 请求上传 URL
-    pub async fn request_upload(
-        &self,
-        request: FileUploadRequest,
-    ) -> Result<FileUploadResponse, SdkError> {
+    pub async fn request_upload(&self, request: FileUploadRequest) -> Result<FileUploadResponse, SdkError> {
         let req = self
             .client
             .post(self.config.api_url("/api/v1/files/upload"))
@@ -424,35 +405,25 @@ impl FileClient {
             .await?;
 
         if !put_resp.status().is_success() {
-            return Err(SdkError::Other(format!(
-                "Upload failed: {}",
-                put_resp.status()
-            )));
+            return Err(SdkError::Other(format!("Upload failed: {}", put_resp.status())));
         }
 
         Ok(upload_resp)
     }
 
     /// 下载文件
-    pub async fn download(
-        &self,
-        file_id: impl Into<String>,
-    ) -> Result<FileDownloadResponse, SdkError> {
+    pub async fn download(&self, file_id: impl Into<String>) -> Result<FileDownloadResponse, SdkError> {
         let file_id = file_id.into();
-        let req = self.client.get(
-            self.config
-                .api_url(&format!("/api/v1/files/{}/download", file_id)),
-        );
+        let req = self
+            .client
+            .get(self.config.api_url(&format!("/api/v1/files/{}/download", file_id)));
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
     }
 
     /// 获取文件（通过分享码）
-    pub async fn get_by_share_code(
-        &self,
-        share_code: impl Into<String>,
-    ) -> Result<Vec<u8>, SdkError> {
+    pub async fn get_by_share_code(&self, share_code: impl Into<String>) -> Result<Vec<u8>, SdkError> {
         let share_code = share_code.into();
 
         // 先获取下载 URL
@@ -462,24 +433,17 @@ impl FileClient {
         let resp = self.client.get(&dl_resp.download_url).send().await?;
 
         if !resp.status().is_success() {
-            return Err(SdkError::Other(format!(
-                "Download failed: {}",
-                resp.status()
-            )));
+            return Err(SdkError::Other(format!("Download failed: {}", resp.status())));
         }
 
         let bytes = resp.bytes().await?.to_vec();
         Ok(bytes)
     }
 
-    async fn get_by_share_code_url(
-        &self,
-        share_code: &str,
-    ) -> Result<FileDownloadResponse, SdkError> {
-        let req = self.client.get(
-            self.config
-                .api_url(&format!("/api/v1/files/share/{}", share_code)),
-        );
+    async fn get_by_share_code_url(&self, share_code: &str) -> Result<FileDownloadResponse, SdkError> {
+        let req = self
+            .client
+            .get(self.config.api_url(&format!("/api/v1/files/share/{}", share_code)));
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -497,10 +461,7 @@ impl FileClient {
             "ttl_secs": ttl_secs.unwrap_or(3600 * 24 * 7)
         });
 
-        let req = self
-            .client
-            .post(self.config.api_url("/api/v1/files/share"))
-            .json(&body);
+        let req = self.client.post(self.config.api_url("/api/v1/files/share")).json(&body);
 
         let resp = self.auth_headers(req).send().await?;
         Self::handle_response(resp).await
@@ -535,9 +496,7 @@ impl FileClient {
         }
     }
 
-    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(
-        resp: reqwest::Response,
-    ) -> Result<T, SdkError> {
+    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(resp: reqwest::Response) -> Result<T, SdkError> {
         let status = resp.status();
         let body = resp.text().await?;
 
@@ -688,14 +647,8 @@ mod tests {
     #[test]
     fn test_config_api_url() {
         let config = Config::new("https://api.openlink.dev");
-        assert_eq!(
-            config.api_url("/api/v1/links"),
-            "https://api.openlink.dev/api/v1/links"
-        );
-        assert_eq!(
-            config.api_url("api/v1/links"),
-            "https://api.openlink.dev/api/v1/links"
-        );
+        assert_eq!(config.api_url("/api/v1/links"), "https://api.openlink.dev/api/v1/links");
+        assert_eq!(config.api_url("api/v1/links"), "https://api.openlink.dev/api/v1/links");
     }
 
     #[test]

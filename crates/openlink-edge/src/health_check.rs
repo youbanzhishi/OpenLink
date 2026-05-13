@@ -161,9 +161,7 @@ impl HealthChecker {
             && online_count == 0
         {
             HealthStatus::Unhealthy
-        } else if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold
-            || online_count < total_count
-        {
+        } else if cache_stats.hit_rate < self.config.cache_hit_degraded_threshold || online_count < total_count {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
@@ -202,18 +200,10 @@ mod tests {
     #[tokio::test]
     async fn test_health_check() {
         let config = EdgeConfig::default_config();
-        let cache = Arc::new(EdgeCache::new(
-            config.cache.max_entries,
-            config.cache.ttl_secs,
-        ));
+        let cache = Arc::new(EdgeCache::new(config.cache.max_entries, config.cache.ttl_secs));
         let geo_router = Arc::new(RwLock::new(GeoRouter::new(GeoRouteConfig::default())));
 
-        let checker = HealthChecker::new(
-            HealthCheckConfig::default(),
-            "test-node".to_string(),
-            cache,
-            geo_router,
-        );
+        let checker = HealthChecker::new(HealthCheckConfig::default(), "test-node".to_string(), cache, geo_router);
 
         let report = checker.check().await;
         assert_eq!(report.node_id, "test-node");
@@ -223,18 +213,10 @@ mod tests {
     #[tokio::test]
     async fn test_health_status_calculation() {
         let config = EdgeConfig::default_config();
-        let cache = Arc::new(EdgeCache::new(
-            config.cache.max_entries,
-            config.cache.ttl_secs,
-        ));
+        let cache = Arc::new(EdgeCache::new(config.cache.max_entries, config.cache.ttl_secs));
         let geo_router = Arc::new(RwLock::new(GeoRouter::new(GeoRouteConfig::default())));
 
-        let checker = HealthChecker::new(
-            HealthCheckConfig::default(),
-            "test-node".to_string(),
-            cache,
-            geo_router,
-        );
+        let checker = HealthChecker::new(HealthCheckConfig::default(), "test-node".to_string(), cache, geo_router);
 
         // Fresh cache with no requests should be healthy
         let report = checker.check().await;

@@ -104,12 +104,10 @@ impl TokenBucketLimiter {
     /// 填充令牌并获取当前令牌数
     fn refill_and_get(&self, key: &str) -> f64 {
         let mut buckets = self.buckets.write();
-        let state = buckets
-            .entry(key.to_string())
-            .or_insert_with(|| TokenBucketState {
-                tokens: self.capacity as f64,
-                last_refill: Instant::now(),
-            });
+        let state = buckets.entry(key.to_string()).or_insert_with(|| TokenBucketState {
+            tokens: self.capacity as f64,
+            last_refill: Instant::now(),
+        });
 
         let now = Instant::now();
         let elapsed = now.duration_since(state.last_refill).as_secs_f64();
@@ -240,9 +238,7 @@ impl RateLimiter for SlidingWindowLimiter {
         let mut windows = self.windows.write();
         let state = windows
             .entry(key.to_string())
-            .or_insert_with(|| SlidingWindowState {
-                timestamps: Vec::new(),
-            });
+            .or_insert_with(|| SlidingWindowState { timestamps: Vec::new() });
 
         self.clean_expired(state);
         let current_count = state.timestamps.len() as u32;
@@ -292,9 +288,7 @@ impl RateLimiter for SlidingWindowLimiter {
         let mut windows = self.windows.write();
         let state = windows
             .entry(key.to_string())
-            .or_insert_with(|| SlidingWindowState {
-                timestamps: Vec::new(),
-            });
+            .or_insert_with(|| SlidingWindowState { timestamps: Vec::new() });
 
         self.clean_expired(state);
         let current_count = state.timestamps.len() as u32;
@@ -419,9 +413,7 @@ impl RateLimitConfig {
     /// 根据配置创建限流器
     pub fn create_limiter(&self) -> Arc<dyn RateLimiter> {
         match self.algorithm {
-            RateLimitAlgorithm::TokenBucket => {
-                Arc::new(TokenBucketLimiter::new(self.capacity, self.refill_rate))
-            }
+            RateLimitAlgorithm::TokenBucket => Arc::new(TokenBucketLimiter::new(self.capacity, self.refill_rate)),
             RateLimitAlgorithm::SlidingWindow => Arc::new(SlidingWindowLimiter::new(
                 Duration::from_secs(self.window_secs),
                 self.max_requests,
@@ -504,19 +496,12 @@ impl RateLimitMiddleware {
     }
 
     /// 获取限流状态（用于响应头）
-    pub async fn get_headers(
-        &self,
-        ip: Option<&str>,
-        api_key: Option<&str>,
-    ) -> HashMap<String, String> {
+    pub async fn get_headers(&self, ip: Option<&str>, api_key: Option<&str>) -> HashMap<String, String> {
         let key = self.config.extract_key(ip, api_key);
         let status = self.limiter.status(&key).await;
         let mut headers = HashMap::new();
         headers.insert("X-RateLimit-Limit".to_string(), status.limit.to_string());
-        headers.insert(
-            "X-RateLimit-Remaining".to_string(),
-            status.remaining.to_string(),
-        );
+        headers.insert("X-RateLimit-Remaining".to_string(), status.remaining.to_string());
         headers.insert(
             "X-RateLimit-Reset".to_string(),
             format!("{:.0}", status.reset_after_secs),
@@ -589,10 +574,7 @@ impl RateLimiter for CompositeRateLimiter {
         };
 
         let min_remaining = statuses.iter().map(|s| s.remaining).min().unwrap_or(0);
-        let max_reset = statuses
-            .iter()
-            .map(|s| s.reset_after_secs)
-            .fold(0.0f64, f64::max);
+        let max_reset = statuses.iter().map(|s| s.reset_after_secs).fold(0.0f64, f64::max);
         let min_limit = statuses.iter().map(|s| s.limit).min().unwrap_or(0);
 
         RateLimitStatus {

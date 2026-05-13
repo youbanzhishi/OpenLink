@@ -164,11 +164,7 @@ impl ParallelDagExecutor {
                     let inputs: HashMap<NodeId, serde_json::Value> = dag
                         .predecessors(node_id)
                         .iter()
-                        .filter_map(|pred| {
-                            node_outputs
-                                .get(&pred.id)
-                                .map(|v| (pred.id.clone(), v.clone()))
-                        })
+                        .filter_map(|pred| node_outputs.get(&pred.id).map(|v| (pred.id.clone(), v.clone())))
                         .collect();
 
                     let executor = self.executor.clone();
@@ -183,13 +179,7 @@ impl ParallelDagExecutor {
                         let elapsed = node_start.elapsed().as_millis() as u64;
 
                         match result {
-                            Ok(output) => (
-                                node_id_clone,
-                                ExecutionStatus::Success,
-                                output,
-                                elapsed,
-                                0u32,
-                            ),
+                            Ok(output) => (node_id_clone, ExecutionStatus::Success, output, elapsed, 0u32),
                             Err(e) => (
                                 node_id_clone,
                                 ExecutionStatus::Failed(e),
@@ -254,10 +244,7 @@ impl ParallelDagExecutor {
                     let total_elapsed = start.elapsed().as_millis() as u64;
                     return Ok(ExecutionResult {
                         dag_id: dag.id.clone(),
-                        status: ExecutionStatus::Failed(format!(
-                            "Fast fail: {} nodes failed",
-                            failed.len()
-                        )),
+                        status: ExecutionStatus::Failed(format!("Fast fail: {} nodes failed", failed.len())),
                         node_results,
                         total_elapsed_ms: total_elapsed,
                     });
@@ -269,10 +256,7 @@ impl ParallelDagExecutor {
         let overall_status = if failed.is_empty() {
             ExecutionStatus::Success
         } else {
-            ExecutionStatus::Failed(format!(
-                "Nodes failed: {:?}",
-                failed.iter().collect::<Vec<_>>()
-            ))
+            ExecutionStatus::Failed(format!("Nodes failed: {:?}", failed.iter().collect::<Vec<_>>()))
         };
 
         Ok(ExecutionResult {
@@ -284,13 +268,7 @@ impl ParallelDagExecutor {
     }
 
     /// 检查节点是否可以执行
-    fn can_execute(
-        &self,
-        dag: &Dag,
-        node_id: &str,
-        completed: &HashSet<NodeId>,
-        failed: &HashSet<NodeId>,
-    ) -> bool {
+    fn can_execute(&self, dag: &Dag, node_id: &str, completed: &HashSet<NodeId>, failed: &HashSet<NodeId>) -> bool {
         let predecessors = dag.predecessors(node_id);
         if predecessors.is_empty() {
             return true;
@@ -337,12 +315,7 @@ mod tests {
 
     fn make_diamond_dag() -> Dag {
         let mut dag = Dag::new("diamond", "Diamond DAG");
-        for (id, name) in [
-            ("a", "Start"),
-            ("b", "Branch B"),
-            ("c", "Branch C"),
-            ("d", "End"),
-        ] {
+        for (id, name) in [("a", "Start"), ("b", "Branch B"), ("c", "Branch C"), ("d", "End")] {
             dag.add_node(DagNode {
                 id: id.to_string(),
                 name: name.to_string(),

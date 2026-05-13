@@ -132,15 +132,9 @@ impl BatchClient {
     }
 
     /// Batch create short links.
-    pub async fn batch_create(
-        &self,
-        links: Vec<CreateLinkRequest>,
-    ) -> Result<BatchCreateResponse, SdkError> {
+    pub async fn batch_create(&self, links: Vec<CreateLinkRequest>) -> Result<BatchCreateResponse, SdkError> {
         let body = BatchCreateRequest { links };
-        let req = self
-            .client
-            .post(self.config.api_url("/api/v1/links/batch"))
-            .json(&body);
+        let req = self.client.post(self.config.api_url("/api/v1/links/batch")).json(&body);
 
         let _permit = self
             .semaphore
@@ -153,10 +147,7 @@ impl BatchClient {
     }
 
     /// Batch resolve short codes.
-    pub async fn batch_resolve(
-        &self,
-        codes: Vec<String>,
-    ) -> Result<BatchResolveResponse, SdkError> {
+    pub async fn batch_resolve(&self, codes: Vec<String>) -> Result<BatchResolveResponse, SdkError> {
         let body = BatchResolveRequest { codes };
         let req = self
             .client
@@ -193,10 +184,7 @@ impl BatchClient {
 
     /// Batch resolve with concurrency control — resolves each code individually
     /// with semaphore-limited concurrency.
-    pub async fn batch_resolve_concurrent(
-        &self,
-        codes: Vec<String>,
-    ) -> BatchResponse<ResolveResult> {
+    pub async fn batch_resolve_concurrent(&self, codes: Vec<String>) -> BatchResponse<ResolveResult> {
         let mut handles = Vec::with_capacity(codes.len());
 
         for code in codes {
@@ -254,9 +242,7 @@ impl BatchClient {
         BatchResponse::from_results(results)
     }
 
-    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(
-        resp: reqwest::Response,
-    ) -> Result<T, SdkError> {
+    async fn handle_response<T: for<'de> serde::Deserialize<'de>>(resp: reqwest::Response) -> Result<T, SdkError> {
         let status = resp.status();
         let body = resp.text().await?;
 

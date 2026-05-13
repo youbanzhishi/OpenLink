@@ -43,29 +43,23 @@ pub use shortcode::{generate, generate_default, is_valid};
 
 // Phase 7: Re-export key types
 pub use auth::{
-    ApiKeyAuth, ApiKeyConfig, AuthMiddleware, AuthProvider, AuthResult, Credentials, JwtAlgorithm,
-    JwtAuth, JwtConfig,
+    ApiKeyAuth, ApiKeyConfig, AuthMiddleware, AuthProvider, AuthResult, Credentials, JwtAlgorithm, JwtAuth, JwtConfig,
 };
 pub use health::{
-    CacheHealthCheck, ComponentHealth, ComponentStatus, DatabaseHealthCheck, HealthCheck,
-    HealthChecker, HealthEndpoint, LivenessProbe, LivenessResult, OverallHealth, ReadinessProbe,
-    ReadinessResult, UpstreamHealthCheck,
+    CacheHealthCheck, ComponentHealth, ComponentStatus, DatabaseHealthCheck, HealthCheck, HealthChecker,
+    HealthEndpoint, LivenessProbe, LivenessResult, OverallHealth, ReadinessProbe, ReadinessResult, UpstreamHealthCheck,
 };
 pub use metrics::{
-    CacheMetrics, InMemoryMetrics, LatencyTracker, MetricsCollector, MetricsMiddleware,
-    MetricsSnapshot, PrometheusExporter, RequestMetricsTimer,
+    CacheMetrics, InMemoryMetrics, LatencyTracker, MetricsCollector, MetricsMiddleware, MetricsSnapshot,
+    PrometheusExporter, RequestMetricsTimer,
 };
 pub use rate_limit::{
-    CompositeRateLimiter, RateLimitAlgorithm, RateLimitConfig, RateLimitMiddleware,
-    RateLimitResult, RateLimitStatus, RateLimitStrategy, RateLimiter, SlidingWindowLimiter,
-    TokenBucketLimiter,
+    CompositeRateLimiter, RateLimitAlgorithm, RateLimitConfig, RateLimitMiddleware, RateLimitResult, RateLimitStatus,
+    RateLimitStrategy, RateLimiter, SlidingWindowLimiter, TokenBucketLimiter,
 };
 
 // Phase 9: Re-export decentralized routing types
 pub use decentralized::{
-    DecentralizedRouter, DegradationStrategy, RoutePath, RouteResult, RouteStrategy, RoutingTable,
-    RoutingTableEntry,
+    DecentralizedRouter, DegradationStrategy, RoutePath, RouteResult, RouteStrategy, RoutingTable, RoutingTableEntry,
 };
-pub use gossip::{
-    GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus,
-};
+pub use gossip::{GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus};

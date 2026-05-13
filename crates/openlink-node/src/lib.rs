@@ -25,9 +25,7 @@ use openlink_core::ExtensionRegistry;
 use std::sync::Arc;
 
 /// 注册 Node 扩展到 Extension Registry
-pub fn register(
-    registry: &mut openlink_core::ExtensionRegistry,
-) -> Result<(), openlink_core::CoreError> {
+pub fn register(registry: &mut openlink_core::ExtensionRegistry) -> Result<(), openlink_core::CoreError> {
     use openlink_core::CoreError;
     use std::sync::Arc;
 
@@ -114,10 +112,8 @@ pub struct TransferRoute {
 #[async_trait]
 impl ActionHandler for DirectTransferAction {
     async fn execute(&self, ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
-        let params: DirectTransferParams =
-            serde_json::from_value(target.params.clone()).map_err(|e| {
-                CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e))
-            })?;
+        let params: DirectTransferParams = serde_json::from_value(target.params.clone())
+            .map_err(|e| CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e)))?;
 
         tracing::info!(
             file_id = ?params.file_id,
@@ -175,16 +171,11 @@ async fn discover_lan_peers() -> Vec<TransferPeer> {
 }
 
 /// 根据参数和可用节点选择最优传输路径
-async fn select_transfer_route(
-    params: &DirectTransferParams,
-    peers: &[TransferPeer],
-) -> TransferRoute {
+async fn select_transfer_route(params: &DirectTransferParams, peers: &[TransferPeer]) -> TransferRoute {
     match params.mode.as_str() {
         "force_lan" => {
             // 强制 LAN，查找最近节点
-            let best = peers
-                .iter()
-                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
+            let best = peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
             TransferRoute {
                 mode: "lan".to_string(),
                 peer: best.cloned(),
@@ -200,9 +191,7 @@ async fn select_transfer_route(
         },
         _ => {
             // lan_first: 优先 LAN，无节点则云
-            let best = peers
-                .iter()
-                .min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
+            let best = peers.iter().min_by_key(|p| p.latency_ms.unwrap_or(u32::MAX));
             TransferRoute {
                 mode: "lan_first".to_string(),
                 peer: best.cloned(),
@@ -226,11 +215,7 @@ impl openlink_core::ConditionHandler for LanConditionHandler {
             .unwrap_or(false);
 
         // 从 context.custom 中读取 LAN peer 信息
-        let has_lan_peer = ctx
-            .custom
-            .get("lan_peer_node_id")
-            .and_then(|v| v.as_str())
-            .is_some();
+        let has_lan_peer = ctx.custom.get("lan_peer_node_id").and_then(|v| v.as_str()).is_some();
 
         Ok(has_lan_peer)
     }

@@ -29,16 +29,10 @@ impl ActionHandler for RedirectHandler {
             .params
             .get("url")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                CoreError::InvalidInput("Redirect action requires 'url' parameter".to_string())
-            })?
+            .ok_or_else(|| CoreError::InvalidInput("Redirect action requires 'url' parameter".to_string()))?
             .to_string();
 
-        let status_code = target
-            .params
-            .get("status_code")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(302) as u16;
+        let status_code = target.params.get("status_code").and_then(|v| v.as_u64()).unwrap_or(302) as u16;
 
         // 状态码校验
         if status_code != 301 && status_code != 302 {

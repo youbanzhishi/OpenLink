@@ -33,54 +33,27 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/routes/:id", put(handlers::route::update_route))
         .route("/api/v1/routes/:id", delete(handlers::route::delete_route))
         // API v1 - Extensions
-        .route(
-            "/api/v1/extensions",
-            get(handlers::extension::list_extensions),
-        )
-        .route(
-            "/api/v1/extensions",
-            post(handlers::extension::register_extension),
-        )
+        .route("/api/v1/extensions", get(handlers::extension::list_extensions))
+        .route("/api/v1/extensions", post(handlers::extension::register_extension))
         .route(
             "/api/v1/extensions/:name",
             delete(handlers::extension::delete_extension),
         )
         // API v1 - Stats
-        .route(
-            "/api/v1/stats/overview",
-            get(handlers::stats::get_overview_stats),
-        )
-        .route(
-            "/api/v1/stats/links/:id",
-            get(handlers::stats::get_link_stats),
-        )
+        .route("/api/v1/stats/overview", get(handlers::stats::get_overview_stats))
+        .route("/api/v1/stats/links/:id", get(handlers::stats::get_link_stats))
         // API v1 - Agent
-        .route(
-            "/api/v1/agent/resolve",
-            post(handlers::agent::batch_resolve),
-        )
+        .route("/api/v1/agent/resolve", post(handlers::agent::batch_resolve))
         .route("/api/v1/agent/discover", post(handlers::agent::discover))
         // API v1 - Agent Config (Person Agent Schema v0.2.0)
         .route("/api/v1/agent/config", post(handlers::agent::config_service))
         // API v1 - Plugins (Phase 8)
         .route("/api/v1/plugins", post(handlers::plugin::register_plugin))
-        .route(
-            "/api/v1/plugins/search",
-            post(handlers::plugin::search_plugins),
-        )
-        .route(
-            "/api/v1/plugins/:id/install",
-            post(handlers::plugin::install_plugin),
-        )
+        .route("/api/v1/plugins/search", post(handlers::plugin::search_plugins))
+        .route("/api/v1/plugins/:id/install", post(handlers::plugin::install_plugin))
         // API v1 - Share (Phase 8)
-        .route(
-            "/api/v1/share/project",
-            post(handlers::plugin::share_project),
-        )
-        .route(
-            "/api/v1/share/:id",
-            get(handlers::plugin::get_shared_project),
-        )
+        .route("/api/v1/share/project", post(handlers::plugin::share_project))
+        .route("/api/v1/share/:id", get(handlers::plugin::get_shared_project))
         // API v1 - P2P (Phase 9)
         .route("/api/v1/p2p/peers", get(handlers::p2p::list_peers))
         .route("/api/v1/p2p/status", get(handlers::p2p::get_status))

@@ -50,11 +50,7 @@ pub trait MetricsCollector: Send + Sync {
         let mut latency_labels = HashMap::new();
         latency_labels.insert("method", method);
         latency_labels.insert("endpoint", endpoint);
-        self.observe_histogram(
-            "request_duration_seconds",
-            &latency_labels,
-            duration.as_secs_f64(),
-        );
+        self.observe_histogram("request_duration_seconds", &latency_labels, duration.as_secs_f64());
     }
 
     /// 记录错误（便捷方法）
@@ -172,8 +168,7 @@ impl MetricsCollector for InMemoryMetrics {
         } else {
             drop(map);
             let mut map = self.gauges.write();
-            map.entry(key)
-                .or_insert_with(|| AtomicI64::new(value as i64));
+            map.entry(key).or_insert_with(|| AtomicI64::new(value as i64));
         }
     }
 
@@ -247,10 +242,7 @@ impl MetricsCollector for InMemoryMetrics {
             }
         }
 
-        lines.push(format!(
-            "uptime_seconds {}",
-            self.start_time.elapsed().as_secs()
-        ));
+        lines.push(format!("uptime_seconds {}", self.start_time.elapsed().as_secs()));
 
         lines.join("\n")
     }
@@ -323,10 +315,7 @@ impl PrometheusExporter {
                             &labels[1..labels.len() - 1] // strip { }
                         ));
                     } else {
-                        output.push(format!(
-                            "openlink_{}{{quantile=\"{}\"}} {}",
-                            base, quantile, value
-                        ));
+                        output.push(format!("openlink_{}{{quantile=\"{}\"}} {}", base, quantile, value));
                     }
                 }
             } else if line.contains("uptime_seconds") {
