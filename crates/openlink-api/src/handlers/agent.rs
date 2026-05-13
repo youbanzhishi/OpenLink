@@ -385,16 +385,20 @@ pub struct ConfigActionResult {
 
 /// GET /.well-known/agent.json — 返回人的数字身份声明
 pub async fn person_agent(
-    State(state): State<Arc<AppState>>,
+    State(_state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let config_path = std::path::Path::new("config/agent.json");
 
     let content = if config_path.exists() {
         fs::read_to_string(config_path)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to read agent.json: {}", e)))?
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to read agent.json: {}", e),
+                )
+            })?
     } else {
-        // 最小默认schema
         let default = PersonAgent {
             schema_version: "0.2.0".into(),
             identity: Identity {
@@ -417,8 +421,12 @@ pub async fn person_agent(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
     };
 
-    let value: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Invalid agent.json: {}", e)))?;
+    let value: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Invalid agent.json: {}", e),
+        )
+    })?;
 
     tracing::info!("Served .well-known/agent.json");
     Ok(Json(value))
@@ -430,28 +438,38 @@ pub async fn config_service(
     headers: HeaderMap,
     Json(req): Json<ConfigRequest>,
 ) -> Result<Json<ConfigResponse>, (StatusCode, String)> {
-    // 验证请求者身份
     let agent_id = headers
         .get("x-agent-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("anonymous");
 
     if agent_id == "anonymous" {
-        return Err((StatusCode::UNAUTHORIZED, "X-Agent-ID header required".into()));
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            "X-Agent-ID header required".into(),
+        ));
     }
 
     let service_id = req.service.id.clone();
     let mut results = Vec::new();
 
-    // 执行auto_config动作
     for action in &req.auto_config {
         let result = match action.as_str() {
             "verify" => {
                 if let Some(endpoint) = &req.service.endpoint {
-                    match reqwest::Client::new().head(endpoint).timeout(std::time::Duration::from_secs(10)).send().await {
+                    match reqwest::Client::new()
+                        .head(endpoint)
+                        .timeout(std::time::Duration::from_secs(10))
+                        .send()
+                        .await
+                    {
                         Ok(resp) => ConfigActionResult {
                             action: "verify".into(),
-                            status: if resp.status().is_success() { "completed".into() } else { "failed".into() },
+                            status: if resp.status().is_success() {
+                                "completed".into()
+                            } else {
+                                "failed".into()
+                            },
                             message: Some(format!("HTTP {}", resp.status())),
                         },
                         Err(e) => ConfigActionResult {
@@ -469,22 +487,25 @@ pub async fn config_service(
                 }
             }
             "notify" => {
-                // 记录通知事件（实际webhook调用在workflow引擎中）
-                tracing::info!(agent_id = agent_id, service_id = %service_id, "Auto-config notification for new service");
+                tracing::info!(
+                    agent_id = agent_id,
+                    service_id = %service_id,
+                    "Auto-config notification for new service"
+                );
                 ConfigActionResult {
                     action: "notify".into(),
                     status: "completed".into(),
                     message: Some(format!("Notified for service {}", service_id)),
                 }
             }
-            "index" | "scan" | "clone" => {
-                // 外部动作，返回pending（需调用OpenMind/OpenVault/GitHub API）
-                ConfigActionResult {
-                    action: action.clone(),
-                    status: "pending".into(),
-                    message: Some(format!("{} requires external API call, queued", action)),
-                }
-            }
+            "index" | "scan" | "clone" => ConfigActionResult {
+                action: action.clone(),
+                status: "pending".into(),
+                message: Some(format!(
+                    "{} requires external API call, queued",
+                    action
+                )),
+            },
             _ => ConfigActionResult {
                 action: action.clone(),
                 status: "skipped".into(),
@@ -508,8 +529,9 @@ pub async fn config_service(
                 if let Some(services) = agent.get_mut("services") {
                     if let Some(list) = services.get_mut(list_key) {
                         if let Some(arr) = list.as_array_mut() {
-                            // 幂等：不重复添加
-                            let exists = arr.iter().any(|s| s.get("id").and_then(|v| v.as_str()) == Some(&service_id));
+                            let exists = arr.iter().any(|s| {
+                                s.get("id").and_then(|v| v.as_str()) == Some(&service_id)
+                            });
                             if !exists {
                                 arr.push(service_value);
                             }
@@ -523,7 +545,12 @@ pub async fn config_service(
         }
     }
 
-    tracing::info!(agent_id = agent_id, service_id = %service_id, action = %req.action, "Service config completed");
+    tracing::info!(
+        agent_id = agent_id,
+        service_id = %service_id,
+        action = %req.action,
+        "Service config completed"
+    );
 
     Ok(Json(ConfigResponse {
         status: "ok".into(),
