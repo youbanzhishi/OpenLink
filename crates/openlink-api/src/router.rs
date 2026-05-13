@@ -47,6 +47,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/agent/discover", post(handlers::agent::discover))
         // API v1 - Agent Config (Person Agent Schema v0.2.0)
         .route("/api/v1/agent/config", post(handlers::agent::config_service))
+        // API v1 - Agent Join (Person Agent Schema v0.3.0)
+        .route("/api/v1/agent/join", post(handlers::agent::join_knowledge))
         // API v1 - Plugins (Phase 8)
         .route("/api/v1/plugins", post(handlers::plugin::register_plugin))
         .route("/api/v1/plugins/search", post(handlers::plugin::search_plugins))

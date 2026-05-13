@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "0.3.0",
   "identity": {
     "name": "主人",
     "type": "person",
@@ -11,12 +11,44 @@
     }
   },
   "capabilities": [
-    { "id": "search-knowledge", "name": "搜索知识库", "category": "search" },
-    { "id": "access-vault", "name": "访问保险箱", "category": "storage", "auth_required": true },
-    { "id": "deploy-service", "name": "部署服务", "category": "deploy", "auth_required": true },
-    { "id": "mix-audio", "name": "混音处理", "category": "create" },
-    { "id": "write-novel", "name": "网文创作", "category": "create" },
-    { "id": "social-media", "name": "自媒体运营", "category": "communicate" }
+    {
+      "id": "search-knowledge",
+      "name": "搜索知识库",
+      "category": "search"
+    },
+    {
+      "id": "access-vault",
+      "name": "访问保险箱",
+      "category": "storage",
+      "auth_required": true
+    },
+    {
+      "id": "deploy-service",
+      "name": "部署服务",
+      "category": "deploy",
+      "auth_required": true
+    },
+    {
+      "id": "mix-audio",
+      "name": "混音处理",
+      "category": "create"
+    },
+    {
+      "id": "write-novel",
+      "name": "网文创作",
+      "category": "create"
+    },
+    {
+      "id": "social-media",
+      "name": "自媒体运营",
+      "category": "communicate"
+    },
+    {
+      "id": "join-knowledge",
+      "name": "加入知识体系",
+      "category": "search",
+      "description": "下载知识体系仓库，理解角色规则和工作协议，按体系规范工作"
+    }
   ],
   "services": {
     "public": [],
@@ -24,8 +56,15 @@
   },
   "preferences": {
     "interaction_style": "简洁直接，不要追问",
-    "search_priority": ["knowledge", "vault", "internet"],
-    "format_preferences": { "audio": "mp3", "document": "md" },
+    "search_priority": [
+      "knowledge",
+      "vault",
+      "internet"
+    ],
+    "format_preferences": {
+      "audio": "mp3",
+      "document": "md"
+    },
     "language": "zh-CN",
     "timezone": "Asia/Shanghai"
   },
@@ -39,5 +78,19 @@
   },
   "links": {
     "github": "https://github.com/youbanzhishi"
+  },
+  "knowledge_system": {
+    "repo": "https://github.com/youbanzhishi/open-knowledge-system.git",
+    "branch": "master",
+    "entry": "入口.md",
+    "init_script": "scripts/init.sh",
+    "roles_dir": "角色/",
+    "protocols": {
+      "work_flow": "五步门",
+      "dev_flow": "六步门",
+      "decision_record": "共享知识/项目规范/决策记录规范.md"
+    },
+    "join_endpoint": "/api/v1/agent/join",
+    "description": "结构化知识体系：角色规则、工作协议、踩坑经验、项目索引。AI加入后按规则工作，按协议沉淀。"
   }
 }

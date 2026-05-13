@@ -537,3 +537,304 @@ pub async fn config_service(
         auto_config_results: results,
     }))
 }
+
+// ─── Join Knowledge System ────────────────────────────────────
+
+/// 加入知识体系请求
+#[derive(Debug, Deserialize)]
+pub struct JoinRequest {
+    /// 智能体自报的身份
+    pub agent_name: String,
+    /// 智能体类型：assistant / tool / robot
+    #[serde(default = "default_agent_type")]
+    pub agent_type: String,
+    /// 智能体希望承担的角色（可选，不填则返回所有角色清单）
+    #[serde(default)]
+    pub desired_role: Option<String>,
+    /// 智能体的能力列表（帮助匹配角色）
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+}
+
+fn default_agent_type() -> String {
+    "assistant".into()
+}
+
+/// 角色摘要
+#[derive(Debug, Serialize)]
+pub struct RoleSummary {
+    pub name: String,
+    pub description: String,
+    pub domain: String,
+    pub skills: Vec<String>,
+    pub rules_path: String,
+}
+
+/// 协议摘要
+#[derive(Debug, Serialize)]
+pub struct ProtocolSummary {
+    pub name: String,
+    pub steps: Vec<String>,
+    pub description: String,
+}
+
+/// 加入知识体系响应
+#[derive(Debug, Serialize)]
+pub struct JoinResponse {
+    pub status: String,
+    pub schema_version: String,
+    /// 知识体系仓库信息
+    pub knowledge_repo: KnowledgeRepoInfo,
+    /// 入口文档内容
+    pub entry_content: String,
+    /// 可选角色清单
+    pub available_roles: Vec<RoleSummary>,
+    /// 核心协议摘要
+    pub protocols: Vec<ProtocolSummary>,
+    /// 下一步指引
+    pub next_steps: Vec<String>,
+    /// 加入凭证（只读token，用于后续访问受保护服务）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token: Option<String>,
+}
+
+/// 知识体系仓库信息
+#[derive(Debug, Serialize)]
+pub struct KnowledgeRepoInfo {
+    pub repo_url: String,
+    pub branch: String,
+    pub entry_file: String,
+    pub init_script: String,
+    pub clone_command: String,
+}
+
+/// GET /api/v1/agent/join — 智能体加入知识体系（只读加入）
+///
+/// 外部智能体调用此端点，获取知识体系的完整概览：
+/// - 仓库地址和克隆命令
+/// - 入口文档内容
+/// - 可选角色清单
+/// - 核心协议摘要
+/// - 下一步操作指引
+///
+/// 不需要Bearer token（公开层），但只返回只读信息。
+/// 读写加入需要通过主代理（小龙）授权。
+pub async fn join_knowledge(
+    State(_state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(req): Json<JoinRequest>,
+) -> Result<Json<JoinResponse>, (StatusCode, String)> {
+    let agent_id = headers
+        .get("x-agent-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("anonymous");
+
+    tracing::info!(
+        agent_id = agent_id,
+        agent_name = %req.agent_name,
+        agent_type = %req.agent_type,
+        desired_role = ?req.desired_role,
+        "Agent requesting to join knowledge system"
+    );
+
+    // 1. 构建仓库信息
+    let knowledge_repo = KnowledgeRepoInfo {
+        repo_url: "https://github.com/youbanzhishi/open-knowledge-system.git".into(),
+        branch: "master".into(),
+        entry_file: "入口.md".into(),
+        init_script: "scripts/init.sh".into(),
+        clone_command: format!(
+            "git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git"
+        ),
+    };
+
+    // 2. 读取入口文档预览
+    let entry_content = if let Ok(content) = tokio::fs::read_to_string("config/entry-preview.md").await {
+        content
+    } else {
+        // 本地无缓存时返回简要指引
+        "# 知识体系入口预览
+
+        > 知识不等于行为，行为不能靠自觉，要靠机制
+
+        ## 加入流程
+        1. git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git
+        2. 读 入口.md 了解全局
+        3. 选角色 → 读 角色/{角色名}/RULES.md
+        4. bash scripts/init.sh 初始化
+        5. 之后所有任务走五步门/六步门
+
+        ## 核心协议
+        - 五步门：查→干→验→记→交
+        - 六步门(开发)：编译→测试→构建→CI→桌面→文档
+        - 铁律：只add自己的/禁stash/交付物必须完整/文档完整性/DR必检".into()
+    };
+
+    // 3. 构建角色清单
+    let available_roles = vec![
+        RoleSummary {
+            name: "系统开发者".into(),
+            description: "跨项目系统开发方法论+经验积累".into(),
+            domain: "系统开发（网络协议/基础设施/存储引擎）".into(),
+            skills: vec!["Rust".into(), "Python".into(), "C/C++".into(), "Docker".into()],
+            rules_path: "角色/系统开发者/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "前端开发".into(),
+            description: "前端开发+UI/UX实现".into(),
+            domain: "前端开发（Web/移动端/桌面）".into(),
+            skills: vec!["TypeScript".into(), "React".into(), "Vue".into(), "Tauri".into()],
+            rules_path: "角色/前端开发/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "ECS运维".into(),
+            description: "ECS服务器运维+Docker部署".into(),
+            domain: "服务器运维".into(),
+            skills: vec!["Docker".into(), "Linux".into(), "Nginx".into()],
+            rules_path: "角色/ECS运维/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "自媒体运营".into(),
+            description: "多平台自媒体内容运营".into(),
+            domain: "自媒体运营".into(),
+            skills: vec!["小红书".into(), "头条".into(), "知乎".into(), "微博".into()],
+            rules_path: "角色/自媒体运营/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "网文写手".into(),
+            description: "网文创作+IP运营".into(),
+            domain: "网文创作".into(),
+            skills: vec!["小说创作".into(), "剧情设计".into(), "角色塑造".into()],
+            rules_path: "角色/网文写手/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "AI调教师".into(),
+            description: "AI训练+知识体系维护".into(),
+            domain: "AI调教".into(),
+            skills: vec!["Prompt工程".into(), "知识管理".into(), "体系优化".into()],
+            rules_path: "角色/AI调教师/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "混音母带工程师".into(),
+            description: "音频混音+母带处理".into(),
+            domain: "音频制作".into(),
+            skills: vec!["REAPER".into(), "混音".into(), "母带".into()],
+            rules_path: "角色/混音母带工程师/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "动画导演".into(),
+            description: "动画项目总控+分镜设计".into(),
+            domain: "动画制作".into(),
+            skills: vec!["分镜".into(), "剧本".into(), "角色设计".into()],
+            rules_path: "角色/动画导演/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "动画设计师".into(),
+            description: "动画制作+美术设计".into(),
+            domain: "动画美术".into(),
+            skills: vec!["动画制作".into(), "美术设计".into(), "角色原画".into()],
+            rules_path: "角色/动画设计师/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "游戏开发工程师".into(),
+            description: "游戏开发+引擎编程".into(),
+            domain: "游戏开发".into(),
+            skills: vec!["Godot".into(), "Rust".into(), "游戏引擎".into()],
+            rules_path: "角色/游戏开发工程师/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "游戏美术设计师".into(),
+            description: "游戏美术+UI设计".into(),
+            domain: "游戏美术".into(),
+            skills: vec!["像素画".into(), "UI设计".into(), "角色设计".into()],
+            rules_path: "角色/游戏美术设计师/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "短视频运营".into(),
+            description: "短视频内容制作+平台运营".into(),
+            domain: "短视频运营".into(),
+            skills: vec!["抖音".into(), "视频剪辑".into(), "脚本编写".into()],
+            rules_path: "角色/短视频运营/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "本地运维".into(),
+            description: "本地开发环境运维".into(),
+            domain: "本地环境运维".into(),
+            skills: vec!["Docker".into(), "Homebrew".into(), "开发环境".into()],
+            rules_path: "角色/本地运维/RULES.md".into(),
+        },
+        RoleSummary {
+            name: "任务助手".into(),
+            description: "通用任务执行+信息整理".into(),
+            domain: "通用助手".into(),
+            skills: vec!["信息搜索".into(), "文档整理".into(), "任务执行".into()],
+            rules_path: "角色/任务助手/RULES.md".into(),
+        },
+    ];
+
+    // 4. 核心协议摘要
+    let protocols = vec![
+        ProtocolSummary {
+            name: "五步门".into(),
+            steps: vec![
+                "① 查后定方案".into(),
+                "② 执行方案".into(),
+                "③ 测试验证".into(),
+                "④ 反哺沉淀".into(),
+                "⑤ 交付闭环".into(),
+            ],
+            description: "每次任务必走，跳过=不合格。通用工作流程。".into(),
+        },
+        ProtocolSummary {
+            name: "六步门".into(),
+            steps: vec![
+                "① 编译0错误".into(),
+                "② 测试0失败".into(),
+                "③ 本地构建验证".into(),
+                "④ CI全平台构建".into(),
+                "⑤ 桌面构建(仅GUI)".into(),
+                "⑥ 文档同步更新".into(),
+            ],
+            description: "开发交付专用。六步全过才算开发完成。".into(),
+        },
+    ];
+
+    // 5. 下一步指引
+    let next_steps = vec![
+        format!("1. 克隆知识体系仓库：{}", knowledge_repo.clone_command),
+        "2. 阅读 入口.md 了解体系全局结构".into(),
+        if let Some(ref role) = req.desired_role {
+            format!("3. 阅读 角色/{}/RULES.md 了解你的角色规则", role)
+        } else {
+            "3. 根据你的能力选择一个角色，阅读对应 RULES.md".into()
+        },
+        "4. 执行 scripts/init.sh 完成环境初始化".into(),
+        "5. 之后所有任务按五步门/六步门执行".into(),
+        "6. 如需读写权限（push到仓库），联系主代理小龙获取授权".into(),
+    ];
+
+    // 6. 如果智能体指定了角色，尝试生成只读token
+    let access_token = if req.desired_role.is_some() {
+        // 生成一个只读token（JWT或随机token，后续对接认证系统）
+        Some(format!("read-only-{}-{}", req.agent_name, uuid::Uuid::new_v4()))
+    } else {
+        None
+    };
+
+    tracing::info!(
+        agent_name = %req.agent_name,
+        role = ?req.desired_role,
+        "Agent joined knowledge system (read-only)"
+    );
+
+    Ok(Json(JoinResponse {
+        status: "joined".into(),
+        schema_version: "0.3.0".into(),
+        knowledge_repo,
+        entry_content,
+        available_roles,
+        protocols,
+        next_steps,
+        access_token,
+    }))
+}
