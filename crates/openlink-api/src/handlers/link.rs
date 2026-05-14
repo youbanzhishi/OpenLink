@@ -292,13 +292,16 @@ pub async fn resolve_link(
     let target_url = route
         .as_ref()
         .and_then(|r| {
-            r.default_target.params.get("url")
+            r.default_target
+                .params
+                .get("url")
                 .or(r.default_target.params.get("target"))
                 .and_then(|v| v.as_str())
                 .map(String::from)
         })
         .or_else(|| {
-            link.payload.get("target_url")
+            link.payload
+                .get("target_url")
                 .or(link.payload.get("target"))
                 .and_then(|v| v.as_str())
                 .map(String::from)
@@ -322,7 +325,7 @@ pub async fn resolve_link(
 /// 批量查询短链请求
 #[derive(Debug, Deserialize)]
 pub struct BatchLinksQuery {
-    pub codes: String,  // 逗号分隔的短码列表
+    pub codes: String, // 逗号分隔的短码列表
 }
 
 /// 批量查询短链
@@ -358,7 +361,9 @@ pub async fn batch_links(
 
         match link {
             Some(link) => {
-                let target_url = link.payload.get("target_url")
+                let target_url = link
+                    .payload
+                    .get("target_url")
                     .or(link.payload.get("target"))
                     .and_then(|v| v.as_str())
                     .map(String::from);
