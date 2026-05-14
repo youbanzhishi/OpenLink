@@ -28,6 +28,10 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/links/:id", get(handlers::link::get_link))
         .route("/api/v1/links/:id", put(handlers::link::update_link))
         .route("/api/v1/links/:id", delete(handlers::link::delete_link))
+        // API v1 - Resolve (单条解析短链)
+        .route("/api/v1/resolve/:code", get(handlers::link::resolve_link))
+        // API v1 - Batch (批量查询短链)
+        .route("/api/v1/links/batch", get(handlers::link::batch_links))
         // API v1 - Routes
         .route("/api/v1/routes", post(handlers::route::create_route))
         .route("/api/v1/routes/:id", put(handlers::route::update_route))

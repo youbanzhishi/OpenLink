@@ -24,7 +24,7 @@ pub struct CreateLinkRequest {
     #[serde(default)]
     pub payload: serde_json::Value,
     /// 重定向目标 URL（便捷字段，自动写入 payload）
-    pub target_url: Option<String>,
+    pub target: Option<String>,
     /// 扩展元数据
     #[serde(default)]
     pub metadata: serde_json::Value,
@@ -124,7 +124,7 @@ pub async fn create_link(
 
     // 构建链接 payload
     let mut payload = req.payload;
-    if let Some(url) = req.target_url {
+    if let Some(url) = req.target {
         payload["target_url"] = serde_json::Value::String(url);
     }
 
@@ -155,9 +155,10 @@ pub async fn get_link(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkResponse>, (StatusCode, String)> {
+    // 先通过 code 查找 link（兼容 id 和 code 两种传入方式）
     let link = state
         .store
-        .get_link(&id)
+        .get_link_by_code(&id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", id)))?;
@@ -239,11 +240,152 @@ pub async fn delete_link(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state.store.delete_link(&id).await.map_err(|e| match e {
+    // 先通过 code 查找 link，获取 id 后删除
+    let link = state
+        .store
+        .get_link_by_code(&id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", id)))?;
+    state.store.delete_link(&link.id).await.map_err(|e| match e {
         openlink_store::StoreError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
         _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     })?;
 
     tracing::info!(id = %id, "Link deleted");
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ─── 新增：单条解析短链 ────────────────────────────────────────
+
+use axum::extract::Query as AxumQuery;
+
+/// 解析短链（返回目标 URL，不执行重定向）
+///
+/// GET /api/v1/resolve/:code
+///
+/// Phase 2: 新增 API，用于 Agent 或程序化调用获取短链目标
+pub async fn resolve_link(
+    State(state): State<Arc<AppState>>,
+    Path(code): Path<String>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    // 1. 查找 Link
+    let link = state
+        .store
+        .get_link_by_code(&code)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Link '{}' not found", code)))?;
+
+    if !link.is_active {
+        return Err((StatusCode::GONE, "Link is inactive".to_string()));
+    }
+
+    // 2. 获取 Route（如果有）
+    let route = state
+        .store
+        .get_route_by_link_id(&link.id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // 3. 构建响应
+    let target_url = route
+        .as_ref()
+        .and_then(|r| {
+            r.default_target.params.get("url")
+                .or(r.default_target.params.get("target"))
+                .and_then(|v| v.as_str())
+                .map(String::from)
+        })
+        .or_else(|| {
+            link.payload.get("target_url")
+                .or(link.payload.get("target"))
+                .and_then(|v| v.as_str())
+                .map(String::from)
+        });
+
+    let response = serde_json::json!({
+        "code": code,
+        "link_id": link.id,
+        "target": target_url,
+        "is_active": link.is_active,
+        "metadata": link.metadata,
+        "created_at": link.created_at.to_rfc3339(),
+    });
+
+    tracing::info!(code = %code, "Link resolved via API");
+    Ok(Json(response))
+}
+
+// ─── 新增：批量查询短链 ────────────────────────────────────────
+
+/// 批量查询短链请求
+#[derive(Debug, Deserialize)]
+pub struct BatchLinksQuery {
+    pub codes: String,  // 逗号分隔的短码列表
+}
+
+/// 批量查询短链
+///
+/// GET /api/v1/links/batch?codes=code1,code2,code3
+///
+/// Phase 2: 新增 API，用于批量查询短链信息
+pub async fn batch_links(
+    State(state): State<Arc<AppState>>,
+    Query(query): AxumQuery<BatchLinksQuery>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let codes: Vec<String> = query
+        .codes
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .take(100)
+        .collect();
+
+    let requested = codes.len();
+    if requested == 0 {
+        return Err((StatusCode::BAD_REQUEST, "No codes provided".to_string()));
+    }
+
+    let mut results = Vec::new();
+
+    for code in codes {
+        let link = state
+            .store
+            .get_link_by_code(&code)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+        match link {
+            Some(link) => {
+                let target_url = link.payload.get("target_url")
+                    .or(link.payload.get("target"))
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+
+                results.push(serde_json::json!({
+                    "code": code,
+                    "link_id": link.id,
+                    "target": target_url,
+                    "is_active": link.is_active,
+                    "found": true,
+                }));
+            }
+            None => {
+                results.push(serde_json::json!({
+                    "code": code,
+                    "found": false,
+                }));
+            }
+        }
+    }
+
+    let response = serde_json::json!({
+        "results": results,
+        "total": results.len(),
+        "requested": requested,
+    });
+
+    tracing::info!(count = results.len(), "Batch links query completed");
+    Ok(Json(response))
 }
