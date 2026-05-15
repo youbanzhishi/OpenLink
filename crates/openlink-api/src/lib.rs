@@ -15,6 +15,7 @@ pub mod middleware;
 pub mod monitoring;
 pub mod router;
 pub mod state;
+pub mod web_ui;
 
 pub use config::AppConfig;
 pub use monitoring::{AppMetrics, HealthCheck, HealthStatus};

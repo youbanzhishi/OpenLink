@@ -8,10 +8,54 @@ use std::sync::Arc;
 
 use crate::handlers;
 use crate::state::AppState;
+use crate::web_ui;
+
+/// Web UI handler: Dashboard
+async fn ui_dashboard() -> axum::response::Html<String> {
+    web_ui::dashboard_page()
+}
+
+/// Web UI handler: Links page
+async fn ui_links() -> axum::response::Html<String> {
+    web_ui::links_page()
+}
+
+/// Web UI handler: Links table fragment (HTMX)
+async fn ui_links_table() -> axum::response::Html<String> {
+    web_ui::links_table_html()
+}
+
+/// Web UI handler: Routes page
+async fn ui_routes() -> axum::response::Html<String> {
+    web_ui::routes_page()
+}
+
+/// Web UI handler: Extensions page
+async fn ui_extensions() -> axum::response::Html<String> {
+    web_ui::extensions_page()
+}
+
+/// Web UI handler: Extensions list fragment (HTMX)
+async fn ui_extensions_list() -> axum::response::Html<String> {
+    web_ui::extensions_list_html()
+}
+
+/// Web UI handler: Agent page
+async fn ui_agent() -> axum::response::Html<String> {
+    web_ui::agent_page()
+}
 
 /// 构建 Axum 应用
 pub fn build_app(state: Arc<AppState>) -> Router {
     Router::new()
+        // ===== Web UI Pages (must be before /:code catch-all) =====
+        .route("/", get(ui_dashboard))
+        .route("/ui/links", get(ui_links))
+        .route("/ui/links-table", get(ui_links_table))
+        .route("/ui/routes", get(ui_routes))
+        .route("/ui/extensions", get(ui_extensions))
+        .route("/ui/extensions-list", get(ui_extensions_list))
+        .route("/ui/agent", get(ui_agent))
         // Person Agent Schema — 必须在 /:code 之前，否则通配路由会吞掉
         .route("/.well-known/agent.json", get(handlers::agent::person_agent))
         // 重定向核心路径
