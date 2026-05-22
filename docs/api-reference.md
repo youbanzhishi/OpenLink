@@ -203,23 +203,90 @@ POST /api/v1/routes
 
 ```json
 {
-  "link_id": "link-abc123",
   "rules": [
     {
-      "condition": { "type": "geo", "value": "CN" },
-      "target": { "type": "url", "value": "https://cn.example.com" },
+      "condition": { "type": "geo", "params": { "value": "CN" } },
+      "target": { "action": "url", "params": { "url": "https://cn.example.com" } },
       "priority": 10
     }
   ],
-  "default_action": { "type": "url", "value": "https://example.com" }
+  "default_target": {
+    "action": "url",
+    "params": { "link_id": "link-abc123", "url": "https://example.com" }
+  }
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| rules | array | | 路由规则列表 |
+| rules[].condition | object | | 单条件（Phase 1 向后兼容） |
+| rules[].condition.type | string | ✓ | 条件类型：geo/device/time/language/always |
+| rules[].condition.params | object | | 条件参数 |
+| rules[].conditions | array | | 多条件列表（Phase 2: AND/OR 组合） |
+| rules[].condition_logic | string | | 条件组合逻辑："and"（默认）/"or" |
+| rules[].target | object | ✓ | 匹配后的跳转目标 |
+| rules[].target.action | string | ✓ | 动作类型：url/redirect/agent/card |
+| rules[].target.params | object | | 动作参数 |
+| rules[].priority | integer | | 优先级（数值越大越优先） |
+| default_target | object | ✓ | 兜底目标（无规则匹配时执行） |
+| default_target.action | string | ✓ | 动作类型 |
+| default_target.params | object | ✓ | 必须包含 link_id（关联的短链ID） |
+
+**注意**：`link_id` 通过 `default_target.params.link_id` 传入，而非顶层字段。
+
+**响应** (`201 Created`):
+
+```json
+{
+  "id": "route-uuid",
+  "link_id": "link-abc123",
+  "rules": [...],
+  "default": { "action": "url", "params": { "url": "https://example.com" } },
+  "version": 1
+}
+```
+
+### 更新路由规则
+
+```
+PUT /api/v1/routes/{route_id}
+```
+
+**请求体**:
+
+```json
+{
+  "rules": [...],
+  "default_target": { "action": "url", "params": { "link_id": "link-abc123", "url": "..." } }
 }
 ```
 
 ### 获取路由规则
 
 ```
-GET /api/v1/routes/{link_id}
+GET /api/v1/routes/{route_id}
 ```
+
+**响应** (`200 OK`):
+
+```json
+{
+  "id": "route-uuid",
+  "link_id": "link-abc123",
+  "rules": [...],
+  "default": { "action": "url", "params": {} },
+  "version": 1
+}
+```
+
+### 删除路由规则
+
+```
+DELETE /api/v1/routes/{route_id}
+```
+
+**响应**: `204 No Content`
 
 ---
 
