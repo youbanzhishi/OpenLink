@@ -121,5 +121,16 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/cards/:code", get(handlers::card::get_card))
         .route("/api/v1/cards/:code", put(handlers::card::update_card))
         .route("/api/v1/cards/:code", delete(handlers::card::delete_card))
+        // API v1 - Extension Search (三桥模式, Phase 10)
+        .route("/api/v1/extensions/search", post(handlers::extension_search::search_extensions))
+        .route("/api/v1/extensions/execute", post(handlers::extension_search::execute_extension))
+        .route("/api/v1/extensions/:name/schema", get(handlers::extension_search::get_extension_schema))
+        // API v1 - KnowledgeSync (ADR-009, Phase 10)
+        .route("/api/v1/knowledge/auth", post(handlers::knowledge_sync::knowledge_auth))
+        .route("/api/v1/knowledge/query", post(handlers::knowledge_sync::knowledge_query))
+        .route("/api/v1/knowledge/read/:id", get(handlers::knowledge_sync::knowledge_read))
+        .route("/api/v1/knowledge/write", post(handlers::knowledge_sync::knowledge_write))
+        .route("/api/v1/knowledge/callback", post(handlers::knowledge_sync::knowledge_callback))
+
         .with_state(state)
 }

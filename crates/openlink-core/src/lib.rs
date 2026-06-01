@@ -34,6 +34,10 @@ pub mod rate_limit;
 pub mod decentralized;
 pub mod gossip;
 
+// Phase 10: Tool Search (三桥模式) + KnowledgeSync (ADR-009)
+pub mod extension_search;
+pub mod knowledge_sync;
+
 pub use engine::RoutingEngine;
 pub use error::CoreError;
 pub use primitives::*;
@@ -63,3 +67,21 @@ pub use decentralized::{
     DecentralizedRouter, DegradationStrategy, RoutePath, RouteResult, RouteStrategy, RoutingTable, RoutingTableEntry,
 };
 pub use gossip::{GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus};
+
+// Phase 10: Re-export Tool Search types
+pub use extension_search::{
+    Bm25Searcher, ExtensionExecuteRequest, ExtensionExecuteResponse, ExtensionIndex,
+    ExtensionSchema, ExtensionSearchRequest, ExtensionSearchResponse, ExtensionType,
+    LazyExtensionRegistry,
+};
+
+// Phase 10: Re-export KnowledgeSync types
+pub use knowledge_sync::{
+    ApiKeyManager, ApiKeyRecord, InMemoryKnowledgeStore, KnowledgeAuthRequest,
+    KnowledgeAuthResponse, KnowledgeCallbackNotification, KnowledgeCallbackRequest,
+    KnowledgeCallbackResponse, KnowledgeEventType, KnowledgeGrantType, KnowledgeMetadata,
+    KnowledgeQueryRequest, KnowledgeQueryResponse, KnowledgeQueryResult, KnowledgeReadRequest,
+    KnowledgeReadResponse, KnowledgeScope, KnowledgeStore, KnowledgeSyncCapability,
+    KnowledgeSyncEndpoints, KnowledgeSyncService, KnowledgeWriteRequest, KnowledgeWriteResponse,
+    KnowledgeWriteStatus,
+};
