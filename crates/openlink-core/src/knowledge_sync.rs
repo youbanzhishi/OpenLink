@@ -326,19 +326,13 @@ pub struct KnowledgeCallbackNotification {
 #[async_trait::async_trait]
 pub trait KnowledgeStore: Send + Sync {
     /// 语义查询
-    async fn query(
-        &self,
-        request: &KnowledgeQueryRequest,
-    ) -> Result<KnowledgeQueryResponse, CoreError>;
+    async fn query(&self, request: &KnowledgeQueryRequest) -> Result<KnowledgeQueryResponse, CoreError>;
 
     /// 读取单个文档
     async fn read(&self, id: &str) -> Result<Option<KnowledgeReadResponse>, CoreError>;
 
     /// 写入文档
-    async fn write(
-        &self,
-        request: &KnowledgeWriteRequest,
-    ) -> Result<KnowledgeWriteResponse, CoreError>;
+    async fn write(&self, request: &KnowledgeWriteRequest) -> Result<KnowledgeWriteResponse, CoreError>;
 
     /// 删除文档
     async fn delete(&self, id: &str) -> Result<bool, CoreError>;
@@ -373,9 +367,7 @@ pub struct ApiKeyManager {
 impl ApiKeyManager {
     /// 创建空管理器
     pub fn new() -> Self {
-        Self {
-            keys: HashMap::new(),
-        }
+        Self { keys: HashMap::new() }
     }
 
     /// 注册 API Key
@@ -442,10 +434,7 @@ impl KnowledgeSyncService {
     }
 
     /// 使用自定义能力声明创建服务
-    pub fn with_capability(
-        store: Box<dyn KnowledgeStore>,
-        capability: KnowledgeSyncCapability,
-    ) -> Self {
+    pub fn with_capability(store: Box<dyn KnowledgeStore>, capability: KnowledgeSyncCapability) -> Self {
         Self {
             store,
             auth: std::sync::RwLock::new(ApiKeyManager::new()),
@@ -463,17 +452,11 @@ impl KnowledgeSyncService {
 
     /// 注册 API Key
     pub fn register_api_key(&self, record: ApiKeyRecord) {
-        self.auth
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .register(record);
+        self.auth.write().unwrap_or_else(|e| e.into_inner()).register(record);
     }
 
     /// 认证（API Key 模式）
-    pub fn authenticate(
-        &self,
-        request: &KnowledgeAuthRequest,
-    ) -> Result<KnowledgeAuthResponse, CoreError> {
+    pub fn authenticate(&self, request: &KnowledgeAuthRequest) -> Result<KnowledgeAuthResponse, CoreError> {
         match request.grant_type {
             KnowledgeGrantType::ApiKey => {
                 let api_key = request
@@ -511,21 +494,16 @@ impl KnowledgeSyncService {
                     available_collections: record.allowed_collections.clone(),
                 })
             }
-            KnowledgeGrantType::AuthorizationCode => {
-                Err(CoreError::InvalidInput(
-                    "OAuth 2.1+PKCE not yet implemented. Use api_key grant type.".to_string(),
-                ))
-            }
+            KnowledgeGrantType::AuthorizationCode => Err(CoreError::InvalidInput(
+                "OAuth 2.1+PKCE not yet implemented. Use api_key grant type.".to_string(),
+            )),
         }
     }
 
     // ─── Read ──────────────────────────────────────────────────
 
     /// 查询知识
-    pub async fn query(
-        &self,
-        request: &KnowledgeQueryRequest,
-    ) -> Result<KnowledgeQueryResponse, CoreError> {
+    pub async fn query(&self, request: &KnowledgeQueryRequest) -> Result<KnowledgeQueryResponse, CoreError> {
         self.store.query(request).await
     }
 
@@ -537,18 +515,11 @@ impl KnowledgeSyncService {
     // ─── Write ─────────────────────────────────────────────────
 
     /// 写入知识
-    pub async fn write(
-        &self,
-        request: &KnowledgeWriteRequest,
-    ) -> Result<KnowledgeWriteResponse, CoreError> {
+    pub async fn write(&self, request: &KnowledgeWriteRequest) -> Result<KnowledgeWriteResponse, CoreError> {
         let result = self.store.write(request).await?;
 
         // 触发回调通知
-        self.trigger_callbacks(
-            &KnowledgeEventType::KnowledgeCreated,
-            &result.id,
-            &request.collection,
-        );
+        self.trigger_callbacks(&KnowledgeEventType::KnowledgeCreated, &result.id, &request.collection);
 
         Ok(result)
     }
@@ -567,10 +538,7 @@ impl KnowledgeSyncService {
     // ─── Callback ──────────────────────────────────────────────
 
     /// 注册回调
-    pub fn register_callback(
-        &self,
-        request: KnowledgeCallbackRequest,
-    ) -> KnowledgeCallbackResponse {
+    pub fn register_callback(&self, request: KnowledgeCallbackRequest) -> KnowledgeCallbackResponse {
         let sub_id = format!("sub_{}", uuid::Uuid::new_v4());
         let events = request.events.clone();
 
@@ -594,9 +562,7 @@ impl KnowledgeSyncService {
             if !subscription.events.contains(event) {
                 continue;
             }
-            if !subscription.collections.is_empty()
-                && !subscription.collections.contains(&collection.to_string())
-            {
+            if !subscription.collections.is_empty() && !subscription.collections.contains(&collection.to_string()) {
                 continue;
             }
 
@@ -650,10 +616,7 @@ impl Default for InMemoryKnowledgeStore {
 
 #[async_trait::async_trait]
 impl KnowledgeStore for InMemoryKnowledgeStore {
-    async fn query(
-        &self,
-        request: &KnowledgeQueryRequest,
-    ) -> Result<KnowledgeQueryResponse, CoreError> {
+    async fn query(&self, request: &KnowledgeQueryRequest) -> Result<KnowledgeQueryResponse, CoreError> {
         let collections = self.collections.read().unwrap_or_else(|e| e.into_inner());
 
         let query_lower = request.query.to_lowercase();
@@ -664,10 +627,7 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
         let target_collections: Vec<&String> = if request.collections.is_empty() {
             collections.keys().collect()
         } else {
-            collections
-                .keys()
-                .filter(|k| request.collections.contains(k))
-                .collect()
+            collections.keys().filter(|k| request.collections.contains(k)).collect()
         };
 
         for coll_name in target_collections {
@@ -680,10 +640,7 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
                         doc.metadata.tags.join(" ").to_lowercase()
                     );
 
-                    let match_count = search_terms
-                        .iter()
-                        .filter(|t| search_text.contains(*t))
-                        .count();
+                    let match_count = search_terms.iter().filter(|t| search_text.contains(*t)).count();
 
                     if match_count > 0 {
                         let relevance = match_count as f64 / search_terms.len() as f64;
@@ -707,7 +664,11 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
         }
 
         // 按相关度排序
-        results.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.relevance
+                .partial_cmp(&a.relevance)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let total = results.len();
         results.truncate(request.limit);
@@ -731,10 +692,7 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
         Ok(None)
     }
 
-    async fn write(
-        &self,
-        request: &KnowledgeWriteRequest,
-    ) -> Result<KnowledgeWriteResponse, CoreError> {
+    async fn write(&self, request: &KnowledgeWriteRequest) -> Result<KnowledgeWriteResponse, CoreError> {
         let mut collections = self.collections.write().unwrap_or_else(|e| e.into_inner());
 
         let now = Utc::now();

@@ -70,18 +70,15 @@ pub use gossip::{GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, 
 
 // Phase 10: Re-export Tool Search types
 pub use extension_search::{
-    Bm25Searcher, ExtensionExecuteRequest, ExtensionExecuteResponse, ExtensionIndex,
-    ExtensionSchema, ExtensionSearchRequest, ExtensionSearchResponse, ExtensionType,
-    LazyExtensionRegistry,
+    Bm25Searcher, ExtensionExecuteRequest, ExtensionExecuteResponse, ExtensionIndex, ExtensionSchema,
+    ExtensionSearchRequest, ExtensionSearchResponse, ExtensionType, LazyExtensionRegistry,
 };
 
 // Phase 10: Re-export KnowledgeSync types
 pub use knowledge_sync::{
-    ApiKeyManager, ApiKeyRecord, InMemoryKnowledgeStore, KnowledgeAuthRequest,
-    KnowledgeAuthResponse, KnowledgeCallbackNotification, KnowledgeCallbackRequest,
-    KnowledgeCallbackResponse, KnowledgeEventType, KnowledgeGrantType, KnowledgeMetadata,
-    KnowledgeQueryRequest, KnowledgeQueryResponse, KnowledgeQueryResult, KnowledgeReadRequest,
-    KnowledgeReadResponse, KnowledgeScope, KnowledgeStore, KnowledgeSyncCapability,
-    KnowledgeSyncEndpoints, KnowledgeSyncService, KnowledgeWriteRequest, KnowledgeWriteResponse,
-    KnowledgeWriteStatus,
+    ApiKeyManager, ApiKeyRecord, InMemoryKnowledgeStore, KnowledgeAuthRequest, KnowledgeAuthResponse,
+    KnowledgeCallbackNotification, KnowledgeCallbackRequest, KnowledgeCallbackResponse, KnowledgeEventType,
+    KnowledgeGrantType, KnowledgeMetadata, KnowledgeQueryRequest, KnowledgeQueryResponse, KnowledgeQueryResult,
+    KnowledgeReadRequest, KnowledgeReadResponse, KnowledgeScope, KnowledgeStore, KnowledgeSyncCapability,
+    KnowledgeSyncEndpoints, KnowledgeSyncService, KnowledgeWriteRequest, KnowledgeWriteResponse, KnowledgeWriteStatus,
 };

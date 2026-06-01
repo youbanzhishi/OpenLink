@@ -12,9 +12,9 @@ use axum::{
     Json,
 };
 use openlink_core::knowledge_sync::{
-    KnowledgeAuthRequest, KnowledgeAuthResponse, KnowledgeCallbackRequest,
-    KnowledgeCallbackResponse, KnowledgeQueryRequest, KnowledgeQueryResponse,
-    KnowledgeReadResponse, KnowledgeScope, KnowledgeWriteRequest, KnowledgeWriteResponse,
+    KnowledgeAuthRequest, KnowledgeAuthResponse, KnowledgeCallbackRequest, KnowledgeCallbackResponse,
+    KnowledgeQueryRequest, KnowledgeQueryResponse, KnowledgeReadResponse, KnowledgeScope, KnowledgeWriteRequest,
+    KnowledgeWriteResponse,
 };
 use std::sync::Arc;
 
@@ -81,10 +81,7 @@ pub async fn knowledge_query(
             );
             Ok(Json(response))
         }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Query failed: {}", e),
-        )),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Query failed: {}", e))),
     }
 }
 
@@ -107,14 +104,8 @@ pub async fn knowledge_read(
             tracing::info!(doc_id = %id, "Knowledge document read");
             Ok(Json(response))
         }
-        Ok(None) => Err((
-            StatusCode::NOT_FOUND,
-            format!("Document '{}' not found", id),
-        )),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Read failed: {}", e),
-        )),
+        Ok(None) => Err((StatusCode::NOT_FOUND, format!("Document '{}' not found", id))),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Read failed: {}", e))),
     }
 }
 
@@ -144,10 +135,7 @@ pub async fn knowledge_write(
             );
             Ok(Json(response))
         }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Write failed: {}", e),
-        )),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Write failed: {}", e))),
     }
 }
 
