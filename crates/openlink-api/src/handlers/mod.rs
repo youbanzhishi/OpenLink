@@ -8,3 +8,4 @@ pub mod extension;
 pub mod redirect;
 pub mod stats;
 pub mod agent; // Phase 3: Agent API
+pub mod knowledge; // Phase 3: 知识体系 API

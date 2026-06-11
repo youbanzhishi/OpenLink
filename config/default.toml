@@ -1,6 +1,7 @@
 # OpenLink 默认配置
 # 优先级：环境变量 > 配置文件 > 默认值
 # Phase 2: 新增 auth 配置
+# Phase 3: 新增 knowledge 配置（知识体系一键接入）
 
 [server]
 host = "0.0.0.0"
@@ -30,3 +31,15 @@ enabled = false
 # token = "ol-readonly-key"
 # name = "viewer"
 # scopes = ["read"]
+
+# Phase 3: 知识体系配置
+# enabled = true 时启用知识体系 API
+# repo_path = 知识体系仓库的本地路径（需要先 clone 到本地）
+# invite_codes = MVP 阶段的写死邀请码列表
+[knowledge]
+enabled = false
+repo_path = "/app/data/所有对话/主对话/open-knowledge-system"
+base_url = "http://localhost:3000"
+
+# MVP 邀请码列表（实际使用时替换为真实邀请码）
+invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]

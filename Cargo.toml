@@ -15,6 +15,7 @@ members = [
     "extensions/ext-filetransfer",
     "extensions/ext-direct-transfer",
     "extensions/ext-daw-distribute",
+    "extensions/ext-knowledge-join",
 ]
 resolver = "2"
 

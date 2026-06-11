@@ -17,4 +17,6 @@ pub struct AppState {
     pub engine: Arc<RoutingEngine>,
     /// 应用配置
     pub config: Arc<AppConfig>,
+    /// 知识体系仓库路径（Phase 3）
+    pub knowledge_repo_path: Option<String>,
 }

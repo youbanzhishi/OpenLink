@@ -9,6 +9,8 @@
 //! - /v1/extensions — 扩展管理（需认证）
 //! - /v1/agent/* — Agent 专用 API（Phase 3 新增）
 //! - /v1/files/* — 文件传输 API（Phase 3 新增）
+//! - /.well-known/agent.json — Agent 发现（Phase 3 新增）
+//! - /v1/knowledge/* — 知识体系 API（Phase 3 新增）
 //!
 //! Phase 2: 管理API需要Token认证，重定向API不需要认证
 //! Phase 3: Agent API使用 X-Agent-ID Header认证
@@ -80,11 +82,27 @@ pub fn build_app(state: AppState) -> Router {
         .route("/v1/files/:file_id/download", get(handlers::agent::request_download))
         .route("/v1/files/share", post(handlers::agent::share_file));
 
+    // 知识体系 API 路由（Phase 3）
+    let knowledge_routes = Router::new()
+        // Agent 发现
+        .route("/.well-known/agent.json", get(handlers::knowledge::agent_discovery))
+        // 知识加入
+        .route("/v1/knowledge/join", post(handlers::knowledge::join_knowledge))
+        // 知识资源
+        .route("/v1/knowledge/entry", get(handlers::knowledge::get_entry))
+        .route("/v1/knowledge/role/{name}", get(handlers::knowledge::get_role_rules))
+        .route("/v1/knowledge/project/{name}", get(handlers::knowledge::get_project_index))
+        .route("/v1/knowledge/script/{name}", get(handlers::knowledge::get_script))
+        .route("/v1/knowledge/hot-rules/{role}", get(handlers::knowledge::get_role_hot_rules))
+        // 只读 Agent 知识 Markdown
+        .route("/v1/knowledge/markdown", get(handlers::knowledge::get_knowledge_markdown));
+
     Router::new()
         .merge(public_routes)
         .merge(admin_routes)
         .merge(agent_routes)
         .merge(file_routes)
+        .merge(knowledge_routes)
         // 全局中间件：请求日志
         .layer(middleware::from_fn(request_logging))
         .with_state(Arc::new(state))

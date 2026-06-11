@@ -9,6 +9,7 @@
 //! 6. 启动 Axum HTTP 服务
 //!
 //! Phase 2: 注册条件路由/Webhook/Hook/JSON扩展
+//! Phase 3: 注册知识体系扩展
 
 use std::sync::Arc;
 use openlink_api::{build_app, state::AppState, config::AppConfig};
@@ -53,6 +54,9 @@ async fn main() {
     ext_hooks::register(&mut registry).expect("Failed to register hooks extension");
     ext_json::register(&mut registry).expect("Failed to register json extension");
 
+    // Phase 3: 知识体系扩展
+    ext_knowledge_join::register(&mut registry).expect("Failed to register knowledge join extension");
+
     tracing::info!(
         actions = ?registry.list_actions(),
         "Extension registry initialized"
@@ -61,11 +65,20 @@ async fn main() {
     // 5. 创建 Routing Engine
     let engine = RoutingEngine::new(Arc::new(registry));
 
-    // 6. 构建 AppState
+    // 6. 构建 AppState（Phase 3: 包含知识仓库路径）
+    let knowledge_repo_path = if config.knowledge.enabled && !config.knowledge.repo_path.is_empty() {
+        tracing::info!(repo_path = %config.knowledge.repo_path, "Knowledge system enabled");
+        Some(config.knowledge.repo_path.clone())
+    } else {
+        tracing::info!("Knowledge system disabled or not configured");
+        None
+    };
+
     let state = AppState {
         store: Arc::new(store),
         engine: Arc::new(engine),
         config: Arc::new(config),
+        knowledge_repo_path,
     };
 
     // 7. 获取监听地址（在move前）
@@ -79,6 +92,7 @@ async fn main() {
 
     tracing::info!("OpenLink server ready at {}", addr);
     tracing::info!("Phase 2 features: conditional routing, webhook, hooks, stats, auth");
+    tracing::info!("Phase 3 features: knowledge join, file transfer, agent API");
     axum::serve(listener, app)
         .await
         .expect("Server error");
