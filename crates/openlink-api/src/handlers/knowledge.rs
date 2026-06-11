@@ -18,6 +18,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::path::PathBuf;
+use std::fmt::Write;
 
 use crate::state::AppState;
 use openlink_core::Context;
@@ -250,7 +251,7 @@ fn list_roles_from_repo(repo_path: &str) -> Result<Vec<RoleInfo>, String> {
             };
 
             roles.push(RoleInfo {
-                name,
+                name: name.clone(),
                 description,
                 rules_url: format!("/api/v1/knowledge/role/{}", 
                     urlencoding_encode(&name)),
@@ -291,7 +292,7 @@ fn list_projects_from_repo(repo_path: &str) -> Result<Vec<ProjectInfo>, String> 
                 let index_path = path.join("INDEX.md");
                 if index_path.exists() {
                     projects.push(ProjectInfo {
-                        name,
+                        name: name.clone(),
                         description: "".to_string(),
                         index_url: format!("/api/v1/knowledge/project/{}", 
                             urlencoding_encode(&name)),
@@ -459,7 +460,7 @@ pub async fn get_project_index(
                     content,
                 ));
             }
-            Err(e) => {
+            Err((_, e)) => {
                 last_error = e;
             }
         }
@@ -512,9 +513,9 @@ fn read_knowledge_file(path: &PathBuf) -> Result<String, (StatusCode, String)> {
         })
 }
 
-/// URL 解码辅助函数
+/// URL 解码辅助函数（支持 UTF-8 多字节）
 fn urlencoding_decode(s: &str) -> String {
-    let mut result = String::new();
+    let mut bytes = Vec::new();
     let mut chars = s.chars().peekable();
     
     while let Some(c) = chars.next() {
@@ -526,16 +527,18 @@ fn urlencoding_decode(s: &str) -> String {
                 }
             }
             if let Ok(byte) = u8::from_str_radix(&hex, 16) {
-                result.push(byte as char);
+                bytes.push(byte);
             }
         } else if c == '+' {
-            result.push(' ');
+            bytes.push(b' ');
         } else {
-            result.push(c);
+            for b in c.to_string().as_bytes() {
+                bytes.push(*b);
+            }
         }
     }
     
-    result
+    String::from_utf8(bytes).unwrap_or_default()
 }
 
 // ─── Knowledge Markdown Response for Read-Only Agents ────────

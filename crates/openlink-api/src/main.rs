@@ -46,7 +46,7 @@ async fn main() {
         .expect("Failed to initialize SQLite store");
 
     // 4. 构建 Extension Registry
-    let registry = ExtensionRegistry::new();
+    let mut registry = ExtensionRegistry::new();
 
     // 注意：扩展注册在 Phase 6 中实现
 
@@ -61,21 +61,16 @@ async fn main() {
     // 5. 创建 Routing Engine
     let engine = RoutingEngine::new(Arc::new(registry));
 
-    // 6. 构建 AppState（包含知识仓库路径）
-    let knowledge_repo_path = if config.knowledge.enabled && !config.knowledge.repo_path.is_empty() {
-        tracing::info!(repo_path = %config.knowledge.repo_path, "Knowledge system enabled");
-        Some(config.knowledge.repo_path.clone())
+    // 6. 构建 AppState
+    let mut state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
+
+    // 设置知识仓库路径
+    if state.config.knowledge.enabled && !state.config.knowledge.repo_path.is_empty() {
+        tracing::info!(repo_path = %state.config.knowledge.repo_path, "Knowledge system enabled");
+        state.knowledge_repo_path = Some(state.config.knowledge.repo_path.clone());
     } else {
         tracing::info!("Knowledge system disabled or not configured");
-        None
-    };
-
-    let state = AppState {
-        store: Arc::new(store),
-        engine: Arc::new(engine),
-        config: Arc::new(config),
-        knowledge_repo_path,
-    };
+    }
 
     // 7. 获取监听地址
     let addr = format!("{}:{}", state.config.server.host, state.config.server.port);
