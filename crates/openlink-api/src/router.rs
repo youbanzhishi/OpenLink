@@ -1,4 +1,19 @@
 //! # HTTP 路由
+//!
+//! Axum 路由配置：
+//! - /:code — 核心重定向路径（无需认证）
+//! - /v1/links — 短链 CRUD（需认证）
+//! - /v1/links/:code/routes — 路由规则管理（需认证）
+//! - /v1/links/:code/stats — 访问统计（需认证）
+//! - /v1/stats/overview — 全局概览（需认证）
+//! - /v1/extensions — 扩展管理（需认证）
+//! - /v1/agent/* — Agent 专用 API（Phase 3 新增）
+//! - /v1/files/* — 文件传输 API（Phase 3 新增）
+//! - /.well-known/agent.json — Agent 发现（Phase 3 新增）
+//! - /v1/knowledge/* — 知识体系 API（Phase 3 新增）
+//!
+//! Phase 2: 管理API需要Token认证，重定向API不需要认证
+//! Phase 3: Agent API使用 X-Agent-ID Header认证
 
 use axum::{
     routing::{delete, get, post, put},
@@ -152,5 +167,13 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             "/api/v1/knowledge/callback",
             post(handlers::knowledge_sync::knowledge_callback),
         )
+        // API v1 - Knowledge 知识体系一键接入
+        .route("/v1/knowledge/join", post(handlers::knowledge::join_knowledge))
+        .route("/v1/knowledge/entry", get(handlers::knowledge::get_entry))
+        .route("/v1/knowledge/role/{name}", get(handlers::knowledge::get_role_rules))
+        .route("/v1/knowledge/project/{name}", get(handlers::knowledge::get_project_index))
+        .route("/v1/knowledge/script/{name}", get(handlers::knowledge::get_script))
+        .route("/v1/knowledge/hot-rules/{role}", get(handlers::knowledge::get_role_hot_rules))
+        .route("/v1/knowledge/markdown", get(handlers::knowledge::get_knowledge_markdown))
         .with_state(state)
 }

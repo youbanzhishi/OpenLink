@@ -21,6 +21,7 @@ members = [
     "extensions/ext-p2p-transfer",
     "extensions/ext-a2a-discovery",
     "extensions/ext-orchestrator",
+    "extensions/ext-knowledge-join",
 ]
 resolver = "2"
 

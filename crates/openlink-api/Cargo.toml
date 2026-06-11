@@ -11,6 +11,7 @@ path = "src/main.rs"
 openlink-core = { path = "../openlink-core" }
 openlink-store = { path = "../openlink-store" }
 openlink-cache = { path = "../openlink-cache" }
+ext-knowledge-join = { path = "../../extensions/ext-knowledge-join" }
 
 # HTTP server
 axum = "0.7"

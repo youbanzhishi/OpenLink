@@ -4,6 +4,7 @@
 //! 优先级：环境变量 > 配置文件 > 默认值
 //!
 //! Phase 2: 新增 auth 配置（API Token 认证）
+//! Phase 3: 新增 knowledge 配置（知识体系一键接入）
 
 use openlink_core::ApiToken;
 use serde::Deserialize;
@@ -17,6 +18,8 @@ pub struct AppConfig {
     pub shortcode: ShortCodeConfig,
     #[serde(default)]
     pub auth: AuthConfig,
+    #[serde(default)]
+    pub knowledge: KnowledgeConfig,
 }
 
 /// 服务器配置
@@ -130,6 +133,42 @@ fn default_token_scopes() -> Vec<String> {
     vec!["read".to_string()]
 }
 
+/// 知识体系配置（Phase 3）
+#[derive(Debug, Deserialize, Clone)]
+pub struct KnowledgeConfig {
+    /// 是否启用知识体系
+    #[serde(default = "default_knowledge_enabled")]
+    pub enabled: bool,
+    /// 知识体系仓库本地路径
+    #[serde(default)]
+    pub repo_path: String,
+    /// MVP: 写死的邀请码列表
+    #[serde(default)]
+    pub invite_codes: Vec<String>,
+    /// API base URL，用于生成资源 URL
+    #[serde(default = "default_knowledge_base_url")]
+    pub base_url: String,
+}
+
+fn default_knowledge_enabled() -> bool {
+    false
+}
+
+fn default_knowledge_base_url() -> String {
+    "http://localhost:3000".to_string()
+}
+
+impl Default for KnowledgeConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            repo_path: String::new(),
+            invite_codes: vec![],
+            base_url: default_knowledge_base_url(),
+        }
+    }
+}
+
 impl AuthConfig {
     /// 将配置转换为 ApiToken 列表
     pub fn to_api_tokens(&self) -> Vec<ApiToken> {
@@ -188,6 +227,7 @@ impl Default for AppConfig {
                 charset: default_charset(),
             },
             auth: AuthConfig::default(),
+            knowledge: KnowledgeConfig::default(),
         }
     }
 }
@@ -268,5 +308,41 @@ mod tests {
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].token, "admin-token");
         assert_eq!(tokens[0].scopes.len(), 3);
+    }
+
+    #[test]
+    fn test_knowledge_config_defaults() {
+        let config = KnowledgeConfig::default();
+        assert!(!config.enabled);
+        assert!(config.repo_path.is_empty());
+        assert!(config.invite_codes.is_empty());
+        assert_eq!(config.base_url, "http://localhost:3000");
+    }
+
+    #[test]
+    fn test_knowledge_config_custom() {
+        let config = KnowledgeConfig {
+            enabled: true,
+            repo_path: "/opt/knowledge".to_string(),
+            invite_codes: vec!["test-code-1".to_string(), "test-code-2".to_string()],
+            base_url: "https://api.example.com".to_string(),
+        };
+        assert!(config.enabled);
+        assert_eq!(config.repo_path, "/opt/knowledge");
+        assert_eq!(config.invite_codes.len(), 2);
+        assert_eq!(config.base_url, "https://api.example.com");
+    }
+
+    #[test]
+    fn test_app_config_with_knowledge() {
+        let mut config = AppConfig::default();
+        config.knowledge = KnowledgeConfig {
+            enabled: true,
+            repo_path: "/opt/knowledge".to_string(),
+            invite_codes: vec!["test-code".to_string()],
+            base_url: "https://api.example.com".to_string(),
+        };
+        assert!(config.knowledge.enabled);
+        assert_eq!(config.knowledge.invite_codes.len(), 1);
     }
 }

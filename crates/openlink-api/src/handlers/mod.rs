@@ -7,6 +7,7 @@ pub mod card; // Phase 3.5: Identity Card 名片
 pub mod edge;
 pub mod extension;
 pub mod extension_search; // Phase 10: Extension Search (三桥模式)
+pub mod knowledge; // 知识体系一键接入 API
 pub mod knowledge_sync; // Phase 10: KnowledgeSync (ADR-009)
 pub mod link;
 pub mod monitoring; // Phase 5: 健康检查
