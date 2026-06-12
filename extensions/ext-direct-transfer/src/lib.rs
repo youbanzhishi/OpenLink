@@ -25,6 +25,7 @@ pub use discovery::{LanDiscovery, LanPeer};
 
 // ─── Re-exports ─────────────────────────────────────────────
 
+use std::sync::Arc;
 use openlink_core::{CoreError, ExtensionRegistry};
 
 /// 注册直传扩展到 Extension Registry

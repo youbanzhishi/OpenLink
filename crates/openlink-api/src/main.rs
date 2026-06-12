@@ -62,7 +62,7 @@ async fn main() {
     let engine = RoutingEngine::new(Arc::new(registry));
 
     // 6. 构建 AppState
-    let mut state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
+    let state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
 
     // 日志：知识体系配置
     if state.config.knowledge.enabled {
