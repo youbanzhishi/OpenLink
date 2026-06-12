@@ -3,7 +3,7 @@
 //! 轻量文件传输服务，支持基本的推送和拉取。
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 use tokio::fs;
 
