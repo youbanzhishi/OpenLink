@@ -116,7 +116,7 @@ pub async fn join_knowledge(
     }
 
     let base_url = &state.config.knowledge.base_url;
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -282,7 +282,7 @@ pub async fn get_entry(
     State(state): State<Arc<AppState>>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -311,7 +311,7 @@ pub async fn get_role_rules(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -341,7 +341,7 @@ pub async fn get_role_hot_rules(
     State(state): State<Arc<AppState>>,
     Path(role): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -371,7 +371,7 @@ pub async fn get_project_index(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -393,6 +393,7 @@ pub async fn get_project_index(
             .join("INDEX.md"),
     ];
 
+    #[allow(unused_assignments)]
     let mut last_error = String::new();
     for index_path in index_paths {
         match read_knowledge_file(&index_path) {
@@ -419,7 +420,7 @@ pub async fn get_script(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -490,7 +491,7 @@ fn urlencoding_decode(s: &str) -> String {
 pub async fn get_knowledge_markdown(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Knowledge repository path not configured".to_string(),
@@ -659,17 +660,15 @@ pub async fn knowledge_short_entry(
     headers: axum::http::HeaderMap,
     Query(params): Query<ShortEntryParams>,
 ) -> Result<Response, (StatusCode, String)> {
-    let repo_path = state
-        .knowledge_repo_path
-        .as_ref()
-        .ok_or_else(|| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Knowledge system not enabled".to_string(),
-            )
-        })?
-        .clone();
+    if state.config.knowledge.repo_path.is_empty() {
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge system not enabled".to_string(),
+        ));
+    }
+    let repo_path = state.config.knowledge.repo_path.clone();
 
+    // 验证邀请码
     // 验证邀请码
     let code = params.code.clone().unwrap_or_default();
     if !state.config.knowledge.invite_codes.contains(&code) {
