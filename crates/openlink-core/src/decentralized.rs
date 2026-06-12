@@ -11,18 +11,15 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 /// 路由策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum RouteStrategy {
     /// 最短路径（最低延迟）
+    #[default]
     ShortestPath,
     /// 多路径冗余（同时走2-3条路径，取最快响应）
     MultiPath,
 }
 
-impl Default for RouteStrategy {
-    fn default() -> Self {
-        RouteStrategy::ShortestPath
-    }
-}
 
 /// 传输降级策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -179,11 +176,16 @@ impl PartialEq for DijkstraNode {
 impl Eq for DijkstraNode {}
 
 
-}
 
 impl Ord for DijkstraNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        other.distance.partial_cmp(&self.distance).unwrap_or(Ordering::Equal)
+    }
+}
+
+impl PartialOrd for DijkstraNode {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
