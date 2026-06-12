@@ -124,7 +124,7 @@ impl ConnectionQuality {
         // 丢包评分：0%=100, 100%=0
         let loss_score = ((1.0 - packet_loss.min(1.0)) * 100.0).max(0.0);
         // 带宽评分：100Mbps=100, 0Mbps=0
-        let bw_score = (bandwidth_mbps / 100.0 * 100.0).min(100.0).max(0.0);
+        let bw_score = (bandwidth_mbps / 100.0 * 100.0).clamp(0.0, 100.0);
 
         let score = latency_score * 0.4 + loss_score * 0.4 + bw_score * 0.2;
 

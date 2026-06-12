@@ -3,7 +3,7 @@
 //! 大文件分块传输、断点续传、多源并行下载、SHA256 校验。
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// 默认 chunk 大小：1MB
 pub const DEFAULT_CHUNK_SIZE: u64 = 1024 * 1024;
@@ -66,7 +66,7 @@ impl ChunkTransferTask {
         let total_chunks = if total_size == 0 {
             0
         } else {
-            ((total_size + chunk_size - 1) / chunk_size) as u32
+            total_size.div_ceil(chunk_size) as u32
         };
 
         let chunks: Vec<ChunkInfo> = (0..total_chunks)
@@ -281,7 +281,7 @@ pub fn calculate_chunk_count(file_size: u64, chunk_size: u64) -> u32 {
     if file_size == 0 || chunk_size == 0 {
         return 0;
     }
-    ((file_size + chunk_size - 1) / chunk_size) as u32
+    file_size.div_ceil(chunk_size) as u32
 }
 
 /// 生成 chunk 的 SHA256 校验和（模拟）

@@ -167,7 +167,7 @@ impl DagExecutor {
             // 执行任务（带重试）
             let node_start = std::time::Instant::now();
             let mut retry_count = 0;
-            let mut last_error = String::new();
+            let mut _last_error = String::new();
 
             loop {
                 match self
@@ -201,7 +201,7 @@ impl DagExecutor {
                     }
                     Err(e) => {
                         retry_count += 1;
-                        last_error = e.clone();
+                        _last_error = e.clone();
 
                         if retry_count <= node.max_retries {
                             tracing::warn!(

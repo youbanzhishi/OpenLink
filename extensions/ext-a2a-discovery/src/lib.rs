@@ -26,7 +26,6 @@ use openlink_a2a::{
     HeartbeatMonitor,
 };
 use openlink_core::{ActionHandler, ActionResult, ConditionHandler, Context, CoreError, ExtensionRegistry, Target};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 // ─── A2A Discovery Action ──────────────────────────────────
@@ -293,7 +292,7 @@ impl ActionHandler for A2aHeartbeatAction {
         self.monitor
             .handle_heartbeat(&heartbeat)
             .await
-            .map_err(|e| CoreError::InternalError(e))?;
+            .map_err(CoreError::InternalError)?;
 
         Ok(ActionResult::Json(serde_json::json!({
             "status": "acknowledged",

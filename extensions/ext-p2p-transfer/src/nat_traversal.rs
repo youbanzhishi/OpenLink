@@ -7,7 +7,7 @@ use crate::nat::{NatInfo, NatType};
 use crate::stun::StunClient;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 穿透策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +66,7 @@ pub struct NatTraversal {
     /// 本端 NAT 信息（缓存）
     local_nat_info: Option<NatInfo>,
     /// STUN 绑定超时（毫秒）
+    #[allow(dead_code)]
     timeout_ms: u64,
 }
 
@@ -91,14 +92,14 @@ impl NatTraversal {
     /// STUN 绑定请求 — 获取公网 IP:Port 映射
     pub fn stun_bind(&mut self) -> Option<SocketAddr> {
         let addr = self.stun_client.get_public_address();
-        if addr.is_some() {
+        if let Some(ref a) = addr {
             // 更新缓存的 NAT 信息
             self.local_nat_info = Some(NatInfo {
                 nat_type: NatType::Open, // 简化：如果 STUN 成功则至少不是完全封闭
                 local_ip: "0.0.0.0".to_string(),
                 local_port: 0,
-                public_ip: Some(addr.unwrap().ip().to_string()),
-                public_port: Some(addr.unwrap().port()),
+                public_ip: Some(a.ip().to_string()),
+                public_port: Some(a.port()),
                 is_complete: true,
             });
         }
@@ -207,7 +208,7 @@ impl NatTraversal {
     }
 
     /// 模拟中继传输
-    pub fn try_relay(relay_server: &str) -> TraversalResult {
+    pub fn try_relay(_relay_server: &str) -> TraversalResult {
         let start = Instant::now();
         let success = true;
 

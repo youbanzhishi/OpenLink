@@ -62,18 +62,16 @@ async fn main() {
     let engine = RoutingEngine::new(Arc::new(registry));
 
     // 6. 构建 AppState
-    let mut state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
+    let state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
 
-    // 日志：知识体系源
+    // 日志：知识体系配置
     if state.config.knowledge.enabled {
-        let sources = state.config.knowledge.resolved_sources();
-        if sources.is_empty() {
-            tracing::info!("Knowledge system enabled but no sources configured");
-        } else {
-            for src in &sources {
-                tracing::info!(source = %src.name, repo = %src.repo_path, codes = %src.invite_codes.len(), "Knowledge source configured");
-            }
-        }
+        tracing::info!(
+            repo_path = %state.config.knowledge.repo_path,
+            base_url = %state.config.knowledge.base_url,
+            invite_codes = state.config.knowledge.invite_codes.len(),
+            "Knowledge system enabled"
+        );
     } else {
         tracing::info!("Knowledge system disabled");
     }

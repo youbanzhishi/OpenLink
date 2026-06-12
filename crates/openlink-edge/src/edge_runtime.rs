@@ -12,16 +12,12 @@ use tokio::sync::Semaphore;
 /// 请求优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum RequestPriority {
     Low = 0,
+    #[default]
     Medium = 1,
     High = 2,
-}
-
-impl Default for RequestPriority {
-    fn default() -> Self {
-        RequestPriority::Medium
-    }
 }
 
 /// 边缘请求
@@ -130,7 +126,7 @@ impl EdgeRuntime {
 
     /// 处理请求（管道模式：接收→路由→执行→响应）
     pub async fn handle_request(&self, request: RuntimeRequest) -> EdgeResponse {
-        let start = Instant::now();
+        let _start = Instant::now();
         self.total_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.active_requests.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 

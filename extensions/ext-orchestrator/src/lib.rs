@@ -29,6 +29,7 @@
 
 use async_trait::async_trait;
 use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+#[allow(unused_imports)]
 use openlink_orchestrator::{
     AggregationStrategy, Dag, DagExecutor, DagNode, EdgeCondition, ExecutionResult, ExecutionStatus, ParallelConfig,
     ParallelDagExecutor, ResultAggregator, SimpleTaskExecutor, TemplateRegistry,
@@ -157,7 +158,11 @@ impl ActionHandler for OrchestrateAction {
 
 impl OrchestrateAction {
     /// 从模板执行
-    async fn execute_template(&self, template_id: &str, params: &serde_json::Value) -> Result<ActionResult, CoreError> {
+    async fn execute_template(
+        &self,
+        template_id: &str,
+        _params: &serde_json::Value,
+    ) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
         let template = templates
             .get(template_id)
@@ -235,6 +240,7 @@ impl ActionHandler for ListTemplatesAction {
 /// DAG 验证 Action（Phase 6 新增）
 pub struct ValidateDagAction;
 
+#[allow(clippy::new_without_default)]
 impl ValidateDagAction {
     pub fn new() -> Self {
         Self

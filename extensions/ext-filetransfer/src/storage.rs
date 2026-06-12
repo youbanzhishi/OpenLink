@@ -387,6 +387,7 @@ impl OssStorageConfig {
     }
 
     /// 获取公共访问 URL
+    #[allow(dead_code)]
     fn public_access_url(&self, object_key: &str) -> String {
         if let Some(ref pub_url) = self.public_url {
             format!("{}/{}", pub_url.trim_end_matches('/'), object_key)

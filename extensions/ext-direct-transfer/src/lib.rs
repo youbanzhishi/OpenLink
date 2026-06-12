@@ -30,8 +30,6 @@ use std::sync::Arc;
 
 /// 注册直传扩展到 Extension Registry
 pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
-    use std::sync::Arc;
-
     // 注册 direct_transfer action
     let action = DirectTransferAction::new();
     registry.register_action(Arc::new(action))?;
@@ -155,6 +153,7 @@ impl DirectTransferAction {
     }
 
     /// 构建直传响应
+    #[allow(dead_code)]
     fn build_response(params: &DirectTransferParams, peer: Option<&LanPeer>, cloud_fallback: bool) -> TransferResponse {
         match peer {
             Some(p) => TransferResponse {

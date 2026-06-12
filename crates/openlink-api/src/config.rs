@@ -124,56 +124,22 @@ fn default_token_scopes() -> Vec<String> {
     vec!["read".to_string()]
 }
 
-/// 知识源配置
-#[derive(Debug, Deserialize, Clone)]
-pub struct KnowledgeSource {
-    /// 源标识名（用于URL路径，如 "private"/"public"）
-    pub name: String,
-    /// 显示名称
-    #[serde(default)]
-    pub display_name: String,
-    /// 知识仓库本地路径
-    pub repo_path: String,
-    /// 该源的邀请码列表
-    #[serde(default)]
-    pub invite_codes: Vec<String>,
-    /// 同步端点认证token（为空则不验证）
-    #[serde(default)]
-    pub sync_token: String,
-}
-
-impl KnowledgeSource {
-    /// 显示名称，未设置时用 name
-    pub fn label(&self) -> &str {
-        if self.display_name.is_empty() {
-            &self.name
-        } else {
-            &self.display_name
-        }
-    }
-}
-
 /// 知识体系配置（Phase 3）
 #[derive(Debug, Deserialize, Clone)]
 pub struct KnowledgeConfig {
     /// 是否启用知识体系
     #[serde(default = "default_knowledge_enabled")]
     pub enabled: bool,
+    /// 知识体系仓库本地路径
+    #[serde(default)]
+    pub repo_path: String,
+    /// MVP: 写死的邀请码列表
+    #[serde(default)]
+    pub invite_codes: Vec<String>,
     /// API base URL，用于生成资源 URL
     #[serde(default = "default_knowledge_base_url")]
     pub base_url: String,
-    /// 多知识源列表
-    #[serde(default)]
-    pub sources: Vec<KnowledgeSource>,
-
-    // ── 兼容旧配置（单源）──
-    /// 旧字段：知识体系仓库本地路径（兼容，会自动转为 sources[0]）
-    #[serde(default)]
-    pub repo_path: String,
-    /// 旧字段：邀请码列表（兼容，会自动转为 sources[0]）
-    #[serde(default)]
-    pub invite_codes: Vec<String>,
-    /// 旧字段：同步token（兼容，会自动转为 sources[0]）
+    /// 同步端点认证token（push.sh推送后通知ECS拉最新代码）
     #[serde(default)]
     pub sync_token: String,
 }
@@ -186,49 +152,13 @@ fn default_knowledge_base_url() -> String {
     "http://localhost:3000".to_string()
 }
 
-impl KnowledgeConfig {
-    /// 获取解析后的知识源列表（自动兼容旧配置）
-    pub fn resolved_sources(&self) -> Vec<KnowledgeSource> {
-        if !self.sources.is_empty() {
-            return self.sources.clone();
-        }
-        // 兼容：旧配置只有 repo_path/invite_codes/sync_token，包装为 "private" 源
-        if !self.repo_path.is_empty() {
-            return vec![KnowledgeSource {
-                name: "private".to_string(),
-                display_name: "OpenClaw知识体系".to_string(),
-                repo_path: self.repo_path.clone(),
-                invite_codes: self.invite_codes.clone(),
-                sync_token: self.sync_token.clone(),
-            }];
-        }
-        vec![]
-    }
-
-    /// 根据 invite_code 查找对应的知识源
-    pub fn find_source_by_code(&self, code: &str) -> Option<KnowledgeSource> {
-        for source in self.resolved_sources() {
-            if source.invite_codes.contains(&code.to_string()) {
-                return Some(source);
-            }
-        }
-        None
-    }
-
-    /// 根据 name 查找知识源
-    pub fn find_source_by_name(&self, name: &str) -> Option<KnowledgeSource> {
-        self.resolved_sources().into_iter().find(|s| s.name == name)
-    }
-}
-
 impl Default for KnowledgeConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            base_url: default_knowledge_base_url(),
-            sources: vec![],
             repo_path: String::new(),
             invite_codes: vec![],
+            base_url: default_knowledge_base_url(),
             sync_token: String::new(),
         }
     }
@@ -379,89 +309,39 @@ mod tests {
     fn test_knowledge_config_defaults() {
         let config = KnowledgeConfig::default();
         assert!(!config.enabled);
-        assert!(config.sources.is_empty());
         assert!(config.repo_path.is_empty());
         assert!(config.invite_codes.is_empty());
         assert_eq!(config.base_url, "http://localhost:3000");
+        assert!(config.sync_token.is_empty());
     }
 
     #[test]
-    fn test_knowledge_config_compat_mode() {
-        // 旧配置自动转为单源
+    fn test_knowledge_config_custom() {
         let config = KnowledgeConfig {
+            enabled: true,
+            repo_path: "/opt/knowledge".to_string(),
+            invite_codes: vec!["test-code-1".to_string(), "test-code-2".to_string()],
+            base_url: "https://api.example.com".to_string(),
+            sync_token: "my-sync-token".to_string(),
+        };
+        assert!(config.enabled);
+        assert_eq!(config.repo_path, "/opt/knowledge");
+        assert_eq!(config.invite_codes.len(), 2);
+        assert_eq!(config.base_url, "https://api.example.com");
+        assert_eq!(config.sync_token, "my-sync-token");
+    }
+
+    #[test]
+    fn test_app_config_with_knowledge() {
+        let mut config = AppConfig::default();
+        config.knowledge = KnowledgeConfig {
             enabled: true,
             repo_path: "/opt/knowledge".to_string(),
             invite_codes: vec!["test-code".to_string()],
             base_url: "https://api.example.com".to_string(),
-            sync_token: "my-sync-token".to_string(),
-            sources: vec![],
-        };
-        let sources = config.resolved_sources();
-        assert_eq!(sources.len(), 1);
-        assert_eq!(sources[0].name, "private");
-        assert_eq!(sources[0].repo_path, "/opt/knowledge");
-        assert_eq!(sources[0].invite_codes.len(), 1);
-    }
-
-    #[test]
-    fn test_knowledge_config_multi_source() {
-        let config = KnowledgeConfig {
-            enabled: true,
-            base_url: "https://link.opendev.dev".to_string(),
-            sources: vec![
-                KnowledgeSource {
-                    name: "private".to_string(),
-                    display_name: "OpenClaw私有".to_string(),
-                    repo_path: "/opt/ks-private".to_string(),
-                    invite_codes: vec!["private-code".to_string()],
-                    sync_token: "sync-priv".to_string(),
-                },
-                KnowledgeSource {
-                    name: "public".to_string(),
-                    display_name: "OpenClaw公开".to_string(),
-                    repo_path: "/opt/ks-public".to_string(),
-                    invite_codes: vec!["public-code".to_string()],
-                    sync_token: String::new(),
-                },
-            ],
-            repo_path: String::new(),
-            invite_codes: vec![],
             sync_token: String::new(),
         };
-        let sources = config.resolved_sources();
-        assert_eq!(sources.len(), 2);
-        assert_eq!(sources[0].name, "private");
-        assert_eq!(sources[1].name, "public");
-    }
-
-    #[test]
-    fn test_find_source_by_code() {
-        let config = KnowledgeConfig {
-            enabled: true,
-            base_url: "http://localhost:3000".to_string(),
-            sources: vec![
-                KnowledgeSource {
-                    name: "private".to_string(),
-                    display_name: String::new(),
-                    repo_path: "/priv".to_string(),
-                    invite_codes: vec!["code-priv".to_string()],
-                    sync_token: String::new(),
-                },
-                KnowledgeSource {
-                    name: "public".to_string(),
-                    display_name: String::new(),
-                    repo_path: "/pub".to_string(),
-                    invite_codes: vec!["code-pub".to_string()],
-                    sync_token: String::new(),
-                },
-            ],
-            repo_path: String::new(),
-            invite_codes: vec![],
-            sync_token: String::new(),
-        };
-        let found = config.find_source_by_code("code-pub").unwrap();
-        assert_eq!(found.name, "public");
-        assert_eq!(found.repo_path, "/pub");
-        assert!(config.find_source_by_code("nope").is_none());
+        assert!(config.knowledge.enabled);
+        assert_eq!(config.knowledge.invite_codes.len(), 1);
     }
 }

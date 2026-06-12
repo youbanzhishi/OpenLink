@@ -10,10 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::net::UdpSocket;
 
 /// 传输模式
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferMode {
     /// 自动选择最优路径
+    #[default]
     Auto,
     /// 强制直连（仅限 LAN）
     Direct,
@@ -34,12 +35,6 @@ impl TransferMode {
             TransferMode::Relay => "relay",
             TransferMode::Cloud => "cloud",
         }
-    }
-}
-
-impl Default for TransferMode {
-    fn default() -> Self {
-        TransferMode::Auto
     }
 }
 

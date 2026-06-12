@@ -37,6 +37,7 @@ impl LinkClient {
     }
 
     /// 创建新的 LinkClient（使用默认配置）
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Config::default())
     }
@@ -342,6 +343,7 @@ impl FileClient {
     }
 
     /// 创建新的 FileClient（使用默认配置）
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Config::default())
     }
