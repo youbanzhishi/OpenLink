@@ -158,7 +158,11 @@ impl ActionHandler for OrchestrateAction {
 
 impl OrchestrateAction {
     /// 从模板执行
-    async fn execute_template(&self, template_id: &str, _params: &serde_json::Value) -> Result<ActionResult, CoreError> {
+    async fn execute_template(
+        &self,
+        template_id: &str,
+        _params: &serde_json::Value,
+    ) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
         let template = templates
             .get(template_id)
