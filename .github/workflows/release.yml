@@ -17,10 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             artifact_name: openlink-api
             asset_name: openlink-linux-amd64
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            artifact_name: openlink-api
+            asset_name: openlink-linux-amd64-musl
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: openlink-api
@@ -41,6 +45,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
+      - name: Install musl-tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release -p openlink-api --target ${{ matrix.target }}
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
