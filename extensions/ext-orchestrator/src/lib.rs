@@ -28,6 +28,7 @@
 //! ```
 
 use async_trait::async_trait;
+#[allow(unused_imports)]
 use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use openlink_orchestrator::{
     AggregationStrategy, Dag, DagExecutor, DagNode, EdgeCondition, ExecutionResult, ExecutionStatus, ParallelConfig,
@@ -72,13 +73,13 @@ impl OrchestrateAction {
     }
 
     /// 解析 DAG 参数
-    fn parse_dag(params: &serde_json::Value) -> Result<Dag, CoreError> {
+    fn parse_dag(_params: &serde_json::Value) -> Result<Dag, CoreError> {
         serde_json::from_value(params.clone())
             .map_err(|e| CoreError::ExtensionError(format!("Invalid DAG definition: {}", e)))
     }
 
     /// 解析聚合策略
-    fn parse_aggregation_strategy(params: &serde_json::Value) -> AggregationStrategy {
+    fn parse_aggregation_strategy(_params: &serde_json::Value) -> AggregationStrategy {
         match params.get("aggregation").and_then(|v| v.as_str()).unwrap_or("merge") {
             "last" => AggregationStrategy::Last,
             "collect" => AggregationStrategy::Collect,
@@ -157,7 +158,7 @@ impl ActionHandler for OrchestrateAction {
 
 impl OrchestrateAction {
     /// 从模板执行
-    async fn execute_template(&self, template_id: &str, params: &serde_json::Value) -> Result<ActionResult, CoreError> {
+    async fn execute_template(&self, template_id: &str, _params: &serde_json::Value) -> Result<ActionResult, CoreError> {
         let templates = self.templates.read().await;
         let template = templates
             .get(template_id)
@@ -235,6 +236,7 @@ impl ActionHandler for ListTemplatesAction {
 /// DAG 验证 Action（Phase 6 新增）
 pub struct ValidateDagAction;
 
+#[allow(clippy::new_without_default)]
 impl ValidateDagAction {
     pub fn new() -> Self {
         Self
