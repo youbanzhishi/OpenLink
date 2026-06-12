@@ -700,7 +700,7 @@ fn build_social_section(code: &str, card: &serde_json::Value) -> String {
     let mut links_html = String::new();
     for (platform, handle) in social_obj {
         if let Some(_handle_str) = handle.as_str() {
-            let icon = get_social_icon(&platform);
+            let icon = get_social_icon(platform);
             let href = format!("/card/{}/{}", code, platform);
             links_html.push_str(&format!(
                 r#"<a href="{}" class="social-link" target="_blank" rel="noopener noreferrer">{}{}</a>"#,

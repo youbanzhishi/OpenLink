@@ -403,8 +403,7 @@ pub async fn get_project_index(
             .join("INDEX.md"),
     ];
 
-    #[allow(unused_assignments)]
-    let mut last_error = String::new();
+    let mut _last_error = String::new();
     for index_path in index_paths {
         match read_knowledge_file(&index_path) {
             Ok(content) => {
@@ -415,7 +414,7 @@ pub async fn get_project_index(
                 ));
             }
             Err((_, e)) => {
-                last_error = e;
+                _last_error = e;
             }
         }
     }

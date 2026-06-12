@@ -102,8 +102,7 @@ pub async fn batch_resolve(
 
                 let target = route
                     .as_ref()
-                    .map(|r| serde_json::to_value(&r.default_target).ok())
-                    .flatten();
+                    .and_then(|r| serde_json::to_value(&r.default_target).ok());
 
                 let action = route.as_ref().map(|r| r.default_target.action.as_str().to_string());
 
