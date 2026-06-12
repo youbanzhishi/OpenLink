@@ -10,7 +10,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::process::Command;
 
 use crate::state::AppState;
 use openlink_core::Context;
@@ -942,4 +943,132 @@ fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> 
     }
 
     Ok(markdown)
+}
+
+// ─── Knowledge Sync ────────────────────────────────────────
+// 推送后自动同步知识仓库：push.sh → curl通知ECS → git pull
+
+/// POST /api/v1/knowledge/sync
+/// 推送后通知ECS拉最新知识仓库代码
+/// 认证：Bearer token，与配置中 sync_token 匹配
+pub async fn sync_knowledge(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Response {
+    let config = &state.config.knowledge;
+
+    if !config.enabled {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({
+                "error": "knowledge module not enabled"
+            })),
+        )
+            .into_response();
+    }
+
+    // 认证：sync_token为空则不验证
+    if !config.sync_token.is_empty() {
+        let auth_ok = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .map(|v| v.strip_prefix("Bearer ").unwrap_or(v) == config.sync_token)
+            .unwrap_or(false);
+
+        if !auth_ok {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "invalid or missing sync token"
+                })),
+            )
+                .into_response();
+        }
+    }
+
+    if config.repo_path.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "repo_path not configured"
+            })),
+        )
+            .into_response();
+    }
+
+    // 执行 git pull --ff-only origin master
+    let output = Command::new("git")
+        .args([
+            "-C",
+            &config.repo_path,
+            "pull",
+            "--ff-only",
+            "origin",
+            "master",
+        ])
+        .output()
+        .await;
+
+    match output {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+            let already_up_to_date = stdout.contains("Already up to date")
+                || stderr.contains("Already up to date");
+
+            // 获取当前commit hash
+            let commit_output = Command::new("git")
+                .args(["-C", &config.repo_path, "rev-parse", "--short", "HEAD"])
+                .output()
+                .await;
+
+            let commit = commit_output
+                .ok()
+                .and_then(|o| {
+                    if o.status.success() {
+                        String::from_utf8_lossy(&o.stdout).trim().to_string().into()
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| "unknown".to_string());
+
+            if out.status.success() {
+                let message = if already_up_to_date {
+                    "already up to date".to_string()
+                } else {
+                    stdout.trim().to_string()
+                };
+
+                (
+                    StatusCode::OK,
+                    Json(serde_json::json!({
+                        "synced": true,
+                        "commit": commit,
+                        "already_up_to_date": already_up_to_date,
+                        "message": message,
+                    })),
+                )
+                    .into_response()
+            } else {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({
+                        "synced": false,
+                        "commit": commit,
+                        "error": stderr.trim(),
+                    })),
+                )
+                    .into_response()
+            }
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "synced": false,
+                "error": format!("failed to execute git: {}", e),
+            })),
+        )
+            .into_response(),
+    }
 }

@@ -148,6 +148,9 @@ pub struct KnowledgeConfig {
     /// API base URL，用于生成资源 URL
     #[serde(default = "default_knowledge_base_url")]
     pub base_url: String,
+    /// 同步端点认证token（push.sh推送后通知ECS拉最新代码）
+    #[serde(default)]
+    pub sync_token: String,
 }
 
 fn default_knowledge_enabled() -> bool {
@@ -165,6 +168,7 @@ impl Default for KnowledgeConfig {
             repo_path: String::new(),
             invite_codes: vec![],
             base_url: default_knowledge_base_url(),
+            sync_token: String::new(),
         }
     }
 }
@@ -317,6 +321,7 @@ mod tests {
         assert!(config.repo_path.is_empty());
         assert!(config.invite_codes.is_empty());
         assert_eq!(config.base_url, "http://localhost:3000");
+        assert!(config.sync_token.is_empty());
     }
 
     #[test]
@@ -326,11 +331,13 @@ mod tests {
             repo_path: "/opt/knowledge".to_string(),
             invite_codes: vec!["test-code-1".to_string(), "test-code-2".to_string()],
             base_url: "https://api.example.com".to_string(),
+            sync_token: "my-sync-token".to_string(),
         };
         assert!(config.enabled);
         assert_eq!(config.repo_path, "/opt/knowledge");
         assert_eq!(config.invite_codes.len(), 2);
         assert_eq!(config.base_url, "https://api.example.com");
+        assert_eq!(config.sync_token, "my-sync-token");
     }
 
     #[test]
@@ -341,6 +348,7 @@ mod tests {
             repo_path: "/opt/knowledge".to_string(),
             invite_codes: vec!["test-code".to_string()],
             base_url: "https://api.example.com".to_string(),
+            sync_token: String::new(),
         };
         assert!(config.knowledge.enabled);
         assert_eq!(config.knowledge.invite_codes.len(), 1);

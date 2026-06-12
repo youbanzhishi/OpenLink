@@ -259,6 +259,7 @@ pub struct JwtAuth {
 #[derive(Default)]
 pub enum JwtAlgorithm {
     /// HMAC SHA-256
+    #[default]
     HS256,
     /// HMAC SHA-384
     HS384,
@@ -680,7 +681,7 @@ fn hmac_simple_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
 
     // Inner: (K' ⊕ ipad) || m
     let mut inner_data = Vec::with_capacity(BLOCK_SIZE + message.len());
-    for (i, &k) in key_padded.iter().enumerate() {
+    for (_i, &k) in key_padded.iter().enumerate() {
         inner_data.push(k ^ 0x36);
     }
     inner_data.extend_from_slice(message);
@@ -688,7 +689,7 @@ fn hmac_simple_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
 
     // Outer: (K' ⊕ opad) || inner_hash
     let mut outer_data = Vec::with_capacity(BLOCK_SIZE + 32);
-    for (i, &k) in key_padded.iter().enumerate() {
+    for (_i, &k) in key_padded.iter().enumerate() {
         outer_data.push(k ^ 0x5C);
     }
     outer_data.extend_from_slice(&inner_hash);

@@ -1,0 +1,20 @@
+# OpenLink 生产环境配置 — ECS部署模板
+# 部署时复制为 /opt/openlink/config/production.toml 并替换 CHANGE_ME
+
+[server]
+host = "0.0.0.0"
+port = 3000
+
+[database]
+url = "sqlite:///opt/openlink/data/openlink.db"
+
+[knowledge]
+enabled = true
+# 知识体系仓库本地路径（ECS上clone的位置）
+repo_path = "/opt/openlink/knowledge/open-knowledge-system"
+# 部署时改为实际域名
+base_url = "https://link.opendev.dev"
+# MVP 邀请码
+invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
+# 同步端点认证token — 部署时必须替换！
+sync_token = "CHANGE_ME_REPLACE_WITH_STRONG_TOKEN"

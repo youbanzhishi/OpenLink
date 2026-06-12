@@ -43,3 +43,6 @@ base_url = "http://localhost:3000"
 
 # MVP 邀请码列表（实际使用时替换为真实邀请码）
 invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
+
+# 同步端点认证token（push.sh推送后通知ECS拉最新代码）
+sync_token = "ol-sync-dev-2026"

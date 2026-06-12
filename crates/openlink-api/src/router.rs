@@ -186,5 +186,10 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             "/api/v1/knowledge/markdown",
             get(handlers::knowledge::get_knowledge_markdown),
         )
+        // Knowledge Sync — 推送后自动同步知识仓库
+        .route(
+            "/api/v1/knowledge/sync",
+            post(handlers::knowledge::sync_knowledge),
+        )
         .with_state(state)
 }
