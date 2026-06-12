@@ -124,7 +124,7 @@ impl EdgeRedirectEngine {
 
         // 对每个 code 的规则按优先级排序（降序）
         for rules in rules_by_code.values_mut() {
-            rules.sort_by(|a, b| b.priority.cmp(&a.priority));
+            rules.sort_by_key(|r| std::cmp::Reverse(r.priority));
         }
 
         Self {
@@ -231,7 +231,7 @@ impl EdgeRedirectEngine {
     pub fn add_rule(&mut self, rule: EdgeRedirectRule) {
         let rules = self.rules_by_code.entry(rule.code.clone()).or_default();
         rules.push(rule);
-        rules.sort_by(|a, b| b.priority.cmp(&a.priority));
+        rules.sort_by_key(|r| std::cmp::Reverse(r.priority));
     }
 
     /// 移除规则
