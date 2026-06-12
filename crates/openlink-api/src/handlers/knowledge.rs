@@ -21,25 +21,20 @@ use std::sync::Arc;
 use tokio::process::Command;
 
 use crate::state::AppState;
-use openlink_core::Context;
 
 // ─── Knowledge Join ────────────────────────────────────────
 
 /// Agent 类型
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentType {
     Llm,
     Robot,
     Service,
+    #[default]
     Custom,
 }
 
-impl Default for AgentType {
-    fn default() -> Self {
-        AgentType::Custom
-    }
-}
 
 /// 加入知识体系请求
 #[derive(Debug, Deserialize)]
@@ -399,7 +394,7 @@ pub async fn get_project_index(
             .join("INDEX.md"),
     ];
 
-    let mut last_error = String::new();
+    let mut _last_error = String::new();
     for index_path in index_paths {
         match read_knowledge_file(&index_path) {
             Ok(content) => {
@@ -458,6 +453,7 @@ fn read_knowledge_file(path: &PathBuf) -> Result<String, (StatusCode, String)> {
 }
 
 /// URL 解码辅助函数（支持 UTF-8 多字节）
+#[allow(dead_code)]
 fn urlencoding_decode(s: &str) -> String {
     let mut bytes = Vec::new();
     let mut chars = s.chars().peekable();
@@ -890,6 +886,7 @@ fn extract_description_from_index(path: &PathBuf) -> Result<String, ()> {
 }
 
 /// 构建完整知识 Markdown（提取为独立函数供短链入口复用）
+#[allow(dead_code)]
 fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> {
     let mut markdown = String::new();
 

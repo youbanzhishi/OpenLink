@@ -37,11 +37,7 @@ pub async fn require_auth(headers: HeaderMap, state: Arc<AppState>) -> Result<()
 /// 从 Authorization header 提取 Bearer Token
 fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
     let auth_header = headers.get("authorization")?.to_str().ok()?;
-    if auth_header.starts_with("Bearer ") {
-        Some(auth_header[7..].trim().to_string())
-    } else {
-        None
-    }
+    auth_header.strip_prefix("Bearer ").map(|s| s.trim().to_string())
 }
 
 /// Axum middleware 层：API Token 认证

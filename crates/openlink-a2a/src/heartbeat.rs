@@ -5,7 +5,6 @@
 use crate::registry::AgentRegistry;
 use crate::types::*;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::RwLock;
 
 /// 心跳配置

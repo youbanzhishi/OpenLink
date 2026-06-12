@@ -10,7 +10,7 @@ use openlink_core::ApiToken;
 use serde::Deserialize;
 
 /// 应用配置根结构
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct AppConfig {
     pub server: ServerConfig,
     pub store: StoreConfig,
@@ -23,7 +23,7 @@ pub struct AppConfig {
 }
 
 /// 服务器配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct ServerConfig {
     #[serde(default = "default_host")]
     pub host: String,
@@ -40,7 +40,7 @@ fn default_port() -> u16 {
 }
 
 /// 存储配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct StoreConfig {
     #[serde(default = "default_backend")]
     pub backend: String,
@@ -68,7 +68,7 @@ impl StoreConfig {
 }
 
 /// 短码配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct ShortCodeConfig {
     #[serde(default = "default_code_length")]
     pub length: usize,
@@ -94,7 +94,7 @@ fn default_charset() -> String {
 }
 
 /// 认证配置（Phase 2）
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct AuthConfig {
     /// 是否启用认证
     #[serde(default = "default_auth_enabled")]
@@ -104,21 +104,13 @@ pub struct AuthConfig {
     pub tokens: Vec<TokenConfig>,
 }
 
-impl Default for AuthConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            tokens: vec![],
-        }
-    }
-}
 
 fn default_auth_enabled() -> bool {
     false
 }
 
 /// Token 配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct TokenConfig {
     /// Token 值
     pub token: String,
@@ -134,7 +126,7 @@ fn default_token_scopes() -> Vec<String> {
 }
 
 /// 知识体系配置（Phase 3）
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct KnowledgeConfig {
     /// 是否启用知识体系
     #[serde(default = "default_knowledge_enabled")]

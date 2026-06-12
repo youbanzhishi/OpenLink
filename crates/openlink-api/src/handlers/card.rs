@@ -673,7 +673,7 @@ fn render_card_html(code: &str, card: &serde_json::Value) -> String {
     let tags_section = build_tags_section(card);
 
     // 替换模板占位符
-    let html = template
+    template
         .replace("{{display_name}}", display_name)
         .replace("{{bio}}", bio)
         .replace("{{avatar}}", avatar)
@@ -682,9 +682,7 @@ fn render_card_html(code: &str, card: &serde_json::Value) -> String {
         .replace("{{avatar_fallback}}", &avatar_fallback)
         .replace("{{social_section}}", &social_section)
         .replace("{{projects_section}}", &projects_section)
-        .replace("{{tags_section}}", &tags_section);
-
-    html
+        .replace("{{tags_section}}", &tags_section)
 }
 
 /// 构建社交链接 HTML 区

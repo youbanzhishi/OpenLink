@@ -21,12 +21,9 @@ pub use heartbeat::{HeartbeatClient, NodeStatus};
 
 // ─── Re-exports ──────────────────────────────────────────────
 
-use openlink_core::ExtensionRegistry;
-use std::sync::Arc;
 
 /// 注册 Node 扩展到 Extension Registry
 pub fn register(registry: &mut openlink_core::ExtensionRegistry) -> Result<(), openlink_core::CoreError> {
-    use openlink_core::CoreError;
     use std::sync::Arc;
 
     // 注册 direct_transfer action（节点间的 P2P 文件传输）
@@ -55,6 +52,7 @@ use serde::{Deserialize, Serialize};
 /// 传输路由：直传 > 云中转
 pub struct DirectTransferAction;
 
+#[allow(clippy::new_without_default)]
 impl DirectTransferAction {
     pub fn new() -> Self {
         Self
@@ -111,7 +109,7 @@ pub struct TransferRoute {
 
 #[async_trait]
 impl ActionHandler for DirectTransferAction {
-    async fn execute(&self, ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
+    async fn execute(&self, _ctx: &Context, target: &Target) -> Result<ActionResult, CoreError> {
         let params: DirectTransferParams = serde_json::from_value(target.params.clone())
             .map_err(|e| CoreError::ExtensionError(format!("Invalid direct transfer params: {}", e)))?;
 
@@ -180,7 +178,7 @@ async fn select_transfer_route(params: &DirectTransferParams, peers: &[TransferP
                 mode: "lan".to_string(),
                 peer: best.cloned(),
                 cloud_fallback: false,
-                estimated_speed_mbps: best.map(|p| 100.0),
+                estimated_speed_mbps: best.map(|_| 100.0),
             }
         }
         "force_cloud" => TransferRoute {
@@ -209,7 +207,7 @@ pub struct LanConditionHandler;
 impl openlink_core::ConditionHandler for LanConditionHandler {
     async fn evaluate(&self, ctx: &Context, params: &serde_json::Value) -> Result<bool, CoreError> {
         // 检查请求是否来自已知的 LAN 节点
-        let require_encrypted = params
+        let _require_encrypted = params
             .get("require_encrypted")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);

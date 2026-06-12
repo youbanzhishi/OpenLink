@@ -323,7 +323,7 @@ impl ProtocolNegotiator {
         let mut best: Option<(ProtocolType, f64, String)> = None;
 
         for (proto, weight) in &self.priority {
-            if common.iter().any(|p| *p == proto) {
+            if common.contains(proto) {
                 let version = local
                     .versions
                     .get(proto)
@@ -331,7 +331,7 @@ impl ProtocolNegotiator {
                     .cloned()
                     .unwrap_or_else(|| "1.0".to_string());
 
-                if best.as_ref().map_or(true, |b| weight > &b.1) {
+                if best.as_ref().is_none_or(|b| weight > &b.1) {
                     best = Some((proto.clone(), *weight, version));
                 }
             }

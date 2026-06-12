@@ -162,10 +162,8 @@ impl MarketplaceRegistry {
                 }
 
                 // 按标签过滤
-                if !query.tags.is_empty() {
-                    if !query.tags.iter().any(|tag| p.tags.iter().any(|t| t == tag)) {
-                        return false;
-                    }
+                if !query.tags.is_empty() && !query.tags.iter().any(|tag| p.tags.iter().any(|t| t == tag)) {
+                    return false;
                 }
 
                 // 按最低评分过滤
@@ -272,7 +270,7 @@ impl MarketplaceRegistry {
 
     /// 更新评分
     pub async fn update_rating(&self, agent_id: &str, new_rating: f64) -> Result<(), MarketplaceError> {
-        if new_rating < 0.0 || new_rating > 5.0 {
+        if !(0.0..=5.0).contains(&new_rating) {
             return Err(MarketplaceError::InvalidRating(new_rating));
         }
 

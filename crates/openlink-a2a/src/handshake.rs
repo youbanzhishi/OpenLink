@@ -27,6 +27,7 @@ pub struct HandshakeEngine {
 
 /// 会话信息
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct SessionInfo {
     /// 会话 Token
     token: String,
@@ -93,7 +94,7 @@ impl HandshakeEngine {
         let provided: Vec<String> = request
             .requested_capabilities
             .iter()
-            .filter(|cap| available_ids.iter().any(|id| *id == cap.as_str()))
+            .filter(|cap| available_ids.contains(&cap.as_str()))
             .cloned()
             .collect();
 
