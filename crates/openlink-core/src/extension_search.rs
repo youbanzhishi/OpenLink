@@ -8,7 +8,7 @@
 use crate::error::CoreError;
 use crate::primitives::{Context, HookPhase, Target};
 use crate::registry::{ActionHandler, ConditionHandler, ExtensionRegistry, HookHandler};
-use async_trait::async_trait;
+// use async_trait::async_trait; // unused
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

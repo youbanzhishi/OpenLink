@@ -243,6 +243,7 @@ pub struct JwtAuth {
     /// HMAC 签名密钥
     secret: String,
     /// 签名算法
+    #[allow(dead_code)]
     algorithm: JwtAlgorithm,
     /// 是否启用
     enabled: bool,
@@ -255,6 +256,7 @@ pub struct JwtAuth {
 /// JWT 签名算法
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
+#[derive(Default)]
 pub enum JwtAlgorithm {
     /// HMAC SHA-256
     HS256,
@@ -264,11 +266,6 @@ pub enum JwtAlgorithm {
     HS512,
 }
 
-impl Default for JwtAlgorithm {
-    fn default() -> Self {
-        JwtAlgorithm::HS256
-    }
-}
 
 /// JWT 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -346,7 +343,6 @@ impl JwtAuth {
 
     /// 计算签名
     fn compute_signature(&self, input: &str) -> Vec<u8> {
-        use std::fmt::Write;
         // Simple HMAC computation using sha2 crate or fallback
         // For now, use a basic HMAC-SHA256 implementation
         let key_bytes = self.secret.as_bytes();
@@ -502,13 +498,13 @@ impl AuthMiddleware {
         if let Some(auth) = auth_header {
             let auth = auth.trim();
             if auth.starts_with("Bearer ") {
-                return Some(Credentials::BearerToken(auth[7..].to_string()));
+                return auth.strip_prefix("Bearer ").map(|t| Credentials::BearerToken(t.to_string()));
             }
             if auth.starts_with("bearer ") {
-                return Some(Credentials::BearerToken(auth[7..].to_string()));
+                return auth.strip_prefix("Bearer ").map(|t| Credentials::BearerToken(t.to_string()));
             }
             if auth.starts_with("Basic ") {
-                let decoded = base64url_decode(auth[6..].trim());
+                let decoded = auth.strip_prefix("Basic ").map(|s| base64url_decode(s.trim())).unwrap_or_else(|| base64url_decode(auth[6..].trim()));
                 if let Some(bytes) = decoded {
                     if let Ok(s) = String::from_utf8(bytes) {
                         let parts: Vec<&str> = s.splitn(2, ':').collect();

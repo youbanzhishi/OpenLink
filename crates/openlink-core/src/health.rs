@@ -167,7 +167,7 @@ impl HealthChecker {
 
         for check in &self.checks {
             let name = check.name().to_string();
-            let start = Instant::now();
+            let _start = Instant::now();
 
             let result = tokio::time::timeout(self.timeout, check.check())
                 .await
@@ -414,7 +414,7 @@ impl DatabaseHealthCheck {
 #[async_trait]
 impl HealthCheck for DatabaseHealthCheck {
     async fn check(&self) -> ComponentHealth {
-        let start = Instant::now();
+        let _start = Instant::now();
         let result = (self.check_fn)();
         let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -460,7 +460,7 @@ impl CacheHealthCheck {
 #[async_trait]
 impl HealthCheck for CacheHealthCheck {
     async fn check(&self) -> ComponentHealth {
-        let start = Instant::now();
+        let _start = Instant::now();
         let result = (self.check_fn)();
         let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -501,7 +501,7 @@ impl UpstreamHealthCheck {
 #[async_trait]
 impl HealthCheck for UpstreamHealthCheck {
     async fn check(&self) -> ComponentHealth {
-        let start = Instant::now();
+        let _start = Instant::now();
 
         // Simple TCP/connection check
         let result = check_upstream_connectivity(&self.url).await;

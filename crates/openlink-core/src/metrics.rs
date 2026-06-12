@@ -318,8 +318,6 @@ impl PrometheusExporter {
                         output.push(format!("openlink_{}{{quantile=\"{}\"}} {}", base, quantile, value));
                     }
                 }
-            } else if line.contains("uptime_seconds") {
-                output.push(format!("openlink_{}", line));
             } else {
                 output.push(format!("openlink_{}", line));
             }

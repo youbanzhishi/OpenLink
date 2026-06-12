@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::time::{Duration, Instant};
+// use std::time::{Duration, Instant}; // unused
 
 /// 节点 ID
 pub type NodeId = String;

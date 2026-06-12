@@ -3,7 +3,7 @@
 //! 基于节点拓扑的最短路径路由、多路径冗余、降级策略。
 //! 路由表维护和自动更新。
 
-use crate::gossip::{GossipConfig, GossipMembership, GossipMessage, LinkStateEntry, NodeId, NodeInfo, NodeStatus};
+use crate::gossip::{GossipConfig, GossipMembership, GossipMessage, NodeId};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -178,10 +178,7 @@ impl PartialEq for DijkstraNode {
 
 impl Eq for DijkstraNode {}
 
-impl PartialOrd for DijkstraNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.distance.partial_cmp(&self.distance)
-    }
+
 }
 
 impl Ord for DijkstraNode {
