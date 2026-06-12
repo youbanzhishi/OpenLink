@@ -61,6 +61,7 @@ impl MemoryCache {
     }
 
     /// 获取所有键列表（用于前缀匹配）
+    #[allow(dead_code)]
     async fn keys(&self) -> Vec<String> {
         let cache = self.cache.lock().await;
         cache.iter().map(|(k, _)| k.clone()).collect()
@@ -398,3 +399,4 @@ mod tests {
         assert_eq!(layered.cache_type(), "layered");
     }
 }
+
