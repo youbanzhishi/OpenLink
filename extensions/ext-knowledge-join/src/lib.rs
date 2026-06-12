@@ -11,12 +11,9 @@
 //! - 全能Agent（User-Agent含bot/agent/curl）→ JSON 知识包
 //! - 浏览器 → HTML 介绍页（通过 redirect 跳转）
 
-use std::sync::Arc;
 use async_trait::async_trait;
-use openlink_core::{
-    ActionHandler, ExtensionRegistry, Context, Target, ActionResult, CoreError,
-    Action,
-};
+use openlink_core::{Action, ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use std::sync::Arc;
 
 /// 知识接入 Action Handler
 ///
@@ -35,11 +32,7 @@ impl ActionHandler for KnowledgeJoinHandler {
             .unwrap_or("default")
             .to_string();
 
-        let repo_url = target
-            .params
-            .get("repo_url")
-            .and_then(|v| v.as_str())
-            .map(String::from);
+        let repo_url = target.params.get("repo_url").and_then(|v| v.as_str()).map(String::from);
 
         let base_url = target
             .params
@@ -109,9 +102,9 @@ impl ActionHandler for KnowledgeServeHandler {
             .params
             .get("repo_path")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| CoreError::InvalidInput(
-                "Knowledge serve action requires 'repo_path' parameter".to_string()
-            ))?
+            .ok_or_else(|| {
+                CoreError::InvalidInput("Knowledge serve action requires 'repo_path' parameter".to_string())
+            })?
             .to_string();
 
         let base_url = target
@@ -168,9 +161,7 @@ fn build_knowledge_markdown(repo_path: &str, base_url: &str) -> Result<String, C
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let role_name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
+                let role_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
                 let rules_path = path.join("RULES.md");
                 if let Ok(content) = std::fs::read_to_string(&rules_path) {
@@ -202,9 +193,7 @@ fn build_knowledge_markdown(repo_path: &str, base_url: &str) -> Result<String, C
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
-                    let project_name = path.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("");
+                    let project_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
                     let index_path = path.join("INDEX.md");
                     if let Ok(content) = std::fs::read_to_string(&index_path) {
@@ -228,8 +217,14 @@ fn build_knowledge_markdown(repo_path: &str, base_url: &str) -> Result<String, C
     markdown.push_str("访问以下端点获取完整内容：\n\n");
     markdown.push_str(&format!("- 入口文档: {}/api/v1/knowledge/entry\n", base_url));
     markdown.push_str(&format!("- 角色RULES: {}/api/v1/knowledge/role/{{角色名}}\n", base_url));
-    markdown.push_str(&format!("- 项目INDEX: {}/api/v1/knowledge/project/{{项目名}}\n", base_url));
-    markdown.push_str(&format!("- 脚本内容: {}/api/v1/knowledge/script/{{脚本名}}\n", base_url));
+    markdown.push_str(&format!(
+        "- 项目INDEX: {}/api/v1/knowledge/project/{{项目名}}\n",
+        base_url
+    ));
+    markdown.push_str(&format!(
+        "- 脚本内容: {}/api/v1/knowledge/script/{{脚本名}}\n",
+        base_url
+    ));
 
     Ok(markdown)
 }
@@ -321,7 +316,7 @@ mod tests {
     async fn test_action_names() {
         let join_handler = KnowledgeJoinHandler;
         let serve_handler = KnowledgeServeHandler;
-        
+
         assert_eq!(join_handler.name(), "knowledge_join");
         assert_eq!(serve_handler.name(), "knowledge_serve");
     }

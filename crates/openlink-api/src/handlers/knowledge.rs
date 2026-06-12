@@ -9,15 +9,15 @@
 //! - GET /api/v1/knowledge/hot-rules/{role} — 角色热规则
 
 use axum::{
-    extract::{State, Path, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::path::PathBuf;
 use std::fmt::Write;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::state::AppState;
 use openlink_core::Context;
@@ -110,39 +110,42 @@ pub async fn join_knowledge(
 ) -> Result<Json<KnowledgePackage>, (StatusCode, String)> {
     // 验证邀请码（MVP: 写死在配置中）
     if !state.config.knowledge.enabled {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, 
-            "Knowledge system is not enabled".to_string()));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Knowledge system is not enabled".to_string(),
+        ));
     }
-    
+
     if !state.config.knowledge.invite_codes.contains(&req.invite_code) {
-        return Err((StatusCode::FORBIDDEN, 
-            "Invalid invite code".to_string()));
+        return Err((StatusCode::FORBIDDEN, "Invalid invite code".to_string()));
     }
 
     let base_url = &state.config.knowledge.base_url;
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // 构建知识全景包
     let package = build_knowledge_package(repo_path, base_url)?;
-    
+
     tracing::info!(
         agent_name = %req.agent_name,
         agent_type = ?req.agent_type,
         "Agent joined knowledge system"
     );
-    
+
     Ok(Json(package))
 }
 
 /// 构建知识全景包
 fn build_knowledge_package(repo_path: &str, base_url: &str) -> Result<KnowledgePackage, (StatusCode, String)> {
-    let roles = list_roles_from_repo(repo_path)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    
-    let projects = list_projects_from_repo(repo_path)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let roles = list_roles_from_repo(repo_path).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let projects =
+        list_projects_from_repo(repo_path).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // 生成 Agent Token（简化实现）
     let token = format!("agt_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
@@ -161,10 +164,7 @@ fn build_knowledge_package(repo_path: &str, base_url: &str) -> Result<KnowledgeP
             act: format!("{}/api/v1/knowledge/script/act.sh", base_url),
             handover: format!("{}/api/v1/knowledge/script/handover.sh", base_url),
         },
-        token: AgentToken {
-            token,
-            expires_at,
-        },
+        token: AgentToken { token, expires_at },
     })
 }
 
@@ -180,11 +180,8 @@ fn list_roles_from_repo(repo_path: &str) -> Result<Vec<RoleInfo>, String> {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            let name = path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("")
-                .to_string();
-            
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+
             // 读取 RULES.md 获取描述
             let rules_path = path.join("RULES.md");
             let description = if rules_path.exists() {
@@ -196,10 +193,8 @@ fn list_roles_from_repo(repo_path: &str) -> Result<Vec<RoleInfo>, String> {
             roles.push(RoleInfo {
                 name: name.clone(),
                 description,
-                rules_url: format!("/api/v1/knowledge/role/{}", 
-                    urlencoding_encode(&name)),
-                hot_rules_url: Some(format!("/api/v1/knowledge/hot-rules/{}", 
-                    urlencoding_encode(&name))),
+                rules_url: format!("/api/v1/knowledge/role/{}", urlencoding_encode(&name)),
+                hot_rules_url: Some(format!("/api/v1/knowledge/hot-rules/{}", urlencoding_encode(&name))),
             });
         }
     }
@@ -216,7 +211,7 @@ fn list_projects_from_repo(repo_path: &str) -> Result<Vec<ProjectInfo>, String> 
     ];
 
     let mut projects = Vec::new();
-    
+
     for projects_dir in projects_dirs {
         if !projects_dir.exists() {
             continue;
@@ -226,10 +221,7 @@ fn list_projects_from_repo(repo_path: &str) -> Result<Vec<ProjectInfo>, String> 
             let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
             if path.is_dir() {
-                let name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("")
-                    .to_string();
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
 
                 // 检查是否有 INDEX.md
                 let index_path = path.join("INDEX.md");
@@ -237,8 +229,7 @@ fn list_projects_from_repo(repo_path: &str) -> Result<Vec<ProjectInfo>, String> 
                     projects.push(ProjectInfo {
                         name: name.clone(),
                         description: "".to_string(),
-                        index_url: format!("/api/v1/knowledge/project/{}", 
-                            urlencoding_encode(&name)),
+                        index_url: format!("/api/v1/knowledge/project/{}", urlencoding_encode(&name)),
                     });
                 }
             }
@@ -250,9 +241,8 @@ fn list_projects_from_repo(repo_path: &str) -> Result<Vec<ProjectInfo>, String> 
 
 /// 从 RULES.md 提取描述（取第一段非空文字）
 fn extract_description_from_rules(rules_path: &PathBuf) -> Result<String, String> {
-    let content = std::fs::read_to_string(rules_path)
-        .map_err(|e| e.to_string())?;
-    
+    let content = std::fs::read_to_string(rules_path).map_err(|e| e.to_string())?;
+
     // 取第一行非空、非标题的内容作为描述
     for line in content.lines() {
         let trimmed = line.trim();
@@ -266,7 +256,7 @@ fn extract_description_from_rules(rules_path: &PathBuf) -> Result<String, String
             return Ok(desc);
         }
     }
-    
+
     Ok("".to_string())
 }
 
@@ -297,24 +287,21 @@ pub async fn get_entry(
     State(state): State<Arc<AppState>>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // 根据 full 参数决定读取哪个文件
-    let is_full = params.get("full")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+    let is_full = params.get("full").and_then(|v| v.as_bool()).unwrap_or(false);
 
-    let filename = if is_full {
-        "入口.md"
-    } else {
-        "入口-快速启动.md"
-    };
+    let filename = if is_full { "入口.md" } else { "入口-快速启动.md" };
 
     let entry_path = PathBuf::from(repo_path).join(filename);
     let content = read_knowledge_file(&entry_path)?;
-    
+
     Ok((
         StatusCode::OK,
         [("Content-Type", "text/markdown; charset=utf-8")],
@@ -329,9 +316,12 @@ pub async fn get_role_rules(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
@@ -339,9 +329,9 @@ pub async fn get_role_rules(
         .join("角色")
         .join(&name_decoded)
         .join("RULES.md");
-    
+
     let content = read_knowledge_file(&rules_path)?;
-    
+
     Ok((
         StatusCode::OK,
         [("Content-Type", "text/markdown; charset=utf-8")],
@@ -356,9 +346,12 @@ pub async fn get_role_hot_rules(
     State(state): State<Arc<AppState>>,
     Path(role): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // Axum Path 已自动做 URL 解码
     let role_decoded = role;
@@ -366,9 +359,9 @@ pub async fn get_role_hot_rules(
         .join("角色")
         .join(&role_decoded)
         .join("hot-rules.md");
-    
+
     let content = read_knowledge_file(&hot_rules_path)?;
-    
+
     Ok((
         StatusCode::OK,
         [("Content-Type", "text/markdown; charset=utf-8")],
@@ -383,17 +376,26 @@ pub async fn get_project_index(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
-    
+
     // 尝试两个位置
     let index_paths = vec![
-        PathBuf::from(repo_path).join("项目").join(&name_decoded).join("INDEX.md"),
-        PathBuf::from(repo_path).join("项目文档").join(&name_decoded).join("INDEX.md"),
+        PathBuf::from(repo_path)
+            .join("项目")
+            .join(&name_decoded)
+            .join("INDEX.md"),
+        PathBuf::from(repo_path)
+            .join("项目文档")
+            .join(&name_decoded)
+            .join("INDEX.md"),
     ];
 
     let mut last_error = String::new();
@@ -411,7 +413,7 @@ pub async fn get_project_index(
             }
         }
     }
-    
+
     Err((StatusCode::NOT_FOUND, format!("Project '{}' not found", name_decoded)))
 }
 
@@ -422,13 +424,16 @@ pub async fn get_script(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
-    
+
     // 自动添加 .sh 后缀（如果需要）
     let script_name = if name_decoded.ends_with(".sh") {
         name_decoded
@@ -436,35 +441,26 @@ pub async fn get_script(
         format!("{}.sh", name_decoded)
     };
 
-    let script_path = PathBuf::from(repo_path)
-        .join("scripts")
-        .join(&script_name);
-    
+    let script_path = PathBuf::from(repo_path).join("scripts").join(&script_name);
+
     let content = read_knowledge_file(&script_path)?;
-    
-    Ok((
-        StatusCode::OK,
-        [("Content-Type", "text/plain; charset=utf-8")],
-        content,
-    ))
+
+    Ok((StatusCode::OK, [("Content-Type", "text/plain; charset=utf-8")], content))
 }
 
 /// 读取知识文件
 fn read_knowledge_file(path: &PathBuf) -> Result<String, (StatusCode, String)> {
-    std::fs::read_to_string(path)
-        .map_err(|_| {
-            let filename = path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("file");
-            (StatusCode::NOT_FOUND, format!("File '{}' not found", filename))
-        })
+    std::fs::read_to_string(path).map_err(|_| {
+        let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
+        (StatusCode::NOT_FOUND, format!("File '{}' not found", filename))
+    })
 }
 
 /// URL 解码辅助函数（支持 UTF-8 多字节）
 fn urlencoding_decode(s: &str) -> String {
     let mut bytes = Vec::new();
     let mut chars = s.chars().peekable();
-    
+
     while let Some(c) = chars.next() {
         if c == '%' {
             let mut hex = String::new();
@@ -484,7 +480,7 @@ fn urlencoding_decode(s: &str) -> String {
             }
         }
     }
-    
+
     String::from_utf8(bytes).unwrap_or_default()
 }
 
@@ -498,32 +494,33 @@ fn urlencoding_decode(s: &str) -> String {
 pub async fn get_knowledge_markdown(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
-            "Knowledge repository path not configured".to_string()))?;
+    let repo_path = state.knowledge_repo_path.as_ref().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge repository path not configured".to_string(),
+        )
+    })?;
 
     let mut markdown = String::new();
-    
+
     // 添加入口文档
     markdown.push_str("# OpenClaw知识体系 — 快速启动\n\n");
-    
+
     let entry_path = PathBuf::from(repo_path).join("入口-快速启动.md");
     if let Ok(content) = std::fs::read_to_string(&entry_path) {
         markdown.push_str(&content);
     }
-    
+
     markdown.push_str("\n\n---\n\n## 角色\n\n");
-    
+
     // 添加角色 RULES
     let roles_dir = PathBuf::from(repo_path).join("角色");
     if let Ok(entries) = std::fs::read_dir(roles_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let role_name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
-                
+                let role_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
                 let rules_path = path.join("RULES.md");
                 if let Ok(content) = std::fs::read_to_string(&rules_path) {
                     markdown.push_str(&format!("### {}\n\n", role_name));
@@ -533,24 +530,22 @@ pub async fn get_knowledge_markdown(
             }
         }
     }
-    
+
     markdown.push_str("## 项目\n\n");
-    
+
     // 添加项目 INDEX
     let projects_dirs = vec![
         PathBuf::from(repo_path).join("项目"),
         PathBuf::from(repo_path).join("项目文档"),
     ];
-    
+
     for projects_dir in projects_dirs {
         if let Ok(entries) = std::fs::read_dir(&projects_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
-                    let project_name = path.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("");
-                    
+                    let project_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
                     let index_path = path.join("INDEX.md");
                     if let Ok(content) = std::fs::read_to_string(&index_path) {
                         markdown.push_str(&format!("### {}\n\n", project_name));
@@ -561,7 +556,7 @@ pub async fn get_knowledge_markdown(
             }
         }
     }
-    
+
     Ok((
         StatusCode::OK,
         [("Content-Type", "text/markdown; charset=utf-8")],
@@ -577,14 +572,20 @@ mod tests {
 
     #[test]
     fn test_url_encoding() {
-        assert_eq!(urlencoding_encode("系统开发者"), "%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E8%80%85");
+        assert_eq!(
+            urlencoding_encode("系统开发者"),
+            "%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E8%80%85"
+        );
         assert_eq!(urlencoding_encode("OpenLink"), "OpenLink");
         assert_eq!(urlencoding_encode("test-file.md"), "test-file.md");
     }
 
     #[test]
     fn test_url_decoding() {
-        assert_eq!(urlencoding_decode("%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E8%80%85"), "系统开发者");
+        assert_eq!(
+            urlencoding_decode("%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E8%80%85"),
+            "系统开发者"
+        );
         assert_eq!(urlencoding_decode("OpenLink"), "OpenLink");
         assert_eq!(urlencoding_decode("hello+world"), "hello world");
     }
@@ -599,15 +600,18 @@ mod tests {
         // 这个测试需要创建临时文件
         let temp_dir = std::env::temp_dir();
         let rules_path = temp_dir.join("test_rules.md");
-        
-        std::fs::write(&rules_path, "# 系统开发者\n\n桥梁型角色——连接主人愿景与团队执行。\n\n## 职责\n\n- 架构设计").unwrap();
-        
+
+        std::fs::write(
+            &rules_path,
+            "# 系统开发者\n\n桥梁型角色——连接主人愿景与团队执行。\n\n## 职责\n\n- 架构设计",
+        )
+        .unwrap();
+
         let desc = extract_description_from_rules(&rules_path).unwrap();
         assert!(desc.contains("桥梁"));
-        
+
         std::fs::remove_file(&rules_path).ok();
     }
-
 
     #[test]
     fn test_knowledge_package_structure() {
@@ -638,14 +642,13 @@ mod tests {
                 expires_at: "2026-07-11T00:00:00Z".to_string(),
             },
         };
-        
+
         let json = serde_json::to_string(&package).unwrap();
         assert!(json.contains("\"version\":\"1.0\""));
         assert!(json.contains("\"roles\""));
         assert!(json.contains("agt_test"));
     }
 }
-
 
 // ─── 一条短链入口 ────────────────────────────────────────
 
@@ -660,16 +663,24 @@ pub async fn knowledge_short_entry(
     headers: axum::http::HeaderMap,
     Query(params): Query<ShortEntryParams>,
 ) -> Result<Response, (StatusCode, String)> {
-    let repo_path = state.knowledge_repo_path.as_ref()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge system not enabled".to_string()))?
+    let repo_path = state
+        .knowledge_repo_path
+        .as_ref()
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge system not enabled".to_string(),
+            )
+        })?
         .clone();
 
     // 验证邀请码
     let code = params.code.clone().unwrap_or_default();
     if !state.config.knowledge.invite_codes.contains(&code) {
-        return Err((StatusCode::FORBIDDEN,
-            "无效邀请码。请在 URL 中加 ?code=你的邀请码".to_string()));
+        return Err((
+            StatusCode::FORBIDDEN,
+            "无效邀请码。请在 URL 中加 ?code=你的邀请码".to_string(),
+        ));
     }
 
     let agent_type = detect_agent_type(&headers, &params.agent);
@@ -683,7 +694,8 @@ pub async fn knowledge_short_entry(
                 StatusCode::OK,
                 [(axum::http::header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
                 markdown,
-            ).into_response())
+            )
+                .into_response())
         }
         AgentCategory::FullCapability => {
             // 全能型智能体：返回结构化 JSON
@@ -693,7 +705,8 @@ pub async fn knowledge_short_entry(
         }
         AgentCategory::Browser => {
             let base = &state.config.knowledge.base_url;
-            let html = format!(r#"<!DOCTYPE html>
+            let html = format!(
+                r#"<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>OpenClaw 知识体系 — 加入</title>
@@ -717,12 +730,14 @@ pub async fn knowledge_short_entry(
   <p><code>curl {base}/join?code={code}</code></p>
   <p>指定返回格式：<code>curl -H "Accept: application/json" {base}/join?code={code}</code></p>
 </div>
-</body></html>"#);
+</body></html>"#
+            );
             Ok((
                 StatusCode::OK,
                 [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
                 html,
-            ).into_response())
+            )
+                .into_response())
         }
     }
 }
@@ -818,7 +833,10 @@ fn build_lightweight_markdown(repo_path: &str, base_url: &str) -> Result<String,
             }
         }
         roles.sort();
-        for r in roles { md.push_str(&r); md.push('\n'); }
+        for r in roles {
+            md.push_str(&r);
+            md.push('\n');
+        }
     }
 
     // 项目目录（去重）
@@ -846,7 +864,10 @@ fn build_lightweight_markdown(repo_path: &str, base_url: &str) -> Result<String,
         }
     }
 
-    md.push_str(&format!("\n---\n\n> 💡 需要全量知识？访问 {}/api/v1/knowledge/markdown\n", base_url));
+    md.push_str(&format!(
+        "\n---\n\n> 💡 需要全量知识？访问 {}/api/v1/knowledge/markdown\n",
+        base_url
+    ));
     Ok(md)
 }
 
@@ -885,9 +906,7 @@ fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> 
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let role_name = path.file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("");
+                let role_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 let rules_path = path.join("RULES.md");
                 if let Ok(content) = std::fs::read_to_string(&rules_path) {
                     markdown.push_str(&format!("### {}\n\n", role_name));
@@ -910,9 +929,7 @@ fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> 
             for entry in entries.flatten() {
                 let path = entry.path();
                 if path.is_dir() {
-                    let project_name = path.file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("");
+                    let project_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     let index_path = path.join("INDEX.md");
                     if let Ok(content) = std::fs::read_to_string(&index_path) {
                         markdown.push_str(&format!("### {}\n\n", project_name));

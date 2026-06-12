@@ -173,9 +173,18 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/knowledge/join", post(handlers::knowledge::join_knowledge))
         .route("/api/v1/knowledge/entry", get(handlers::knowledge::get_entry))
         .route("/api/v1/knowledge/role/:name", get(handlers::knowledge::get_role_rules))
-        .route("/api/v1/knowledge/project/:name", get(handlers::knowledge::get_project_index))
+        .route(
+            "/api/v1/knowledge/project/:name",
+            get(handlers::knowledge::get_project_index),
+        )
         .route("/api/v1/knowledge/script/:name", get(handlers::knowledge::get_script))
-        .route("/api/v1/knowledge/hot-rules/:role", get(handlers::knowledge::get_role_hot_rules))
-        .route("/api/v1/knowledge/markdown", get(handlers::knowledge::get_knowledge_markdown))
+        .route(
+            "/api/v1/knowledge/hot-rules/:role",
+            get(handlers::knowledge::get_role_hot_rules),
+        )
+        .route(
+            "/api/v1/knowledge/markdown",
+            get(handlers::knowledge::get_knowledge_markdown),
+        )
         .with_state(state)
 }

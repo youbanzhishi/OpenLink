@@ -52,8 +52,7 @@ impl Default for Identity {
 // ─── DeviceInfo ─────────────────────────────────────────────
 
 /// 设备信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DeviceInfo {
     /// 设备类型：mobile / desktop / server / iot
     pub device_type: Option<String>,
@@ -71,8 +70,7 @@ pub struct DeviceInfo {
 // ─── GeoInfo ────────────────────────────────────────────────
 
 /// 地理位置信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GeoInfo {
     pub country: Option<String>,
     pub region: Option<String>,
@@ -112,9 +110,7 @@ impl Context {
     /// 从 HTTP 请求构建基础 Context
     /// Phase 2: 增强 User-Agent 解析，识别 curl/Agent 等请求类型
     pub fn from_request(user_agent: Option<&str>, ip: Option<&str>) -> Self {
-        let identity_type = user_agent
-            .map(detect_identity_type)
-            .unwrap_or(IdentityType::Human);
+        let identity_type = user_agent.map(detect_identity_type).unwrap_or(IdentityType::Human);
 
         let device = DeviceInfo {
             device_type: user_agent.and_then(detect_device_type),
@@ -275,7 +271,6 @@ pub enum ConditionLogic {
     /// 任一条件满足
     Or,
 }
-
 
 /// 条件 — 什么情况下走这条路
 #[derive(Debug, Clone, Serialize, Deserialize)]
