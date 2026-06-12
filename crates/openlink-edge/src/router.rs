@@ -93,8 +93,8 @@ impl EdgeRouter {
             code: code.to_string(),
             client_ip: client_ip.map(ToString::to_string),
             user_agent: user_agent.map(ToString::to_string),
-            device_type: user_agent.and_then(|ua| detect_device_type(ua)),
-            identity_type: user_agent.and_then(|ua| detect_identity_type(ua)),
+            device_type: user_agent.and_then(detect_device_type),
+            identity_type: user_agent.and_then(detect_identity_type),
             geo_region: {
                 if let Some(ip) = client_ip {
                     let router = self.geo_router.read().await;
