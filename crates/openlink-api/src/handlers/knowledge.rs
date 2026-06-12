@@ -116,12 +116,14 @@ pub async fn join_knowledge(
     }
 
     let base_url = &state.config.knowledge.base_url;
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // 构建知识全景包
     let package = build_knowledge_package(repo_path, base_url)?;
@@ -282,12 +284,14 @@ pub async fn get_entry(
     State(state): State<Arc<AppState>>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // 根据 full 参数决定读取哪个文件
     let is_full = params.get("full").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -311,12 +315,14 @@ pub async fn get_role_rules(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
@@ -341,12 +347,14 @@ pub async fn get_role_hot_rules(
     State(state): State<Arc<AppState>>,
     Path(role): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // Axum Path 已自动做 URL 解码
     let role_decoded = role;
@@ -371,12 +379,14 @@ pub async fn get_project_index(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
@@ -420,12 +430,14 @@ pub async fn get_script(
     State(state): State<Arc<AppState>>,
     Path(name): Path<String>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     // Axum Path 已自动做 URL 解码
     let name_decoded = name;
@@ -491,12 +503,14 @@ fn urlencoding_decode(s: &str) -> String {
 pub async fn get_knowledge_markdown(
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let repo_path = (!state.config.knowledge.repo_path.is_empty()).then(|| &state.config.knowledge.repo_path).ok_or_else(|| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Knowledge repository path not configured".to_string(),
-        )
-    })?;
+    let repo_path = (!state.config.knowledge.repo_path.is_empty())
+        .then(|| &state.config.knowledge.repo_path)
+        .ok_or_else(|| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Knowledge repository path not configured".to_string(),
+            )
+        })?;
 
     let mut markdown = String::new();
 
