@@ -1,20 +1,40 @@
-# OpenLink 生产环境配置 — ECS部署模板
+# OpenLink 生产环境配置 — ECS部署模板（多源版 v1.3.0+）
 # 部署时复制为 /opt/openlink/config/production.toml 并替换 CHANGE_ME
 
 [server]
 host = "0.0.0.0"
 port = 3000
 
-[database]
-url = "sqlite:///opt/openlink/data/openlink.db"
+[store]
+backend = "sqlite"
+path = "/opt/openlink/data/openlink.db"
 
+[shortcode]
+length = 6
+charset = "base62"
+
+[auth]
+enabled = true
+
+# 知识体系配置（多源版）
+# base_url = API 对外地址，用于生成资源 URL
+# sources = 知识源列表，每个源有独立的仓库路径和邀请码
 [knowledge]
 enabled = true
-# 知识体系仓库本地路径（ECS上clone的位置）
-repo_path = "/opt/openlink/knowledge/open-knowledge-system"
-# 部署时改为实际域名
 base_url = "https://link.opendev.dev"
-# MVP 邀请码
+
+# 知识源1：私有（完整知识体系，自己用）
+[[knowledge.sources]]
+name = "private"
+display_name = "OpenClaw知识体系"
+repo_path = "/opt/openlink/knowledge/open-knowledge-system"
 invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
-# 同步端点认证token — 部署时必须替换！
-sync_token = "CHANGE_ME_REPLACE_WITH_STRONG_TOKEN"
+sync_token = "CHANGE_ME_PRIVATE_SYNC_TOKEN"
+
+# 知识源2：公开（框架版，给别人用）
+[[knowledge.sources]]
+name = "public"
+display_name = "OpenClaw Framework"
+repo_path = "/opt/openlink/knowledge/open-knowledge-framework"
+invite_codes = ["openclaw-framework", "try-openclaw"]
+sync_token = ""
