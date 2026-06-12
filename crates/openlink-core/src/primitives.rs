@@ -53,6 +53,7 @@ impl Default for Identity {
 
 /// 设备信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct DeviceInfo {
     /// 设备类型：mobile / desktop / server / iot
     pub device_type: Option<String>,
@@ -67,40 +68,17 @@ pub struct DeviceInfo {
     pub user_agent_raw: Option<String>,
 }
 
-impl Default for DeviceInfo {
-    fn default() -> Self {
-        Self {
-            device_type: None,
-            os: None,
-            browser: None,
-            bandwidth: None,
-            user_agent_raw: None,
-        }
-    }
-}
-
 // ─── GeoInfo ────────────────────────────────────────────────
 
 /// 地理位置信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct GeoInfo {
     pub country: Option<String>,
     pub region: Option<String>,
     pub city: Option<String>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
-}
-
-impl Default for GeoInfo {
-    fn default() -> Self {
-        Self {
-            country: None,
-            region: None,
-            city: None,
-            lat: None,
-            lon: None,
-        }
-    }
 }
 
 // ─── Context ────────────────────────────────────────────────
@@ -135,11 +113,11 @@ impl Context {
     /// Phase 2: 增强 User-Agent 解析，识别 curl/Agent 等请求类型
     pub fn from_request(user_agent: Option<&str>, ip: Option<&str>) -> Self {
         let identity_type = user_agent
-            .map(|ua| detect_identity_type(ua))
+            .map(detect_identity_type)
             .unwrap_or(IdentityType::Human);
 
         let device = DeviceInfo {
-            device_type: user_agent.and_then(|ua| detect_device_type(ua)),
+            device_type: user_agent.and_then(detect_device_type),
             os: None,
             browser: None,
             bandwidth: None,
@@ -289,18 +267,15 @@ impl Action {
 /// 条件逻辑组合方式
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum ConditionLogic {
     /// 所有条件都满足（默认）
+    #[default]
     And,
     /// 任一条件满足
     Or,
 }
 
-impl Default for ConditionLogic {
-    fn default() -> Self {
-        ConditionLogic::And
-    }
-}
 
 /// 条件 — 什么情况下走这条路
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -173,21 +173,21 @@ impl ExtensionRegistry {
     /// 获取 BeforeRoute 钩子列表（已按优先级排序）
     pub fn get_before_hooks(&self) -> Vec<Arc<dyn HookHandler>> {
         let mut hooks = self.hooks_before.clone();
-        hooks.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        hooks.sort_by_key(|b| std::cmp::Reverse(b.priority()));
         hooks
     }
 
     /// 获取 AfterRoute 钩子列表（已按优先级排序）
     pub fn get_after_hooks(&self) -> Vec<Arc<dyn HookHandler>> {
         let mut hooks = self.hooks_after.clone();
-        hooks.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        hooks.sort_by_key(|b| std::cmp::Reverse(b.priority()));
         hooks
     }
 
     /// 获取 OnError 钩子列表（已按优先级排序）
     pub fn get_error_hooks(&self) -> Vec<Arc<dyn HookHandler>> {
         let mut hooks = self.hooks_error.clone();
-        hooks.sort_by(|a, b| b.priority().cmp(&a.priority()));
+        hooks.sort_by_key(|b| std::cmp::Reverse(b.priority()));
         hooks
     }
 
