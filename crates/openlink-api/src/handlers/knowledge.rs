@@ -676,8 +676,9 @@ pub async fn knowledge_short_entry(
 
     match agent_type {
         AgentCategory::ReadOnly => {
-            // 只读智能体：返回完整知识 Markdown（复用 get_knowledge_markdown 的逻辑）
-            let markdown = build_full_markdown(&repo_path)?;
+            // 只读智能体：返回精简 Markdown（入口+目录+URL，按需取，不塞全量）
+            let base_url = &state.config.knowledge.base_url;
+            let markdown = build_lightweight_markdown(&repo_path, base_url)?;
             Ok((
                 StatusCode::OK,
                 [(axum::http::header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
@@ -785,6 +786,85 @@ fn detect_agent_type(headers: &axum::http::HeaderMap, agent_param: &Option<Strin
 
     // 默认：只读（最安全）
     AgentCategory::ReadOnly
+}
+
+/// 构建精简知识 Markdown（入口文档+目录+URL，让只读智能体按需取）
+/// 约3-5KB，对比全量446KB，响应快100倍
+fn build_lightweight_markdown(repo_path: &str, base_url: &str) -> Result<String, (StatusCode, String)> {
+    let mut md = String::new();
+    md.push_str("# OpenClaw 知识体系\n\n");
+
+    // 入口文档
+    let entry_path = PathBuf::from(repo_path).join("入口-快速启动.md");
+    if let Ok(content) = std::fs::read_to_string(&entry_path) {
+        md.push_str(&content);
+        md.push_str("\n\n---\n\n");
+    }
+
+    // 角色目录
+    md.push_str("## 可用角色\n\n");
+    md.push_str("访问对应 URL 获取角色完整规则：\n\n");
+    let roles_dir = PathBuf::from(repo_path).join("角色");
+    if let Ok(entries) = std::fs::read_dir(roles_dir) {
+        let mut roles: Vec<String> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    let desc = extract_description_from_rules(&path.join("RULES.md")).unwrap_or_default();
+                    let url = format!("{}/api/v1/knowledge/role/{}", base_url, urlencoding_encode(name));
+                    roles.push(format!("- **{}**：{} [→完整规则]({})", name, desc, url));
+                }
+            }
+        }
+        roles.sort();
+        for r in roles { md.push_str(&r); md.push('\n'); }
+    }
+
+    // 项目目录（去重）
+    md.push_str("\n## 可用项目\n\n");
+    md.push_str("访问对应 URL 获取项目知识索引：\n\n");
+    let projects_dirs = vec![
+        PathBuf::from(repo_path).join("项目"),
+        PathBuf::from(repo_path).join("项目文档"),
+    ];
+    let mut seen = std::collections::HashSet::new();
+    for pdir in &projects_dirs {
+        if let Ok(entries) = std::fs::read_dir(pdir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        if seen.insert(name.to_string()) {
+                            let desc = extract_description_from_index(&path.join("INDEX.md")).unwrap_or_default();
+                            let url = format!("{}/api/v1/knowledge/project/{}", base_url, urlencoding_encode(name));
+                            md.push_str(&format!("- **{}**：{} [→项目索引]({})\n", name, desc, url));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    md.push_str(&format!("\n---\n\n> 💡 需要全量知识？访问 {}/api/v1/knowledge/markdown\n", base_url));
+    Ok(md)
+}
+
+/// 从 INDEX.md 提取项目描述（首行非空非标题）
+fn extract_description_from_index(path: &PathBuf) -> Result<String, ()> {
+    let content = std::fs::read_to_string(path).map_err(|_| ())?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with('>') {
+            let desc = if trimmed.chars().count() > 80 {
+                format!("{}...", trimmed.chars().take(80).collect::<String>())
+            } else {
+                trimmed.to_string()
+            };
+            return Ok(desc);
+        }
+    }
+    Ok(String::new())
 }
 
 /// 构建完整知识 Markdown（提取为独立函数供短链入口复用）
