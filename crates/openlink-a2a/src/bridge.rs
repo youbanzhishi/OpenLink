@@ -323,7 +323,7 @@ impl ProtocolNegotiator {
         let mut best: Option<(ProtocolType, f64, String)> = None;
 
         for (proto, weight) in &self.priority {
-            if common.contains(&&proto) {
+            if common.contains(&proto) {
                 let version = local
                     .versions
                     .get(proto)
