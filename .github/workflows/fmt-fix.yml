@@ -2,7 +2,7 @@ name: Auto Format Fix
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
