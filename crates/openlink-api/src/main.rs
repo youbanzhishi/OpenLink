@@ -64,14 +64,16 @@ async fn main() {
     // 6. 构建 AppState
     let state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
 
-    // 日志：知识体系配置
+    // 日志：知识体系源
     if state.config.knowledge.enabled {
-        tracing::info!(
-            repo_path = %state.config.knowledge.repo_path,
-            base_url = %state.config.knowledge.base_url,
-            invite_codes = state.config.knowledge.invite_codes.len(),
-            "Knowledge system enabled"
-        );
+        let sources = state.config.knowledge.resolved_sources();
+        if sources.is_empty() {
+            tracing::info!("Knowledge system enabled but no sources configured");
+        } else {
+            for src in &sources {
+                tracing::info!(source = %src.name, repo = %src.repo_path, codes = %src.invite_codes.len(), "Knowledge source configured");
+            }
+        }
     } else {
         tracing::info!("Knowledge system disabled");
     }

@@ -30,6 +30,7 @@ base_url = "http://localhost:3000"
 [[knowledge.sources]]
 name = "private"
 display_name = "OpenClaw知识体系"
+short_code = "0"
 repo_path = "/app/data/所有对话/主对话/open-knowledge-system"
 invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
 sync_token = "ol-sync-dev-2026"
@@ -38,6 +39,7 @@ sync_token = "ol-sync-dev-2026"
 [[knowledge.sources]]
 name = "public"
 display_name = "OpenClaw Framework"
+short_code = "1"
 repo_path = "/app/data/所有对话/主对话/open-knowledge-framework"
 invite_codes = ["openclaw-framework", "try-openclaw"]
 sync_token = ""

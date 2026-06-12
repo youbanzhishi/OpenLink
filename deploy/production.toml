@@ -27,6 +27,7 @@ base_url = "https://link.opendev.dev"
 [[knowledge.sources]]
 name = "private"
 display_name = "OpenClaw知识体系"
+short_code = "0"
 repo_path = "/opt/openlink/knowledge/open-knowledge-system"
 invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
 sync_token = "CHANGE_ME_PRIVATE_SYNC_TOKEN"
@@ -35,6 +36,7 @@ sync_token = "CHANGE_ME_PRIVATE_SYNC_TOKEN"
 [[knowledge.sources]]
 name = "public"
 display_name = "OpenClaw Framework"
+short_code = "1"
 repo_path = "/opt/openlink/knowledge/open-knowledge-framework"
 invite_codes = ["openclaw-framework", "try-openclaw"]
 sync_token = ""

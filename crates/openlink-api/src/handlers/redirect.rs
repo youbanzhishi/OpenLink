@@ -18,7 +18,126 @@ use axum::{
 use openlink_core::{AccessLog, ActionResult, Context};
 use std::sync::Arc;
 
+use crate::config::KnowledgeSource;
 use crate::state::AppState;
+
+/// 知识源邀请码短链 — 直接返回入口内容
+///
+/// 当 /:code 匹配到知识源邀请码时，根据 User-Agent 返回对应格式：
+/// - 只读智能体 → Markdown
+/// - 全能智能体 → JSON（含 API 端点 + token）
+/// - 浏览器 → HTML 引导页
+async fn serve_knowledge_entry(
+    state: &Arc<AppState>,
+    source: &KnowledgeSource,
+    headers: &HeaderMap,
+) -> axum::response::Response {
+    let user_agent = headers
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let base_url = &state.config.knowledge.base_url;
+    let repo_path = &source.repo_path;
+
+    // 判断访问者类型
+    let is_llm = user_agent.contains("GPT")
+        || user_agent.contains("Claude")
+        || user_agent.contains("Gemini")
+        || user_agent.contains("openai")
+        || user_agent.contains("anthropic")
+        || user_agent.contains("doubao")
+        || user_agent.contains("qwen")
+        || user_agent.contains("kimi")
+        || user_agent.contains("deepseek")
+        || user_agent.contains("ChatGLM")
+        || user_agent.contains("Meta-Llama");
+
+    let is_curl = user_agent.starts_with("curl/")
+        || user_agent.starts_with("Wget/")
+        || user_agent.starts_with("HTTPie/");
+
+    let is_api_client = headers
+        .get("accept")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.contains("application/json"))
+        .unwrap_or(false);
+
+    if is_llm || is_curl || is_api_client {
+        // 智能/API 客户端：返回精简 Markdown
+        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label()) {
+            Ok(markdown) => (
+                StatusCode::OK,
+                [("Content-Type", "text/markdown; charset=utf-8")],
+                markdown,
+            )
+                .into_response(),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to read knowledge entry: {}", e.1),
+            )
+                .into_response(),
+        }
+    } else if user_agent.contains("Mozilla") || user_agent.contains("WebKit") {
+        // 浏览器：返回 HTML 引导页
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>{} — 加入知识体系</title>
+<style>
+  body {{ font-family:-apple-system,BlinkMacSystemFont,sans-serif; max-width:680px; margin:60px auto; padding:0 20px; color:#1a1a1a; line-height:1.7; }}
+  h1 {{ color:#3b82f6; }} .card {{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px 24px; margin:16px 0; }}
+  code {{ background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:14px; }}
+  .tip {{ color:#64748b; font-size:14px; }}
+</style></head><body>
+<h1>🐉 {}</h1>
+<p>你已通过短链访问知识源，以下是接入方式：</p>
+<div class="card">
+  <h3>🤖 AI 智能体</h3>
+  <p>直接访问此短链即可获取知识入口文档（Markdown 格式）。</p>
+  <p class="tip">用 <code>curl</code> 或智能体 HTTP 工具访问，将自动返回 Markdown。</p>
+</div>
+<div class="card">
+  <h3>🔧 API 接入</h3>
+  <p>入口文档：<code>{base_url}/api/v1/knowledge/{source_name}/entry</code></p>
+  <p>角色 RULES：<code>{base_url}/api/v1/knowledge/{source_name}/role/:name</code></p>
+  <p>项目 INDEX：<code>{base_url}/api/v1/knowledge/{source_name}/project/:name</code></p>
+</div>
+<div class="card">
+  <h3>📋 邀请码</h3>
+  <p><code>{invite_codes}</code></p>
+</div>
+</body></html>"#,
+            source.label(),
+            source.label(),
+            base_url = base_url,
+            source_name = source.name,
+            invite_codes = source.invite_codes.join(", "),
+        );
+        (
+            StatusCode::OK,
+            [("Content-Type", "text/html; charset=utf-8")],
+            html,
+        )
+            .into_response()
+    } else {
+        // 默认：返回 Markdown
+        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label()) {
+            Ok(markdown) => (
+                StatusCode::OK,
+                [("Content-Type", "text/markdown; charset=utf-8")],
+                markdown,
+            )
+                .into_response(),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to read knowledge entry: {}", e.1),
+            )
+                .into_response(),
+        }
+    }
+}
 
 /// 短链重定向 — 核心路径
 ///
@@ -34,7 +153,17 @@ pub async fn redirect(
     // 1. 查找 Link
     let link = match state.store.get_link_by_code(&code).await {
         Ok(Some(link)) => link,
-        Ok(None) => return (StatusCode::NOT_FOUND, "Link not found").into_response(),
+        Ok(None) => {
+            // Fallback: 短链码可能是知识源邀请码
+            // 访问 link.opendev.dev/try-openclaw 等同于 /join?code=try-openclaw
+            if state.config.knowledge.enabled {
+                if let Some(source) = state.config.knowledge.find_source_by_short_code(&code) {
+                    tracing::info!(code = %code, source = %source.name, "Short link resolved to knowledge invite code");
+                    return serve_knowledge_entry(&state, &source, &headers).await;
+                }
+            }
+            return (StatusCode::NOT_FOUND, "Link not found").into_response();
+        }
         Err(e) => {
             tracing::error!(code = %code, error = %e, "Failed to lookup link");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
