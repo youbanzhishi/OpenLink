@@ -167,11 +167,11 @@ impl HealthChecker {
 
         for check in &self.checks {
             let name = check.name().to_string();
-            let start = Instant::now();
+            let _start = Instant::now();
 
             let result = tokio::time::timeout(self.timeout, check.check())
                 .await
-                .map(|r| r)
+                
                 .unwrap_or_else(|_| ComponentHealth {
                     name: name.clone(),
                     status: ComponentStatus::Unhealthy,

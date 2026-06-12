@@ -249,7 +249,7 @@ impl Bm25Searcher {
             })
             .filter(|(_, c)| *c > 0)
             .collect();
-        results.sort_by(|a, b| b.1.cmp(&a.1));
+        results.sort_by_key(|a| std::cmp::Reverse(a.1));
         results
             .into_iter()
             .take(limit)
@@ -444,6 +444,7 @@ impl LazyExtensionRegistry {
     }
 
     /// Bridge 3: execute
+    #[allow(clippy::await_holding_lock)]
     pub async fn execute(
         &self,
         name: &str,

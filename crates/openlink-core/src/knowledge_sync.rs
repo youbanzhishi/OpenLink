@@ -711,7 +711,7 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
 
         collections
             .entry(request.collection.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(doc);
 
         Ok(KnowledgeWriteResponse {
