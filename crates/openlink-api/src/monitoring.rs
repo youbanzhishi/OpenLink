@@ -9,9 +9,7 @@
 //! - 缓存命中率 (gauge)
 //! - 活跃连接数 (gauge)
 
-use prometheus::{
-    CounterVec, Encoder, Gauge, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder,
-};
+use prometheus::{CounterVec, Encoder, Gauge, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

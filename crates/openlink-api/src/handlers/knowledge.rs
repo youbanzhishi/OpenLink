@@ -35,7 +35,6 @@ pub enum AgentType {
     Custom,
 }
 
-
 /// 加入知识体系请求
 #[derive(Debug, Deserialize)]
 pub struct JoinRequest {

@@ -104,7 +104,6 @@ pub struct AuthConfig {
     pub tokens: Vec<TokenConfig>,
 }
 
-
 fn default_auth_enabled() -> bool {
     false
 }

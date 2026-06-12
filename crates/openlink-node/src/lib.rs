@@ -21,7 +21,6 @@ pub use heartbeat::{HeartbeatClient, NodeStatus};
 
 // ─── Re-exports ──────────────────────────────────────────────
 
-
 /// 注册 Node 扩展到 Extension Registry
 pub fn register(registry: &mut openlink_core::ExtensionRegistry) -> Result<(), openlink_core::CoreError> {
     use std::sync::Arc;
