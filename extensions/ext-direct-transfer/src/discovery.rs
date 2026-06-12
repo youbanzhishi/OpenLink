@@ -33,7 +33,9 @@ impl LanPeer {
 
 /// LAN 发现器
 pub struct LanDiscovery {
+    #[allow(dead_code)]
     service_name: String,
+    #[allow(dead_code)]
     cache: std::collections::HashMap<String, LanPeer>,
 }
 

@@ -14,6 +14,7 @@ use std::net::UdpSocket;
 #[serde(rename_all = "snake_case")]
 pub enum TransferMode {
     /// 自动选择最优路径
+    #[default]
     Auto,
     /// 强制直连（仅限 LAN）
     Direct,
