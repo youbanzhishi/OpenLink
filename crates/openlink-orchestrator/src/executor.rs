@@ -167,6 +167,7 @@ impl DagExecutor {
             // 执行任务（带重试）
             let node_start = std::time::Instant::now();
             let mut retry_count = 0;
+            #[allow(unused_assignments)]
             let mut last_error = String::new();
 
             loop {
