@@ -31,21 +31,32 @@ use crate::state::AppState;
 /// 从 state + source name 解析知识源，找不到返回错误
 fn resolve_source(state: &AppState, source: &str) -> Result<KnowledgeSource, (StatusCode, String)> {
     if !state.config.knowledge.enabled {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, "Knowledge system is not enabled".to_string()));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Knowledge system is not enabled".to_string(),
+        ));
     }
     state.config.knowledge.find_source_by_name(source).ok_or_else(|| {
-        (StatusCode::NOT_FOUND, format!("Knowledge source '{}' not found", source))
+        (
+            StatusCode::NOT_FOUND,
+            format!("Knowledge source '{}' not found", source),
+        )
     })
 }
 
 /// 从 state + invite code 解析知识源
 fn resolve_source_by_code(state: &AppState, code: &str) -> Result<KnowledgeSource, (StatusCode, String)> {
     if !state.config.knowledge.enabled {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, "Knowledge system is not enabled".to_string()));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Knowledge system is not enabled".to_string(),
+        ));
     }
-    state.config.knowledge.find_source_by_code(code).ok_or_else(|| {
-        (StatusCode::FORBIDDEN, "Invalid invite code".to_string())
-    })
+    state
+        .config
+        .knowledge
+        .find_source_by_code(code)
+        .ok_or_else(|| (StatusCode::FORBIDDEN, "Invalid invite code".to_string()))
 }
 
 // ─── Knowledge Join ────────────────────────────────────────
@@ -227,7 +238,11 @@ fn list_roles_from_repo(repo_path: &str, source: &str, _base_url: &str) -> Resul
                 name: name.clone(),
                 description,
                 rules_url: format!("/api/v1/knowledge/{}/role/{}", source, urlencoding_encode(&name)),
-                hot_rules_url: Some(format!("/api/v1/knowledge/{}/hot-rules/{}", source, urlencoding_encode(&name))),
+                hot_rules_url: Some(format!(
+                    "/api/v1/knowledge/{}/hot-rules/{}",
+                    source,
+                    urlencoding_encode(&name)
+                )),
             });
         }
     }
@@ -350,10 +365,7 @@ pub async fn get_role_rules(
     Path((source, name)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let src = resolve_source(&state, &source)?;
-    let rules_path = PathBuf::from(&src.repo_path)
-        .join("角色")
-        .join(&name)
-        .join("RULES.md");
+    let rules_path = PathBuf::from(&src.repo_path).join("角色").join(&name).join("RULES.md");
 
     let content = read_knowledge_file(&rules_path)?;
     Ok((
@@ -391,9 +403,11 @@ pub async fn get_project_index(
 
     let index_paths = vec![
         PathBuf::from(&src.repo_path).join("项目").join(&name).join("INDEX.md"),
-        PathBuf::from(&src.repo_path).join("项目文档").join(&name).join("INDEX.md"),
+        PathBuf::from(&src.repo_path)
+            .join("项目文档")
+            .join(&name)
+            .join("INDEX.md"),
     ];
-
 
     for index_path in index_paths {
         match read_knowledge_file(&index_path) {
@@ -437,7 +451,6 @@ fn read_knowledge_file(path: &PathBuf) -> Result<String, (StatusCode, String)> {
         (StatusCode::NOT_FOUND, format!("File '{}' not found", filename))
     })
 }
-
 
 // ─── Knowledge Markdown Response for Read-Only Agents ────────
 
@@ -618,7 +631,12 @@ fn build_lightweight_markdown(
             if path.is_dir() {
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     let desc = extract_description_from_rules(&path.join("RULES.md")).unwrap_or_default();
-                    let url = format!("{}/api/v1/knowledge/{}/role/{}", base_url, source, urlencoding_encode(name));
+                    let url = format!(
+                        "{}/api/v1/knowledge/{}/role/{}",
+                        base_url,
+                        source,
+                        urlencoding_encode(name)
+                    );
                     roles.push(format!("- **{}**：{} [→完整规则]({})", name, desc, url));
                 }
             }
@@ -646,7 +664,12 @@ fn build_lightweight_markdown(
                     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                         if seen.insert(name.to_string()) {
                             let desc = extract_description_from_index(&path.join("INDEX.md")).unwrap_or_default();
-                            let url = format!("{}/api/v1/knowledge/{}/project/{}", base_url, source, urlencoding_encode(name));
+                            let url = format!(
+                                "{}/api/v1/knowledge/{}/project/{}",
+                                base_url,
+                                source,
+                                urlencoding_encode(name)
+                            );
                             md.push_str(&format!("- **{}**：{} [→项目索引]({})\n", name, desc, url));
                         }
                     }
