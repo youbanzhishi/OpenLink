@@ -156,6 +156,7 @@ struct LinkRow {
     payload: String,
     owner_id: String,
     created_at: String,
+    #[allow(dead_code)]
     updated_at: String,
     metadata: String,
     is_active: i32,

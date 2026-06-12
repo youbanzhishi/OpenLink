@@ -12,7 +12,7 @@
 //! - 浏览器 → HTML 介绍页（通过 redirect 跳转）
 
 use async_trait::async_trait;
-use openlink_core::{Action, ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use std::sync::Arc;
 
 /// 知识接入 Action Handler
@@ -66,8 +66,8 @@ impl ActionHandler for KnowledgeJoinHandler {
                 "handover": format!("{}/api/v1/knowledge/script/handover.sh", base_url),
             },
             "instructions": {
-                "clone": if repo_url.is_some() {
-                    format!("git clone {}", repo_url.as_ref().unwrap())
+                "clone": if let Some(url) = repo_url.as_ref() {
+                    format!("git clone {}", url)
                 } else {
                     "Repository URL not provided".to_string()
                 },
@@ -115,7 +115,7 @@ impl ActionHandler for KnowledgeServeHandler {
             .to_string();
 
         // 构建 Markdown 内容
-        let mut markdown = build_knowledge_markdown(&repo_path, &base_url)?;
+        let markdown = build_knowledge_markdown(&repo_path, &base_url)?;
 
         let content_type = "text/markdown; charset=utf-8".to_string();
 
@@ -150,7 +150,7 @@ fn build_knowledge_markdown(repo_path: &str, base_url: &str) -> Result<String, C
     if let Ok(content) = std::fs::read_to_string(&entry_path) {
         markdown.push_str("---\n\n## 快速启动\n\n");
         markdown.push_str(&content);
-        markdown.push_str("\n");
+        markdown.push('\n');
     }
 
     // 添加角色
