@@ -238,8 +238,8 @@ pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
 
 #[cfg(test)]
 mod tests {
-    use openlink_core::Action;
     use super::*;
+    use openlink_core::Action;
     use openlink_core::IdentityType;
 
     #[tokio::test]
