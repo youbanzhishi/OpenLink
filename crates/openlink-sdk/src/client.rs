@@ -669,4 +669,3 @@ mod tests {
         assert!(json.contains("\"storage\":\"r2\""));
     }
 }
-

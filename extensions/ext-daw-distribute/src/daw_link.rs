@@ -121,4 +121,3 @@ mod tests {
         assert!(url.starts_with("opendaw://project?url="));
     }
 }
-
