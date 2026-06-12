@@ -399,4 +399,3 @@ mod tests {
         assert_eq!(layered.cache_type(), "layered");
     }
 }
-
