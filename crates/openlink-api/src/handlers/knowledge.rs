@@ -257,9 +257,9 @@ fn extract_description_from_rules(rules_path: &PathBuf) -> Result<String, String
     for line in content.lines() {
         let trimmed = line.trim();
         if !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with('>') {
-            // 截取前100字符
-            let desc = if trimmed.len() > 100 {
-                format!("{}...", &trimmed[..100])
+            // 截取前100字符（按char边界，避免UTF-8 panic）
+            let desc = if trimmed.chars().count() > 100 {
+                format!("{}...", trimmed.chars().take(100).collect::<String>())
             } else {
                 trimmed.to_string()
             };
@@ -333,7 +333,8 @@ pub async fn get_role_rules(
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
             "Knowledge repository path not configured".to_string()))?;
 
-    let name_decoded = urlencoding_decode(&name);
+    // Axum Path 已自动做 URL 解码
+    let name_decoded = name;
     let rules_path = PathBuf::from(repo_path)
         .join("角色")
         .join(&name_decoded)
@@ -359,7 +360,8 @@ pub async fn get_role_hot_rules(
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
             "Knowledge repository path not configured".to_string()))?;
 
-    let role_decoded = urlencoding_decode(&role);
+    // Axum Path 已自动做 URL 解码
+    let role_decoded = role;
     let hot_rules_path = PathBuf::from(repo_path)
         .join("角色")
         .join(&role_decoded)
@@ -385,7 +387,8 @@ pub async fn get_project_index(
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
             "Knowledge repository path not configured".to_string()))?;
 
-    let name_decoded = urlencoding_decode(&name);
+    // Axum Path 已自动做 URL 解码
+    let name_decoded = name;
     
     // 尝试两个位置
     let index_paths = vec![
@@ -423,7 +426,8 @@ pub async fn get_script(
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, 
             "Knowledge repository path not configured".to_string()))?;
 
-    let name_decoded = urlencoding_decode(&name);
+    // Axum Path 已自动做 URL 解码
+    let name_decoded = name;
     
     // 自动添加 .sh 后缀（如果需要）
     let script_name = if name_decoded.ends_with(".sh") {

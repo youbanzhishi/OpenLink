@@ -16,10 +16,10 @@ length = 6               # 6 位 Base62 = 568 亿组合
 charset = "base62"
 
 # Phase 2: API Token 认证配置
-# enabled = false 时，管理API不需要认证
+# enabled = true 时，管理API不需要认证
 # enabled = true 时，管理API需要 Bearer Token
 [auth]
-enabled = false
+enabled = true
 
 # Token 列表（enabled = true 时生效）
 # [[auth.tokens]]
@@ -37,7 +37,7 @@ enabled = false
 # repo_path = 知识体系仓库的本地路径（需要先 clone 到本地）
 # invite_codes = MVP 阶段的写死邀请码列表
 [knowledge]
-enabled = false
+enabled = true
 repo_path = "/app/data/所有对话/主对话/open-knowledge-system"
 base_url = "http://localhost:3000"
 
