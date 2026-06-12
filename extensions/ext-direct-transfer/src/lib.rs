@@ -29,7 +29,6 @@ use openlink_core::{CoreError, ExtensionRegistry};
 
 /// 注册直传扩展到 Extension Registry
 pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
-    
     // 注册 direct_transfer action
     let action = DirectTransferAction::new();
     registry.register_action(Arc::new(action))?;
