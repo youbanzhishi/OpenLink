@@ -171,7 +171,6 @@ impl HealthChecker {
 
             let result = tokio::time::timeout(self.timeout, check.check())
                 .await
-                
                 .unwrap_or_else(|_| ComponentHealth {
                     name: name.clone(),
                     status: ComponentStatus::Unhealthy,
