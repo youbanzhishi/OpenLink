@@ -34,7 +34,6 @@ pub struct AppState {
     // Phase 10: KnowledgeSync (ADR-009)
     /// KnowledgeSync 服务
     pub knowledge_sync: Arc<RwLock<KnowledgeSyncService>>,
-
 }
 
 impl AppState {

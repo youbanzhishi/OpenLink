@@ -32,10 +32,7 @@ async fn serve_knowledge_entry(
     source: &KnowledgeSource,
     headers: &HeaderMap,
 ) -> axum::response::Response {
-    let user_agent = headers
-        .get("user-agent")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+    let user_agent = headers.get("user-agent").and_then(|v| v.to_str().ok()).unwrap_or("");
 
     let base_url = &state.config.knowledge.base_url;
     let repo_path = &source.repo_path;
@@ -53,9 +50,8 @@ async fn serve_knowledge_entry(
         || user_agent.contains("ChatGLM")
         || user_agent.contains("Meta-Llama");
 
-    let is_curl = user_agent.starts_with("curl/")
-        || user_agent.starts_with("Wget/")
-        || user_agent.starts_with("HTTPie/");
+    let is_curl =
+        user_agent.starts_with("curl/") || user_agent.starts_with("Wget/") || user_agent.starts_with("HTTPie/");
 
     let is_api_client = headers
         .get("accept")
@@ -65,7 +61,8 @@ async fn serve_knowledge_entry(
 
     if is_llm || is_curl || is_api_client {
         // 智能/API 客户端：返回精简 Markdown
-        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label()) {
+        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label())
+        {
             Ok(markdown) => (
                 StatusCode::OK,
                 [("Content-Type", "text/markdown; charset=utf-8")],
@@ -115,15 +112,11 @@ async fn serve_knowledge_entry(
             source_name = source.name,
             invite_codes = source.invite_codes.join(", "),
         );
-        (
-            StatusCode::OK,
-            [("Content-Type", "text/html; charset=utf-8")],
-            html,
-        )
-            .into_response()
+        (StatusCode::OK, [("Content-Type", "text/html; charset=utf-8")], html).into_response()
     } else {
         // 默认：返回 Markdown
-        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label()) {
+        match crate::handlers::knowledge::build_lightweight_markdown(repo_path, &source.name, base_url, source.label())
+        {
             Ok(markdown) => (
                 StatusCode::OK,
                 [("Content-Type", "text/markdown; charset=utf-8")],
