@@ -709,10 +709,7 @@ impl KnowledgeStore for InMemoryKnowledgeStore {
             updated_at: now,
         };
 
-        collections
-            .entry(request.collection.clone())
-            .or_insert_with(Vec::new)
-            .push(doc);
+        collections.entry(request.collection.clone()).or_default().push(doc);
 
         Ok(KnowledgeWriteResponse {
             id,
