@@ -1,7 +1,6 @@
 //! # 知识体系 API Handlers — Phase 3 新增
 //!
 //! 知识体系一键接入 API：
-//! - GET /.well-known/agent.json — Agent 发现端点
 //! - POST /api/v1/knowledge/join — 加入知识体系
 //! - GET /api/v1/knowledge/entry — 入口文档
 //! - GET /api/v1/knowledge/role/{name} — 角色 RULES.md
@@ -11,7 +10,7 @@
 
 use axum::{
     extract::{State, Path, Query},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
@@ -22,62 +21,6 @@ use std::fmt::Write;
 
 use crate::state::AppState;
 use openlink_core::Context;
-
-// ─── Agent Discovery ─────────────────────────────────────────
-
-/// Agent 发现响应
-#[derive(Debug, Serialize)]
-pub struct AgentDiscoveryResponse {
-    pub name: String,
-    pub version: String,
-    pub description: String,
-    pub capabilities: Vec<String>,
-    pub knowledge_join_url: String,
-    pub endpoints: AgentEndpoints,
-}
-
-/// Agent 端点信息
-#[derive(Debug, Serialize)]
-pub struct AgentEndpoints {
-    pub join: String,
-    pub entry: String,
-    pub roles: String,
-    pub projects: String,
-    pub scripts: String,
-}
-
-/// GET /.well-known/agent.json
-///
-/// 返回 OpenLink 能力描述，包含知识体系入口。
-/// 这是标准化的 Agent 发现协议。
-pub async fn agent_discovery(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<AgentDiscoveryResponse>, (StatusCode, String)> {
-    let base_url = &state.config.knowledge.base_url;
-    
-    let response = AgentDiscoveryResponse {
-        name: "OpenLink".to_string(),
-        version: "0.2.0".to_string(),
-        description: "智能体时代的通用路由与编排协议".to_string(),
-        capabilities: vec![
-            "shortlink".to_string(),
-            "routing".to_string(),
-            "knowledge_join".to_string(),
-            "file_transfer".to_string(),
-        ],
-        knowledge_join_url: format!("{}/api/v1/knowledge/join", base_url),
-        endpoints: AgentEndpoints {
-            join: format!("{}/api/v1/knowledge/join", base_url),
-            entry: format!("{}/api/v1/knowledge/entry", base_url),
-            roles: format!("{}/api/v1/knowledge/role/{{name}}", base_url),
-            projects: format!("{}/api/v1/knowledge/project/{{name}}", base_url),
-            scripts: format!("{}/api/v1/knowledge/script/{{name}}", base_url),
-        },
-    };
-
-    tracing::info!("Agent discovery requested");
-    Ok(Json(response))
-}
 
 // ─── Knowledge Join ────────────────────────────────────────
 
@@ -661,27 +604,6 @@ mod tests {
         std::fs::remove_file(&rules_path).ok();
     }
 
-    #[test]
-    fn test_agent_discovery_response() {
-        let response = AgentDiscoveryResponse {
-            name: "OpenLink".to_string(),
-            version: "0.2.0".to_string(),
-            description: "Test".to_string(),
-            capabilities: vec!["shortlink".to_string()],
-            knowledge_join_url: "http://localhost/join".to_string(),
-            endpoints: AgentEndpoints {
-                join: "http://localhost/join".to_string(),
-                entry: "http://localhost/entry".to_string(),
-                roles: "http://localhost/roles".to_string(),
-                projects: "http://localhost/projects".to_string(),
-                scripts: "http://localhost/scripts".to_string(),
-            },
-        };
-        
-        let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("\"name\":\"OpenLink\""));
-        assert!(json.contains("knowledge_join_url"));
-    }
 
     #[test]
     fn test_knowledge_package_structure() {
