@@ -35,8 +35,6 @@ pub struct AppState {
     /// KnowledgeSync 服务
     pub knowledge_sync: Arc<RwLock<KnowledgeSyncService>>,
 
-    /// 知识体系仓库路径（知识体系一键接入）
-    pub knowledge_repo_path: Option<String>,
 }
 
 impl AppState {
@@ -52,7 +50,6 @@ impl AppState {
             start_time: Instant::now(),
             search_registry: Arc::new(RwLock::new(LazyExtensionRegistry::new_empty())),
             knowledge_sync: Arc::new(RwLock::new(knowledge_sync)),
-            knowledge_repo_path: None,
         }
     }
 

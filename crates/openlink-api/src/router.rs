@@ -110,8 +110,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/agent/discover", post(handlers::agent::discover))
         // API v1 - Agent Config (Person Agent Schema v0.2.0)
         .route("/api/v1/agent/config", post(handlers::agent::config_service))
-        // API v1 - Agent Join (→ 转发到知识体系一键接入)
-        .route("/api/v1/agent/join", post(handlers::knowledge::join_knowledge))
+        // API v1 - Agent Join (→ 转发到知识体系一键接入，邀请码自动路由源)
+        .route("/api/v1/agent/join", post(handlers::knowledge::join_knowledge_compat))
         // API v1 - Plugins (Phase 8)
         .route("/api/v1/plugins", post(handlers::plugin::register_plugin))
         .route("/api/v1/plugins/search", post(handlers::plugin::search_plugins))
@@ -167,26 +167,27 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             "/api/v1/knowledge/callback",
             post(handlers::knowledge_sync::knowledge_callback),
         )
-        // API v1 - Knowledge 知识体系一键接入
-        // 一条短链入口 — GET /join?code=xxx
+        // API v1 - Knowledge 知识体系一键接入（多源版）
+        // 一条短链入口 — GET /join?code=xxx（根据邀请码自动路由到对应源）
         .route("/join", get(handlers::knowledge::knowledge_short_entry))
-        .route("/api/v1/knowledge/join", post(handlers::knowledge::join_knowledge))
-        .route("/api/v1/knowledge/entry", get(handlers::knowledge::get_entry))
-        .route("/api/v1/knowledge/role/:name", get(handlers::knowledge::get_role_rules))
+        // 带源路径的 API（:source = private/public 等）
+        .route("/api/v1/knowledge/:source/join", post(handlers::knowledge::join_knowledge))
+        .route("/api/v1/knowledge/:source/entry", get(handlers::knowledge::get_entry))
+        .route("/api/v1/knowledge/:source/role/:name", get(handlers::knowledge::get_role_rules))
         .route(
-            "/api/v1/knowledge/project/:name",
+            "/api/v1/knowledge/:source/project/:name",
             get(handlers::knowledge::get_project_index),
         )
-        .route("/api/v1/knowledge/script/:name", get(handlers::knowledge::get_script))
+        .route("/api/v1/knowledge/:source/script/:name", get(handlers::knowledge::get_script))
         .route(
-            "/api/v1/knowledge/hot-rules/:role",
+            "/api/v1/knowledge/:source/hot-rules/:role",
             get(handlers::knowledge::get_role_hot_rules),
         )
         .route(
-            "/api/v1/knowledge/markdown",
+            "/api/v1/knowledge/:source/markdown",
             get(handlers::knowledge::get_knowledge_markdown),
         )
-        // Knowledge Sync — 推送后自动同步知识仓库
-        .route("/api/v1/knowledge/sync", post(handlers::knowledge::sync_knowledge))
+        // Knowledge Sync — 按源同步
+        .route("/api/v1/knowledge/:source/sync", post(handlers::knowledge::sync_knowledge))
         .with_state(state)
 }

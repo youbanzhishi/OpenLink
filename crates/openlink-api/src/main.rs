@@ -64,12 +64,18 @@ async fn main() {
     // 6. 构建 AppState
     let mut state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
 
-    // 设置知识仓库路径
-    if state.config.knowledge.enabled && !state.config.knowledge.repo_path.is_empty() {
-        tracing::info!(repo_path = %state.config.knowledge.repo_path, "Knowledge system enabled");
-        state.knowledge_repo_path = Some(state.config.knowledge.repo_path.clone());
+    // 日志：知识体系源
+    if state.config.knowledge.enabled {
+        let sources = state.config.knowledge.resolved_sources();
+        if sources.is_empty() {
+            tracing::info!("Knowledge system enabled but no sources configured");
+        } else {
+            for src in &sources {
+                tracing::info!(source = %src.name, repo = %src.repo_path, codes = %src.invite_codes.len(), "Knowledge source configured");
+            }
+        }
     } else {
-        tracing::info!("Knowledge system disabled or not configured");
+        tracing::info!("Knowledge system disabled");
     }
 
     // 7. 获取监听地址

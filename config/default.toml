@@ -1,7 +1,7 @@
 # OpenLink 默认配置
 # 优先级：环境变量 > 配置文件 > 默认值
 # Phase 2: 新增 auth 配置
-# Phase 3: 新增 knowledge 配置（知识体系一键接入）
+# Phase 3: 新增 knowledge 配置（知识体系一键接入，支持多源）
 
 [server]
 host = "0.0.0.0"
@@ -16,33 +16,28 @@ length = 6               # 6 位 Base62 = 568 亿组合
 charset = "base62"
 
 # Phase 2: API Token 认证配置
-# enabled = true 时，管理API不需要认证
-# enabled = true 时，管理API需要 Bearer Token
 [auth]
 enabled = true
 
-# Token 列表（enabled = true 时生效）
-# [[auth.tokens]]
-# token = "ol-admin-secret-2026"
-# name = "admin"
-# scopes = ["read", "write", "admin"]
-#
-# [[auth.tokens]]
-# token = "ol-readonly-key"
-# name = "viewer"
-# scopes = ["read"]
-
-# Phase 3: 知识体系配置
-# enabled = true 时启用知识体系 API
-# repo_path = 知识体系仓库的本地路径（需要先 clone 到本地）
-# invite_codes = MVP 阶段的写死邀请码列表
+# Phase 3: 知识体系配置（多源版）
+# base_url = API 对外地址，用于生成资源 URL
+# sources = 知识源列表，每个源有独立的仓库路径和邀请码
 [knowledge]
 enabled = true
-repo_path = "/app/data/所有对话/主对话/open-knowledge-system"
 base_url = "http://localhost:3000"
 
-# MVP 邀请码列表（实际使用时替换为真实邀请码）
+# 知识源1：私有（完整知识体系，自己用）
+[[knowledge.sources]]
+name = "private"
+display_name = "OpenClaw知识体系"
+repo_path = "/app/data/所有对话/主对话/open-knowledge-system"
 invite_codes = ["openclaw-2026", "welcome-agent", "knowledge-join"]
-
-# 同步端点认证token（push.sh推送后通知ECS拉最新代码）
 sync_token = "ol-sync-dev-2026"
+
+# 知识源2：公开（框架版，给别人用）
+[[knowledge.sources]]
+name = "public"
+display_name = "OpenClaw Framework"
+repo_path = "/app/data/所有对话/主对话/open-knowledge-framework"
+invite_codes = ["openclaw-framework", "try-openclaw"]
+sync_token = ""
