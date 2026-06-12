@@ -20,6 +20,8 @@ pub enum RequestPriority {
     High = 2,
 }
 
+
+
 /// 边缘请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuntimeRequest {

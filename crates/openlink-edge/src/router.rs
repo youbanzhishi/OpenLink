@@ -3,7 +3,7 @@
 //! 精简版路由器，处理短链重定向。
 //! Phase 5 增强：集成 WASM 重定向引擎和地理路由。
 
-use crate::cache::{CacheEntry, EdgeCache};
+use crate::cache::EdgeCache;
 use crate::config::EdgeConfig;
 use crate::geo::GeoRouter;
 use crate::wasm_redirect::{EdgeRedirectEngine, EdgeRedirectRule, EdgeRequest};
@@ -23,6 +23,7 @@ pub struct RouteTarget {
 
 /// 边缘路由器（Phase 5 增强版）
 pub struct EdgeRouter {
+    #[allow(dead_code)]
     config: EdgeConfig,
     cache: EdgeCache,
     /// 内存中的路由表（简化版，无数据库）
@@ -90,8 +91,8 @@ impl EdgeRouter {
         // 1. WASM 重定向引擎
         let request = EdgeRequest {
             code: code.to_string(),
-            client_ip: client_ip.map(|s| s.to_string()),
-            user_agent: user_agent.map(|s| s.to_string()),
+            client_ip: client_ip.map(ToString::to_string),
+            user_agent: user_agent.map(ToString::to_string),
             device_type: user_agent.and_then(|ua| detect_device_type(ua)),
             identity_type: user_agent.and_then(|ua| detect_identity_type(ua)),
             geo_region: {
