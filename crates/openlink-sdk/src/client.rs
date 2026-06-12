@@ -37,6 +37,7 @@ impl LinkClient {
     }
 
     /// 创建新的 LinkClient（使用默认配置）
+    #[allow(clippy::new_without_default)]
     pub fn default() -> Self {
         Self::new(Config::default())
     }
@@ -342,6 +343,7 @@ impl FileClient {
     }
 
     /// 创建新的 FileClient（使用默认配置）
+    #[allow(clippy::new_without_default)]
     pub fn default() -> Self {
         Self::new(Config::default())
     }
@@ -667,3 +669,4 @@ mod tests {
         assert!(json.contains("\"storage\":\"r2\""));
     }
 }
+

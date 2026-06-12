@@ -36,7 +36,7 @@ impl DawDeeplink {
     pub fn from_url(url: &str) -> Result<Self, DeeplinkError> {
         let url = url.trim_start_matches("opendaw://");
         let parts: Vec<&str> = url.splitn(2, '?').collect();
-        let action = parts.get(0).unwrap_or(&"");
+        let action = parts.first().unwrap_or(&"");
 
         match *action {
             "project" => {
@@ -121,3 +121,4 @@ mod tests {
         assert!(url.starts_with("opendaw://project?url="));
     }
 }
+
