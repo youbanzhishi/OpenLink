@@ -951,10 +951,7 @@ fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> 
 /// POST /api/v1/knowledge/sync
 /// 推送后通知ECS拉最新知识仓库代码
 /// 认证：Bearer token，与配置中 sync_token 匹配
-pub async fn sync_knowledge(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+pub async fn sync_knowledge(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     let config = &state.config.knowledge;
 
     if !config.enabled {
@@ -998,14 +995,7 @@ pub async fn sync_knowledge(
 
     // 执行 git pull --ff-only origin master
     let output = Command::new("git")
-        .args([
-            "-C",
-            &config.repo_path,
-            "pull",
-            "--ff-only",
-            "origin",
-            "master",
-        ])
+        .args(["-C", &config.repo_path, "pull", "--ff-only", "origin", "master"])
         .output()
         .await;
 
@@ -1013,8 +1003,7 @@ pub async fn sync_knowledge(
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout).to_string();
             let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-            let already_up_to_date = stdout.contains("Already up to date")
-                || stderr.contains("Already up to date");
+            let already_up_to_date = stdout.contains("Already up to date") || stderr.contains("Already up to date");
 
             // 获取当前commit hash
             let commit_output = Command::new("git")
