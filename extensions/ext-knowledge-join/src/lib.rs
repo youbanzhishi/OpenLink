@@ -12,7 +12,7 @@
 //! - 浏览器 → HTML 介绍页（通过 redirect 跳转）
 
 use async_trait::async_trait;
-use openlink_core::{Action, ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
 use std::sync::Arc;
 
 /// 知识接入 Action Handler
@@ -238,6 +238,7 @@ pub fn register(registry: &mut ExtensionRegistry) -> Result<(), CoreError> {
 
 #[cfg(test)]
 mod tests {
+    use openlink_core::Action;
     use super::*;
     use openlink_core::IdentityType;
 
