@@ -43,7 +43,7 @@ pub use peer_connection::{
 pub use stun::StunClient;
 pub use transfer::{P2pResponse, P2pTransferAction, P2pTransferParams, TransferMode};
 
-use openlink_core::{ActionHandler, ActionResult, Context, CoreError, ExtensionRegistry, Target};
+use openlink_core::{CoreError, ExtensionRegistry};
 use std::sync::Arc;
 
 /// 注册 P2P 传输扩展
