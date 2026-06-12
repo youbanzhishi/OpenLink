@@ -266,7 +266,6 @@ pub enum JwtAlgorithm {
     HS512,
 }
 
-
 /// JWT 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JwtConfig {
@@ -498,13 +497,20 @@ impl AuthMiddleware {
         if let Some(auth) = auth_header {
             let auth = auth.trim();
             if auth.starts_with("Bearer ") {
-                return auth.strip_prefix("Bearer ").map(|t| Credentials::BearerToken(t.to_string()));
+                return auth
+                    .strip_prefix("Bearer ")
+                    .map(|t| Credentials::BearerToken(t.to_string()));
             }
             if auth.starts_with("bearer ") {
-                return auth.strip_prefix("Bearer ").map(|t| Credentials::BearerToken(t.to_string()));
+                return auth
+                    .strip_prefix("Bearer ")
+                    .map(|t| Credentials::BearerToken(t.to_string()));
             }
             if auth.starts_with("Basic ") {
-                let decoded = auth.strip_prefix("Basic ").map(|s| base64url_decode(s.trim())).unwrap_or_else(|| base64url_decode(auth[6..].trim()));
+                let decoded = auth
+                    .strip_prefix("Basic ")
+                    .map(|s| base64url_decode(s.trim()))
+                    .unwrap_or_else(|| base64url_decode(auth[6..].trim()));
                 if let Some(bytes) = decoded {
                     if let Ok(s) = String::from_utf8(bytes) {
                         let parts: Vec<&str> = s.splitn(2, ':').collect();

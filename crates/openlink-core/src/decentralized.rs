@@ -20,7 +20,6 @@ pub enum RouteStrategy {
     MultiPath,
 }
 
-
 /// 传输降级策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -174,8 +173,6 @@ impl PartialEq for DijkstraNode {
 }
 
 impl Eq for DijkstraNode {}
-
-
 
 impl Ord for DijkstraNode {
     fn cmp(&self, other: &Self) -> Ordering {
