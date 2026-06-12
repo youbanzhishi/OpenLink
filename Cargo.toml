@@ -62,8 +62,8 @@ toml = "0.8"
 # Random — short code generation
 rand = "0.8"
 
-# HTTP client (webhook)
-reqwest = { version = "0.12", features = ["json"] }
+# HTTP client (webhook) — 用rustls替代native-tls，避免openssl依赖
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 
 # Cryptography (for R2/OSS signing)
 hmac = "0.12"

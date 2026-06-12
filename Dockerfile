@@ -1,11 +1,12 @@
 # ── Stage 1: 编译（musl静态链接，零glibc依赖）──
-FROM rust:1.86-bookworm AS builder
+FROM rust:1.88-bookworm AS builder
 
-RUN apt-get update && apt-get install -y musl-tools pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y musl-tools && rm -rf /var/lib/apt/lists/*
 RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /app
 COPY . .
+# reqwest用rustls，无需openssl
 RUN cargo build --release -p openlink-api --target x86_64-unknown-linux-musl
 
 # ── Stage 2: 运行（极简镜像，~10MB）──
