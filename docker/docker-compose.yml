@@ -1,22 +1,30 @@
-# OpenLink 单容器部署
-version: "3.8"
+# OpenLink Docker Compose 部署
+# 用法：docker compose up -d
+# 自定义配置：编辑 ./config/production.toml 后重启
 
 services:
   openlink:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/youbanzhishi/openlink:latest
+    # 如需本地构建：取消注释下面两行，注释掉 image
+    # build:
+    #   context: ..
+    #   dockerfile: Dockerfile
     container_name: openlink
     ports:
       - "3000:3000"
     volumes:
-      - openlink-data:/app/data
-      - ../config:/app/config:ro
+      # 配置文件（必须修改 sync_token 和 base_url）
+      - ./config/production.toml:/opt/openlink/config/default.toml:ro
+      # 数据持久化
+      - openlink-data:/opt/openlink/data
+      # 知识体系仓库（git clone到本地后挂载）
+      - ./knowledge:/opt/openlink/knowledge:ro
     environment:
       - RUST_LOG=openlink=info
+      - OPENLINK_CONFIG=/opt/openlink/config/default.toml
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/v1/links"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/knowledge/entry"]
       interval: 30s
       timeout: 5s
       retries: 3
