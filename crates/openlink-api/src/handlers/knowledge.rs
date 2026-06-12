@@ -645,3 +645,204 @@ mod tests {
         assert!(json.contains("agt_test"));
     }
 }
+
+
+// ─── 一条短链入口 ────────────────────────────────────────
+
+/// GET /join?code=xxx — 一条短链，智能体访问即可加入知识体系
+///
+/// 根据访问者类型自动返回最合适的格式：
+/// - 只读型智能体（元宝/豆包/ChatGPT）→ 纯 Markdown 文本
+/// - 全能型智能体（Coze/自建Agent）→ JSON（含角色/项目/脚本URL + token）
+/// - 浏览器 → HTML 引导页
+pub async fn knowledge_short_entry(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Query(params): Query<ShortEntryParams>,
+) -> Result<Response, (StatusCode, String)> {
+    let repo_path = state.knowledge_repo_path.as_ref()
+        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR,
+            "Knowledge system not enabled".to_string()))?
+        .clone();
+
+    // 验证邀请码
+    let code = params.code.clone().unwrap_or_default();
+    if !state.config.knowledge.invite_codes.contains(&code) {
+        return Err((StatusCode::FORBIDDEN,
+            "无效邀请码。请在 URL 中加 ?code=你的邀请码".to_string()));
+    }
+
+    let agent_type = detect_agent_type(&headers, &params.agent);
+
+    match agent_type {
+        AgentCategory::ReadOnly => {
+            // 只读智能体：返回完整知识 Markdown（复用 get_knowledge_markdown 的逻辑）
+            let markdown = build_full_markdown(&repo_path)?;
+            Ok((
+                StatusCode::OK,
+                [(axum::http::header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
+                markdown,
+            ).into_response())
+        }
+        AgentCategory::FullCapability => {
+            // 全能型智能体：返回结构化 JSON
+            let base_url = &state.config.knowledge.base_url;
+            let pkg = build_knowledge_package(&repo_path, base_url)?;
+            Ok(Json(pkg).into_response())
+        }
+        AgentCategory::Browser => {
+            let base = &state.config.knowledge.base_url;
+            let html = format!(r#"<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OpenClaw 知识体系 — 加入</title>
+<style>
+  body {{ font-family: -apple-system,BlinkMacSystemFont,sans-serif; max-width:680px; margin:60px auto; padding:0 20px; color:#1a1a1a; line-height:1.7; }}
+  h1 {{ color:#3b82f6; }} .card {{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px 24px; margin:16px 0; }}
+  code {{ background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:14px; }}
+  .tip {{ color:#64748b; font-size:14px; }}
+</style></head><body>
+<h1>🐉 OpenClaw 知识体系</h1>
+<p>你已通过邀请码验证，接下来根据你的身份选择加入方式：</p>
+<div class="card">
+  <h3>🤖 我是 AI 智能体</h3>
+  <p>直接访问以下地址即可获取知识（会自动识别你的类型）：</p>
+  <p><code>{base}/join?code={code}</code></p>
+  <p class="tip">全能型 Agent 会收到 JSON + Token，只读型 Agent 会收到 Markdown 文本。</p>
+</div>
+<div class="card">
+  <h3>👨‍💻 我是开发者</h3>
+  <p>使用 curl 测试：</p>
+  <p><code>curl {base}/join?code={code}</code></p>
+  <p>指定返回格式：<code>curl -H "Accept: application/json" {base}/join?code={code}</code></p>
+</div>
+</body></html>"#);
+            Ok((
+                StatusCode::OK,
+                [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                html,
+            ).into_response())
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShortEntryParams {
+    pub code: Option<String>,
+    pub agent: Option<String>,
+}
+
+enum AgentCategory {
+    ReadOnly,
+    FullCapability,
+    Browser,
+}
+
+fn detect_agent_type(headers: &axum::http::HeaderMap, agent_param: &Option<String>) -> AgentCategory {
+    // 1. 查询参数优先
+    if let Some(a) = agent_param {
+        match a.to_lowercase().as_str() {
+            "readonly" | "llm" => return AgentCategory::ReadOnly,
+            "full" | "agent" => return AgentCategory::FullCapability,
+            "browser" => return AgentCategory::Browser,
+            _ => {}
+        }
+    }
+
+    // 2. Accept 头判断
+    if let Some(accept) = headers.get("accept") {
+        let accept_str = accept.to_str().unwrap_or("").to_lowercase();
+        if accept_str.contains("text/markdown") || accept_str.contains("text/plain") {
+            return AgentCategory::ReadOnly;
+        }
+        if accept_str.contains("application/json") && !accept_str.contains("text/html") {
+            return AgentCategory::FullCapability;
+        }
+        if accept_str.contains("text/html") {
+            return AgentCategory::Browser;
+        }
+    }
+
+    // 3. User-Agent 猜测
+    if let Some(ua) = headers.get("user-agent") {
+        let ua_str = ua.to_str().unwrap_or("").to_lowercase();
+        let readonly_agents = ["yuanbao", "doubao", "chatgpt", "claude", "perplexity", "bingbot"];
+        for agent in readonly_agents {
+            if ua_str.contains(agent) {
+                return AgentCategory::ReadOnly;
+            }
+        }
+        let full_agents = ["coze", "openai-python", "python-requests", "curl"];
+        for agent in full_agents {
+            if ua_str.contains(agent) {
+                return AgentCategory::FullCapability;
+            }
+        }
+        if ua_str.contains("mozilla") || ua_str.contains("safari") || ua_str.contains("chrome") {
+            return AgentCategory::Browser;
+        }
+    }
+
+    // 默认：只读（最安全）
+    AgentCategory::ReadOnly
+}
+
+/// 构建完整知识 Markdown（提取为独立函数供短链入口复用）
+fn build_full_markdown(repo_path: &str) -> Result<String, (StatusCode, String)> {
+    let mut markdown = String::new();
+
+    markdown.push_str("# OpenClaw知识体系 — 快速启动\n\n");
+
+    let entry_path = PathBuf::from(repo_path).join("入口-快速启动.md");
+    if let Ok(content) = std::fs::read_to_string(&entry_path) {
+        markdown.push_str(&content);
+    }
+
+    markdown.push_str("\n\n---\n\n## 角色\n\n");
+
+    let roles_dir = PathBuf::from(repo_path).join("角色");
+    if let Ok(entries) = std::fs::read_dir(roles_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let role_name = path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                let rules_path = path.join("RULES.md");
+                if let Ok(content) = std::fs::read_to_string(&rules_path) {
+                    markdown.push_str(&format!("### {}\n\n", role_name));
+                    markdown.push_str(&content);
+                    markdown.push_str("\n\n---\n\n");
+                }
+            }
+        }
+    }
+
+    markdown.push_str("## 项目\n\n");
+
+    let projects_dirs = vec![
+        PathBuf::from(repo_path).join("项目"),
+        PathBuf::from(repo_path).join("项目文档"),
+    ];
+
+    for projects_dir in projects_dirs {
+        if let Ok(entries) = std::fs::read_dir(&projects_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let project_name = path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("");
+                    let index_path = path.join("INDEX.md");
+                    if let Ok(content) = std::fs::read_to_string(&index_path) {
+                        markdown.push_str(&format!("### {}\n\n", project_name));
+                        markdown.push_str(&content);
+                        markdown.push_str("\n\n---\n\n");
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(markdown)
+}

@@ -168,6 +168,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             post(handlers::knowledge_sync::knowledge_callback),
         )
         // API v1 - Knowledge 知识体系一键接入
+        // 一条短链入口 — GET /join?code=xxx
+        .route("/join", get(handlers::knowledge::knowledge_short_entry))
         .route("/api/v1/knowledge/join", post(handlers::knowledge::join_knowledge))
         .route("/api/v1/knowledge/entry", get(handlers::knowledge::get_entry))
         .route("/api/v1/knowledge/role/:name", get(handlers::knowledge::get_role_rules))
