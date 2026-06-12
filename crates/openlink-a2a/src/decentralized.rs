@@ -161,7 +161,7 @@ impl DecentralizedCapabilityRouter {
             capability_routes: Arc::new(RwLock::new(HashMap::new())),
             gossip_seq: Arc::new(RwLock::new(0)),
             partition_status: Arc::new(RwLock::new(PartitionStatus::Normal)),
-            partition_policy: partition_policy,
+            partition_policy,
             local_node_id,
             known_nodes_count: Arc::new(RwLock::new(1)),
             reachable_nodes_count: Arc::new(RwLock::new(1)),
@@ -378,7 +378,7 @@ impl DecentralizedCapabilityRouter {
         match *status {
             PartitionStatus::Normal => DegradationStrategy::P2P,
             PartitionStatus::Minor => DegradationStrategy::DirectTransfer,
-            PartitionStatus::Major | PartitionStatus::Isolated => self.partition_policy.degradation.clone(),
+            PartitionStatus::Major | PartitionStatus::Isolated => self.partition_policy.degradation,
         }
     }
 

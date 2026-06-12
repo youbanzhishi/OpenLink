@@ -35,6 +35,7 @@ pub struct FileRequest {
     pub content_type: Option<String>,
 }
 
+#[allow(clippy::type_complexity)]
 /// 文件服务
 pub struct FileServer {
     backend: Arc<RwLock<FileBackend>>,

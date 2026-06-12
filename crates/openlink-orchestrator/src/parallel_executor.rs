@@ -3,6 +3,7 @@
 //! 增强版 DAG 执行引擎，支持并行执行无依赖节点。
 //! 使用拓扑层级（level）来识别可并行的节点。
 
+#[allow(unused_imports)]
 use crate::dag::{Dag, DagError, DagNode, EdgeCondition, NodeId};
 use crate::executor::{ExecutionResult, ExecutionStatus, NodeResult, TaskExecutor};
 use serde::{Deserialize, Serialize};

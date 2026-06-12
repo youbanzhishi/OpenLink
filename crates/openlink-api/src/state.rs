@@ -7,7 +7,7 @@ use openlink_core::knowledge_sync::{InMemoryKnowledgeStore, KnowledgeSyncService
 use openlink_core::RoutingEngine;
 use openlink_store::Store;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tokio::sync::RwLock;
 
 /// 应用状态（共享给所有 handler）

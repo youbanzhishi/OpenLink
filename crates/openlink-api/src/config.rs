@@ -23,7 +23,7 @@ pub struct AppConfig {
 }
 
 /// 服务器配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct ServerConfig {
     #[serde(default = "default_host")]
     pub host: String,
@@ -40,7 +40,7 @@ fn default_port() -> u16 {
 }
 
 /// 存储配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct StoreConfig {
     #[serde(default = "default_backend")]
     pub backend: String,
@@ -94,7 +94,7 @@ fn default_charset() -> String {
 }
 
 /// 认证配置（Phase 2）
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct AuthConfig {
     /// 是否启用认证
     #[serde(default = "default_auth_enabled")]
@@ -104,21 +104,12 @@ pub struct AuthConfig {
     pub tokens: Vec<TokenConfig>,
 }
 
-impl Default for AuthConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            tokens: vec![],
-        }
-    }
-}
-
 fn default_auth_enabled() -> bool {
     false
 }
 
 /// Token 配置
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct TokenConfig {
     /// Token 值
     pub token: String,

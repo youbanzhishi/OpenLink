@@ -25,7 +25,6 @@ use tokio::process::Command;
 
 use crate::config::KnowledgeSource;
 use crate::state::AppState;
-use openlink_core::Context;
 
 // ─── Helper: resolve source ──────────────────────────────
 
@@ -52,19 +51,14 @@ fn resolve_source_by_code(state: &AppState, code: &str) -> Result<KnowledgeSourc
 // ─── Knowledge Join ────────────────────────────────────────
 
 /// Agent 类型
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentType {
     Llm,
     Robot,
     Service,
+    #[default]
     Custom,
-}
-
-impl Default for AgentType {
-    fn default() -> Self {
-        AgentType::Custom
-    }
 }
 
 /// 加入知识体系请求
@@ -400,6 +394,7 @@ pub async fn get_project_index(
         PathBuf::from(&src.repo_path).join("项目文档").join(&name).join("INDEX.md"),
     ];
 
+
     for index_path in index_paths {
         match read_knowledge_file(&index_path) {
             Ok(content) => {
@@ -442,6 +437,7 @@ fn read_knowledge_file(path: &PathBuf) -> Result<String, (StatusCode, String)> {
         (StatusCode::NOT_FOUND, format!("File '{}' not found", filename))
     })
 }
+
 
 // ─── Knowledge Markdown Response for Read-Only Agents ────────
 

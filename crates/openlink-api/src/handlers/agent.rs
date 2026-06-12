@@ -643,7 +643,7 @@ pub async fn join_knowledge(
         branch: "master".into(),
         entry_file: "入口.md".into(),
         init_script: "scripts/init.sh".into(),
-        clone_command: format!("git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git"),
+        clone_command: "git clone -b master https://github.com/youbanzhishi/open-knowledge-system.git".to_string(),
     };
 
     // 2. 读取入口文档预览

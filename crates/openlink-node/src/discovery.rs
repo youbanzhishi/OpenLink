@@ -11,7 +11,6 @@
 //! - `port`: HTTP 服务端口
 
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
 use std::time::Duration;
 
 /// 已发现的 OpenLink 节点

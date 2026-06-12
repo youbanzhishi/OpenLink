@@ -2,6 +2,7 @@
 //!
 //! 按拓扑顺序执行 DAG，支持并行执行无依赖的节点。
 
+#[allow(unused_imports)]
 use crate::dag::{Dag, DagError, DagNode, EdgeCondition, NodeId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
