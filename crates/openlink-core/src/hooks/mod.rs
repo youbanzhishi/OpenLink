@@ -6,4 +6,4 @@ pub mod permission;
 pub use monitor::{
     ErrorRateMonitorHook, LatencyMonitorHook, MonitorAdvice, MonitorContext, MonitorEngine, MonitorHook,
 };
-pub use permission::{PermissionHook, PermissionHookConfig, PermissionContextExt};
+pub use permission::{PermissionContextExt, PermissionHook, PermissionHookConfig};

@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use openlink_auth::{
-    AgentPermission, AgentType, Operation, PermissionChecker, PermissionError, 
-    ResourceLimits, SessionConfig, PermissionStatus,
+    AgentPermission, AgentType, Operation, PermissionChecker, PermissionError, PermissionStatus, ResourceLimits,
+    SessionConfig,
 };
 use openlink_core::error::CoreError;
 
