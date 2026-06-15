@@ -7,8 +7,8 @@
 //! - 默认不启用MonitorHook（向后兼容）
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// 监控建议类型
@@ -229,12 +229,14 @@ impl MonitorHook for ErrorRateMonitorHook {
             if rate >= self.abort_threshold {
                 MonitorAdvice::SuggestAbort(format!(
                     "Error rate {:.2}% exceeds abort threshold {:.2}%",
-                    rate * 100.0, self.abort_threshold * 100.0
+                    rate * 100.0,
+                    self.abort_threshold * 100.0
                 ))
             } else if rate >= self.warn_threshold {
                 MonitorAdvice::Warn(format!(
                     "Error rate {:.2}% exceeds warn threshold {:.2}%",
-                    rate * 100.0, self.warn_threshold * 100.0
+                    rate * 100.0,
+                    self.warn_threshold * 100.0
                 ))
             } else {
                 MonitorAdvice::Continue

@@ -2,5 +2,6 @@
 
 pub mod monitor;
 
-pub use monitor::{MonitorHook, MonitorEngine, MonitorAdvice, MonitorContext,
-                  LatencyMonitorHook, ErrorRateMonitorHook};
+pub use monitor::{
+    ErrorRateMonitorHook, LatencyMonitorHook, MonitorAdvice, MonitorContext, MonitorEngine, MonitorHook,
+};
