@@ -191,10 +191,7 @@ impl ContextFilterEngine {
         filter: Option<&ExtensionFilter>,
     ) -> Vec<ExtensionFilterTarget> {
         let filter = filter.unwrap_or(&self.default_filter);
-        extensions
-            .into_iter()
-            .filter(|ext| filter.matches(ext))
-            .collect()
+        extensions.into_iter().filter(|ext| filter.matches(ext)).collect()
     }
 
     /// 根据Context过滤
@@ -321,7 +318,7 @@ mod tests {
     #[test]
     fn test_context_filter_engine() {
         let engine = ContextFilterEngine::new();
-        
+
         let extensions = vec![
             create_test_extension("ext1", vec![], vec!["search"]),
             create_test_extension("ext2", vec![TaskPhase::Planning], vec!["planning"]),
@@ -330,7 +327,7 @@ mod tests {
 
         let context = FilterContext::new(TaskPhase::Execution);
         let filtered = engine.filter_by_context(extensions, &context);
-        
+
         // 所有Extension都应该被包含（因为task_phase为空表示所有阶段）
         assert_eq!(filtered.len(), 3);
     }
@@ -338,18 +335,17 @@ mod tests {
     #[test]
     fn test_filter_with_required_tags() {
         let engine = ContextFilterEngine::new();
-        
+
         let extensions = vec![
             create_test_extension("ext1", vec![], vec!["search", "read"]),
             create_test_extension("ext2", vec![], vec!["write"]),
             create_test_extension("ext3", vec![], vec!["search", "write"]),
         ];
 
-        let context = FilterContext::new(TaskPhase::Execution)
-            .with_tags(vec!["search".to_string()]);
-        
+        let context = FilterContext::new(TaskPhase::Execution).with_tags(vec!["search".to_string()]);
+
         let filtered = engine.filter_by_context(extensions, &context);
-        
+
         // ext1 和 ext3 有 search 标签
         assert_eq!(filtered.len(), 2);
         assert!(filtered.iter().any(|e| e.id == "ext1"));
