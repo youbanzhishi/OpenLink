@@ -2,8 +2,8 @@
 //!
 //! 实现 BeforeRoute Hook，校验链：Token验证→会话状态→权限有效期→Extension白名单→操作检查→资源限制
 
-use crate::hooks::{Hook, HookAdvice, HookContext, HookResult};
 use crate::error::CoreError;
+use crate::hooks::{Hook, HookAdvice, HookContext, HookResult};
 use crate::primitives::{Action, Context, Route};
 
 /// 权限Hook配置
@@ -23,11 +23,7 @@ impl Default for PermissionHookConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            bypass_paths: vec![
-                "/health".into(),
-                "/ready".into(),
-                "/api/v1/auth/login".into(),
-            ],
+            bypass_paths: vec!["/health".into(), "/ready".into(), "/api/v1/auth/login".into()],
             default_max_file_size: 10 * 1024 * 1024, // 10MB
             token_header: "Authorization".into(),
         }
@@ -105,10 +101,7 @@ impl Hook for PermissionHook {
             // 检查操作权限
             let action = ctx.action();
             if !perm_ctx.is_operation_allowed(&action) {
-                return Err(CoreError::Forbidden(format!(
-                    "Operation '{}' is not allowed",
-                    action
-                )));
+                return Err(CoreError::Forbidden(format!("Operation '{}' is not allowed", action)));
             }
         }
 
@@ -117,11 +110,7 @@ impl Hook for PermissionHook {
     }
 
     fn on_error(&self, ctx: &HookContext, error: &CoreError) -> HookResult {
-        tracing::warn!(
-            "Permission hook error for path '{}': {}",
-            ctx.path(),
-            error
-        );
+        tracing::warn!("Permission hook error for path '{}': {}", ctx.path(), error);
         Err(error.clone())
     }
 }
