@@ -2,11 +2,11 @@
 
 pub mod memory;
 
-use async_trait::async_trait;
-use crate::error::SessionStoreError;
-use super::session::{Session, SessionId};
-use super::permission::UserId;
 use super::permission::AgentId;
+use super::permission::UserId;
+use super::session::{Session, SessionId};
+use crate::error::SessionStoreError;
+use async_trait::async_trait;
 
 /// 会话存储 trait
 #[async_trait]

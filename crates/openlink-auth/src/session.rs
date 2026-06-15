@@ -2,13 +2,13 @@
 //!
 //! Session = 权限实例，会话结束自动失效
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use super::permission::{AgentId, UserId};
 use crate::permission::PermissionId;
-use super::permission::{UserId, AgentId};
 
 /// 会话唯一标识
 pub type SessionId = String;
@@ -48,8 +48,8 @@ pub struct SessionConfig {
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            ttl_seconds: 3600,           // 1小时
-            refresh_ttl_seconds: 86400,  // 1天
+            ttl_seconds: 3600,          // 1小时
+            refresh_ttl_seconds: 86400, // 1天
             max_concurrent_sessions: 5,
             require_re_auth: false,
             auto_revoke_on_session_end: true,
@@ -125,12 +125,7 @@ pub struct Session {
 
 impl Session {
     /// 创建新会话（token稍后填充）
-    pub fn new(
-        permission_id: PermissionId,
-        agent_id: AgentId,
-        user_id: UserId,
-        config: &SessionConfig,
-    ) -> Self {
+    pub fn new(permission_id: PermissionId, agent_id: AgentId, user_id: UserId, config: &SessionConfig) -> Self {
         let issued_at = Utc::now();
         let expires_at = issued_at + chrono::Duration::seconds(config.ttl_seconds as i64);
 
@@ -182,12 +177,7 @@ mod tests {
     #[test]
     fn test_session_creation() {
         let config = SessionConfig::default();
-        let session = Session::new(
-            "perm-001".into(),
-            "agent-001".into(),
-            "user-001".into(),
-            &config,
-        );
+        let session = Session::new("perm-001".into(), "agent-001".into(), "user-001".into(), &config);
 
         assert!(!session.session_id.is_empty());
         assert_eq!(session.permission_id, "perm-001");
@@ -199,12 +189,7 @@ mod tests {
     #[test]
     fn test_session_refresh() {
         let config = SessionConfig::default();
-        let mut session = Session::new(
-            "perm-001".into(),
-            "agent-001".into(),
-            "user-001".into(),
-            &config,
-        );
+        let mut session = Session::new("perm-001".into(), "agent-001".into(), "user-001".into(), &config);
 
         let original_expires = session.expires_at;
         session.refresh(7200); // 刷新为2小时
@@ -216,12 +201,7 @@ mod tests {
     #[test]
     fn test_session_revoke() {
         let config = SessionConfig::default();
-        let mut session = Session::new(
-            "perm-001".into(),
-            "agent-001".into(),
-            "user-001".into(),
-            &config,
-        );
+        let mut session = Session::new("perm-001".into(), "agent-001".into(), "user-001".into(), &config);
 
         assert!(session.is_active());
         session.revoke();

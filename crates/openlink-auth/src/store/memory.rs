@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::error::SessionStoreError;
+use super::super::super::permission::{AgentId, UserId};
 use super::super::super::session::{Session, SessionId, SessionStatus};
-use super::super::super::permission::{UserId, AgentId};
 use super::SessionStore;
+use crate::error::SessionStoreError;
 
 /// 内存会话存储
 #[derive(Debug, Clone)]
@@ -57,30 +57,26 @@ impl SessionStore for InMemorySessionStore {
 
     async fn delete(&self, session_id: &SessionId) -> Result<(), SessionStoreError> {
         let mut sessions = self.sessions.write().await;
-        sessions.remove(session_id)
+        sessions
+            .remove(session_id)
             .ok_or(SessionStoreError::NotFound(session_id.clone()))?;
         Ok(())
     }
 
     async fn list_by_user(&self, user_id: &UserId) -> Result<Vec<Session>, SessionStoreError> {
         let sessions = self.sessions.read().await;
-        Ok(sessions.values()
-            .filter(|s| s.user_id == *user_id)
-            .cloned()
-            .collect())
+        Ok(sessions.values().filter(|s| s.user_id == *user_id).cloned().collect())
     }
 
     async fn list_by_agent(&self, agent_id: &AgentId) -> Result<Vec<Session>, SessionStoreError> {
         let sessions = self.sessions.read().await;
-        Ok(sessions.values()
-            .filter(|s| s.agent_id == *agent_id)
-            .cloned()
-            .collect())
+        Ok(sessions.values().filter(|s| s.agent_id == *agent_id).cloned().collect())
     }
 
     async fn revoke(&self, session_id: &SessionId) -> Result<(), SessionStoreError> {
         let mut sessions = self.sessions.write().await;
-        let session = sessions.get_mut(session_id)
+        let session = sessions
+            .get_mut(session_id)
             .ok_or(SessionStoreError::NotFound(session_id.clone()))?;
         session.revoke();
         Ok(())
@@ -88,7 +84,8 @@ impl SessionStore for InMemorySessionStore {
 
     async fn cleanup_expired(&self) -> Result<u64, SessionStoreError> {
         let mut sessions = self.sessions.write().await;
-        let expired_ids: Vec<SessionId> = sessions.iter()
+        let expired_ids: Vec<SessionId> = sessions
+            .iter()
             .filter(|(_, s)| s.status != SessionStatus::Active)
             .map(|(id, _)| id.clone())
             .collect();

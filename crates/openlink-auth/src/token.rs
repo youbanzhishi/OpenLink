@@ -4,12 +4,12 @@
 //! refresh_token: 长期凭证(1天)，用于刷新access_token
 
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use uuid::Uuid;
 
-use crate::error::TokenError;
 use super::session::Session;
+use crate::error::TokenError;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -104,11 +104,10 @@ impl TokenGenerator {
         let (header_b64, payload_b64, sig_b64) = self.split_token(token)?;
         self.verify_signature(&format!("{}.{}", header_b64, payload_b64), &sig_b64)?;
 
-        let payload = Self::base64_decode(&payload_b64)
-            .ok_or(TokenError::Decode("Invalid payload encoding".into()))?;
+        let payload = Self::base64_decode(&payload_b64).ok_or(TokenError::Decode("Invalid payload encoding".into()))?;
 
-        let claims: AccessTokenClaims = serde_json::from_slice(&payload)
-            .map_err(|e| TokenError::Decode(e.to_string()))?;
+        let claims: AccessTokenClaims =
+            serde_json::from_slice(&payload).map_err(|e| TokenError::Decode(e.to_string()))?;
 
         // 检查过期
         let now = chrono::Utc::now().timestamp();
@@ -124,11 +123,10 @@ impl TokenGenerator {
         let (header_b64, payload_b64, sig_b64) = self.split_token(token)?;
         self.verify_signature(&format!("{}.{}", header_b64, payload_b64), &sig_b64)?;
 
-        let payload = Self::base64_decode(&payload_b64)
-            .ok_or(TokenError::Decode("Invalid payload encoding".into()))?;
+        let payload = Self::base64_decode(&payload_b64).ok_or(TokenError::Decode("Invalid payload encoding".into()))?;
 
-        let claims: RefreshTokenClaims = serde_json::from_slice(&payload)
-            .map_err(|e| TokenError::Decode(e.to_string()))?;
+        let claims: RefreshTokenClaims =
+            serde_json::from_slice(&payload).map_err(|e| TokenError::Decode(e.to_string()))?;
 
         let now = chrono::Utc::now().timestamp();
         if claims.exp < now {
@@ -145,10 +143,8 @@ impl TokenGenerator {
             typ: "JWT".into(),
         };
 
-        let header_json = serde_json::to_vec(&header)
-            .map_err(|e| TokenError::Encode(e.to_string()))?;
-        let payload_json = serde_json::to_vec(claims)
-            .map_err(|e| TokenError::Encode(e.to_string()))?;
+        let header_json = serde_json::to_vec(&header).map_err(|e| TokenError::Encode(e.to_string()))?;
+        let payload_json = serde_json::to_vec(claims).map_err(|e| TokenError::Encode(e.to_string()))?;
 
         let header_b64 = Self::base64_encode(&header_json);
         let payload_b64 = Self::base64_encode(&payload_json);
@@ -161,8 +157,7 @@ impl TokenGenerator {
 
     /// 计算HMAC-SHA256签名
     fn compute_signature(&self, input: &str) -> String {
-        let mut mac = HmacSha256::new_from_slice(&self.secret_key)
-            .expect("HMAC key length is valid");
+        let mut mac = HmacSha256::new_from_slice(&self.secret_key).expect("HMAC key length is valid");
         mac.update(input.as_bytes());
         let result = mac.finalize();
         hex::encode(result.into_bytes())
@@ -236,12 +231,22 @@ mod base64_simd {
 
             let chunks = chars.chunks(4);
             for chunk in chunks {
-                if chunk.len() < 2 { break; }
+                if chunk.len() < 2 {
+                    break;
+                }
 
                 let v0 = CHARSET.find(chunk[0]).ok_or(())? as u32;
                 let v1 = CHARSET.find(chunk[1]).ok_or(())? as u32;
-                let v2 = if chunk.len() > 2 { CHARSET.find(chunk[2]).ok_or(())? as u32 } else { 0 };
-                let v3 = if chunk.len() > 3 { CHARSET.find(chunk[3]).ok_or(())? as u32 } else { 0 };
+                let v2 = if chunk.len() > 2 {
+                    CHARSET.find(chunk[2]).ok_or(())? as u32
+                } else {
+                    0
+                };
+                let v3 = if chunk.len() > 3 {
+                    CHARSET.find(chunk[3]).ok_or(())? as u32
+                } else {
+                    0
+                };
 
                 let triple = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
 

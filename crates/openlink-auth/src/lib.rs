@@ -2,13 +2,13 @@
 //!
 //! 实现User+Agent双维度权限模型和Session生命周期管理
 
+pub mod error;
 pub mod permission;
 pub mod session;
-pub mod token;
 pub mod store;
-pub mod error;
+pub mod token;
 
-pub use permission::{AgentPermission, ResourceLimits, Operation, AgentType, PermissionStatus, PermissionId};
-pub use session::{Session, SessionId, SessionStatus, SessionConfig, SessionMetadata};
-pub use token::TokenGenerator;
 pub use error::AuthError;
+pub use permission::{AgentPermission, AgentType, Operation, PermissionId, PermissionStatus, ResourceLimits};
+pub use session::{Session, SessionConfig, SessionId, SessionMetadata, SessionStatus};
+pub use token::TokenGenerator;
