@@ -5,8 +5,8 @@
 //! - 置信度计算：来源权重 × 时间衰减 × 交叉验证
 //! - 同步时自动附加置信度元数据
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// 知识来源类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -97,7 +97,8 @@ impl ConfidenceMetadata {
         // 交叉验证加成：每次通过+5%，上限+30%
         let validation_bonus = (self.cross_validation_passes as f64 * 0.05).min(0.3);
 
-        self.current_score = (self.initial_score * self.source_type.weight() * decay_factor + validation_bonus).min(1.0);
+        self.current_score =
+            (self.initial_score * self.source_type.weight() * decay_factor + validation_bonus).min(1.0);
         self.current_score
     }
 
@@ -182,9 +183,7 @@ mod tests {
 
     #[test]
     fn test_confidence_creation() {
-        let meta = ConfidenceMetadata::new(
-            "k001".into(), SourceType::UserInput, 0.9, "user_direct".into(),
-        );
+        let meta = ConfidenceMetadata::new("k001".into(), SourceType::UserInput, 0.9, "user_direct".into());
         assert_eq!(meta.knowledge_id, "k001");
         assert!(meta.current_score > 0.0);
         assert_eq!(meta.cross_validation_count, 0);
@@ -200,9 +199,7 @@ mod tests {
 
     #[test]
     fn test_cross_validation() {
-        let mut meta = ConfidenceMetadata::new(
-            "k001".into(), SourceType::ToolOutput, 0.8, "ext-search".into(),
-        );
+        let mut meta = ConfidenceMetadata::new("k001".into(), SourceType::ToolOutput, 0.8, "ext-search".into());
 
         meta.cross_validate(true);
         meta.cross_validate(true);
@@ -216,9 +213,7 @@ mod tests {
     #[test]
     fn test_confidence_engine() {
         let engine = ConfidenceEngine::new(0.6);
-        let mut meta = ConfidenceMetadata::new(
-            "k001".into(), SourceType::UserInput, 0.9, "user_direct".into(),
-        );
+        let mut meta = ConfidenceMetadata::new("k001".into(), SourceType::UserInput, 0.9, "user_direct".into());
 
         let result = engine.evaluate(&mut meta);
         assert!(result.trusted);
@@ -228,9 +223,7 @@ mod tests {
     #[test]
     fn test_low_confidence_not_trusted() {
         let engine = ConfidenceEngine::new(0.6);
-        let mut meta = ConfidenceMetadata::new(
-            "k001".into(), SourceType::HistoricalCache, 0.4, "old_cache".into(),
-        );
+        let mut meta = ConfidenceMetadata::new("k001".into(), SourceType::HistoricalCache, 0.4, "old_cache".into());
 
         let result = engine.evaluate(&mut meta);
         assert!(!result.trusted);
