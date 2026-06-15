@@ -100,3 +100,8 @@ pub use knowledge_sync::{
     KnowledgeReadRequest, KnowledgeReadResponse, KnowledgeScope, KnowledgeStore, KnowledgeSyncCapability,
     KnowledgeSyncEndpoints, KnowledgeSyncService, KnowledgeWriteRequest, KnowledgeWriteResponse, KnowledgeWriteStatus,
 };
+
+// Phase 3.5: Re-export Compression types
+pub use compression::{
+    CompressionConfig, CompressionResult, CompressionStats, ContextSummary, ConversationTurn, SummaryCompressor, SlidingWindow,
+};
