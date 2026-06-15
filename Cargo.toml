@@ -9,6 +9,7 @@ members = [
     "crates/openlink-cache",
     "crates/openlink-a2a",
     "crates/openlink-orchestrator",
+    "crates/openlink-auth",
     "extensions/ext-redirect",
     "extensions/ext-webhook",
     "extensions/ext-conditions",
