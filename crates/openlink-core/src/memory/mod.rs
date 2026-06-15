@@ -4,8 +4,8 @@
 //! - LRU淘汰 + TTL过期 + 按任务ID分区
 //! - 与Context原语集成：请求处理前检查缓存，命中则跳过Extension调用
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -164,7 +164,8 @@ impl MemoryService for InMemoryCache {
         // LRU淘汰
         if entries.len() >= self.max_entries {
             // 找到最久未访问的条目
-            if let Some(oldest_key) = entries.iter()
+            if let Some(oldest_key) = entries
+                .iter()
                 .min_by_key(|(_, e)| e.last_accessed_at)
                 .map(|(k, _)| k.clone())
             {
@@ -187,10 +188,7 @@ impl MemoryService for InMemoryCache {
 
     async fn invalidate_task(&self, task_id: &TaskId) -> u64 {
         let mut entries = self.entries.write().await;
-        let keys_to_remove: Vec<_> = entries.keys()
-            .filter(|(tid, _)| tid == task_id)
-            .cloned()
-            .collect();
+        let keys_to_remove: Vec<_> = entries.keys().filter(|(tid, _)| tid == task_id).cloned().collect();
         let count = keys_to_remove.len() as u64;
         for key in keys_to_remove {
             entries.remove(&key);
@@ -200,7 +198,8 @@ impl MemoryService for InMemoryCache {
 
     async fn cleanup_expired(&self) -> u64 {
         let mut entries = self.entries.write().await;
-        let expired_keys: Vec<_> = entries.iter()
+        let expired_keys: Vec<_> = entries
+            .iter()
             .filter(|(_, e)| e.is_expired())
             .map(|(k, _)| k.clone())
             .collect();
@@ -227,9 +226,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_set_and_get() {
         let cache = InMemoryCache::new(100);
-        let entry = CacheEntry::new(
-            "key1".into(), "task1".into(), json!({"data": "hello"}), 3600,
-        );
+        let entry = CacheEntry::new("key1".into(), "task1".into(), json!({"data": "hello"}), 3600);
 
         cache.set(entry).await.unwrap();
         let result = cache.get(&"task1".into(), &"key1".into()).await;
@@ -248,14 +245,23 @@ mod tests {
     async fn test_cache_lru_eviction() {
         let cache = InMemoryCache::new(2);
 
-        cache.set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600)).await.unwrap();
-        cache.set(CacheEntry::new("k2".into(), "t1".into(), json!(2), 3600)).await.unwrap();
+        cache
+            .set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600))
+            .await
+            .unwrap();
+        cache
+            .set(CacheEntry::new("k2".into(), "t1".into(), json!(2), 3600))
+            .await
+            .unwrap();
 
         // 访问k1使其更"新"
         cache.get(&"t1".into(), &"k1".into()).await;
 
         // 添加第3个，应该淘汰k2（最久未访问）
-        cache.set(CacheEntry::new("k3".into(), "t1".into(), json!(3), 3600)).await.unwrap();
+        cache
+            .set(CacheEntry::new("k3".into(), "t1".into(), json!(3), 3600))
+            .await
+            .unwrap();
 
         let stats = cache.stats().await;
         assert_eq!(stats.evictions, 1);
@@ -265,7 +271,10 @@ mod tests {
     #[tokio::test]
     async fn test_cache_invalidate() {
         let cache = InMemoryCache::new(100);
-        cache.set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600)).await.unwrap();
+        cache
+            .set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600))
+            .await
+            .unwrap();
 
         let removed = cache.invalidate(&"t1".into(), &"k1".into()).await;
         assert!(removed);
@@ -277,8 +286,14 @@ mod tests {
     #[tokio::test]
     async fn test_cache_task_partition() {
         let cache = InMemoryCache::new(100);
-        cache.set(CacheEntry::new("k1".into(), "t1".into(), json!("v1"), 3600)).await.unwrap();
-        cache.set(CacheEntry::new("k1".into(), "t2".into(), json!("v2"), 3600)).await.unwrap();
+        cache
+            .set(CacheEntry::new("k1".into(), "t1".into(), json!("v1"), 3600))
+            .await
+            .unwrap();
+        cache
+            .set(CacheEntry::new("k1".into(), "t2".into(), json!("v2"), 3600))
+            .await
+            .unwrap();
 
         // 同key不同task是不同条目
         let r1 = cache.get(&"t1".into(), &"k1".into()).await.unwrap();
@@ -295,7 +310,10 @@ mod tests {
     #[tokio::test]
     async fn test_cache_hit_rate_stats() {
         let cache = InMemoryCache::new(100);
-        cache.set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600)).await.unwrap();
+        cache
+            .set(CacheEntry::new("k1".into(), "t1".into(), json!(1), 3600))
+            .await
+            .unwrap();
 
         // 1 hit
         cache.get(&"t1".into(), &"k1".into()).await;
