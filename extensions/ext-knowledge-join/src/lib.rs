@@ -322,3 +322,5 @@ mod tests {
         assert_eq!(serve_handler.name(), "knowledge_serve");
     }
 }
+
+pub mod confidence;
