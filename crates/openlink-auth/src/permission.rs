@@ -3,8 +3,8 @@
 //! 权限 = User授权 × Agent角色限制
 //! Agent只获得完成任务所需的最小权限
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// 权限唯一标识
@@ -152,12 +152,7 @@ pub struct AgentPermission {
 
 impl AgentPermission {
     /// 创建新的权限配置
-    pub fn new(
-        user_id: UserId,
-        agent_id: AgentId,
-        agent_name: String,
-        agent_type: AgentType,
-    ) -> Self {
+    pub fn new(user_id: UserId, agent_id: AgentId, agent_name: String, agent_type: AgentType) -> Self {
         let now = Utc::now();
         Self {
             permission_id: Uuid::new_v4().to_string(),
@@ -181,9 +176,7 @@ impl AgentPermission {
     /// 检查权限是否在有效期内
     pub fn is_valid(&self) -> bool {
         let now = Utc::now();
-        self.status == PermissionStatus::Active
-            && now >= self.valid_from
-            && now <= self.valid_until
+        self.status == PermissionStatus::Active && now >= self.valid_from && now <= self.valid_until
     }
 
     /// 检查Extension是否被允许
