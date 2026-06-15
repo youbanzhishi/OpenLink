@@ -103,5 +103,6 @@ pub use knowledge_sync::{
 
 // Phase 3.5: Re-export Compression types
 pub use compression::{
-    CompressionConfig, CompressionResult, CompressionStats, ContextSummary, ConversationTurn, SummaryCompressor, SlidingWindow,
+    CompressionConfig, CompressionResult, CompressionStats, ContextSummary, ConversationTurn, SlidingWindow,
+    SummaryCompressor,
 };
