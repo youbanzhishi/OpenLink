@@ -3,9 +3,9 @@
 use crate::error::AuthError;
 use crate::permission::{AgentPermission, Operation, PermissionStatus};
 use crate::session::{Session, SessionStatus};
-use crate::token::TokenGenerator;
 use crate::store::memory::InMemorySessionStore;
 use crate::store::SessionStore;
+use crate::token::TokenGenerator;
 
 /// 权限校验结果
 #[derive(Debug, Clone)]
@@ -44,7 +44,10 @@ pub struct PermissionChecker {
 
 impl PermissionChecker {
     pub fn new(token_generator: TokenGenerator, session_store: InMemorySessionStore) -> Self {
-        Self { token_generator, session_store }
+        Self {
+            token_generator,
+            session_store,
+        }
     }
 
     /// 完整校验链
@@ -56,11 +59,16 @@ impl PermissionChecker {
         file_size: Option<u64>,
     ) -> Result<CheckResult, AuthError> {
         // 1. Token验证
-        let claims = self.token_generator.verify_access_token(access_token)
+        let claims = self
+            .token_generator
+            .verify_access_token(access_token)
             .map_err(|e| AuthError::TokenError(e))?;
 
         // 2. 会话状态
-        let session = self.session_store.get(&claims.sub).await
+        let session = self
+            .session_store
+            .get(&claims.sub)
+            .await
             .map_err(|e| AuthError::StoreError(e.to_string()))?
             .ok_or_else(|| AuthError::SessionNotFound(claims.sub.clone()))?;
 
@@ -80,7 +88,8 @@ impl PermissionChecker {
 
         // 6. 资源限制
         if let Some(size) = file_size {
-            if size > 10 * 1024 * 1024 { // 默认10MB限制
+            if size > 10 * 1024 * 1024 {
+                // 默认10MB限制
                 return Ok(CheckResult::deny("File size exceeds limit"));
             }
         }
@@ -160,12 +169,10 @@ mod tests {
     #[tokio::test]
     async fn test_full_check_chain() {
         let (checker, session) = setup().await;
-        let result = checker.check(
-            &session.access_token,
-            "knowledge-search",
-            &Operation::Read,
-            None,
-        ).await.unwrap();
+        let result = checker
+            .check(&session.access_token, "knowledge-search", &Operation::Read, None)
+            .await
+            .unwrap();
 
         assert!(result.allowed);
         assert_eq!(result.session_id.unwrap(), session.session_id);
@@ -174,12 +181,15 @@ mod tests {
     #[tokio::test]
     async fn test_file_size_limit() {
         let (checker, session) = setup().await;
-        let result = checker.check(
-            &session.access_token,
-            "file-upload",
-            &Operation::Write,
-            Some(20 * 1024 * 1024), // 20MB
-        ).await.unwrap();
+        let result = checker
+            .check(
+                &session.access_token,
+                "file-upload",
+                &Operation::Write,
+                Some(20 * 1024 * 1024), // 20MB
+            )
+            .await
+            .unwrap();
 
         assert!(!result.allowed);
     }
@@ -187,7 +197,9 @@ mod tests {
     #[test]
     fn test_agent_permission_context() {
         let session = Session::new(
-            "perm-001".into(), "agent-001".into(), "user-001".into(),
+            "perm-001".into(),
+            "agent-001".into(),
+            "user-001".into(),
             &SessionConfig::default(),
         );
         let ctx = AgentPermissionContext::from_session(&session);
