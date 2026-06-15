@@ -83,3 +83,4 @@ pub use knowledge_sync::{
     KnowledgeSyncEndpoints, KnowledgeSyncService, KnowledgeWriteRequest, KnowledgeWriteResponse, KnowledgeWriteStatus,
 };
 pub mod hooks;
+pub mod memory;
