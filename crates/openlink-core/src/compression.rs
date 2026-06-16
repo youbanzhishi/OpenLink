@@ -22,10 +22,10 @@ pub struct CompressionConfig {
 impl Default for CompressionConfig {
     fn default() -> Self {
         Self {
-            window_size: 10,           // 保留最近10轮
-            size_threshold: 100_000,  // 100KB
-            turns_threshold: 20,      // 20轮对话
-            compression_ratio: 0.3,   // 压缩到30%
+            window_size: 10,         // 保留最近10轮
+            size_threshold: 100_000, // 100KB
+            turns_threshold: 20,     // 20轮对话
+            compression_ratio: 0.3,  // 压缩到30%
         }
     }
 }
@@ -106,7 +106,7 @@ impl SlidingWindow {
     /// 添加对话轮
     pub fn push(&mut self, turn: ConversationTurn) {
         self.turns.push_back(turn);
-        
+
         // 超过窗口大小时触发压缩
         while self.turns.len() > self.config.window_size {
             self.compress_oldest_turn();
@@ -148,13 +148,9 @@ impl SlidingWindow {
 
     /// 获取当前状态
     pub fn stats(&self) -> CompressionStats {
-        let total_size: usize = self.turns.iter()
-            .map(|t| t.content.len())
-            .sum();
-        
-        let summary_size: usize = self.summaries.iter()
-            .map(|s| s.compressed_size)
-            .sum();
+        let total_size: usize = self.turns.iter().map(|t| t.content.len()).sum();
+
+        let summary_size: usize = self.summaries.iter().map(|s| s.compressed_size).sum();
 
         CompressionStats {
             turn_count: self.turns.len(),

@@ -178,8 +178,7 @@ pub struct KnowledgeConfig {
     #[serde(default)]
     pub sync_token: String,
     /// 知识体系仓库本地路径
-    /// MVP: 写死的邀请码列表
-
+    // MVP: 写死的邀请码列表
 }
 
 fn default_knowledge_enabled() -> bool {
