@@ -50,6 +50,7 @@ pub mod knowledge_sync;
 
 pub mod hooks;
 pub mod memory;
+pub mod compression;  // WO-082: ContextCompression滑动窗口
 
 pub use engine::RoutingEngine;
 pub use error::CoreError;

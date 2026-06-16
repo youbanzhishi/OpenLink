@@ -910,3 +910,58 @@ mod tests {
         assert!(config.enabled);
     }
 }
+
+// WO-079: 组合权限模型 - Agent权限上下文
+/// Agent权限上下文 - WO-079组合权限模型
+#[derive(Debug, Clone)]
+pub struct AgentPermissionContext {
+    /// 用户ID
+    pub user_id: String,
+    /// Agent ID
+    pub agent_id: Option<String>,
+    /// 用户权限列表
+    pub user_scopes: Vec<String>,
+    /// Agent权限列表
+    pub agent_scopes: Vec<String>,
+    /// 会话ID
+    pub session_id: Option<String>,
+    /// 权限过期时间
+    pub expires_at: Option<i64>,
+}
+
+impl AgentPermissionContext {
+    pub fn new(user_id: String) -> Self {
+        Self {
+            user_id,
+            agent_id: None,
+            user_scopes: Vec::new(),
+            agent_scopes: Vec::new(),
+            session_id: None,
+            expires_at: None,
+        }
+    }
+
+    /// 合并用户和Agent权限
+    pub fn with_agent(mut self, agent_id: String, scopes: Vec<String>) -> Self {
+        self.agent_id = Some(agent_id);
+        self.agent_scopes = scopes;
+        self
+    }
+
+    /// 检查是否有指定权限
+    pub fn has_scope(&self, scope: &str) -> bool {
+        self.user_scopes.iter().any(|s| s == scope || s == "admin")
+            || self.agent_scopes.iter().any(|s| s == scope || s == "admin")
+    }
+
+    /// 检查是否过期
+    pub fn is_expired(&self) -> bool {
+        if let Some(expires) = self.expires_at {
+            return std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64 > expires)
+                .unwrap_or(false);
+        }
+        false
+    }
+}
