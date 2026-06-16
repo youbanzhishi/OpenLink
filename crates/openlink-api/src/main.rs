@@ -108,7 +108,5 @@ async fn main() {
     tracing::info!("Phase 5 features: health checks, monitoring");
     tracing::info!("Phase 3 features: knowledge join, file transfer, agent API");
     tracing::info!("Phase 2 features: conditional routing, webhook, hooks, stats, auth");
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }

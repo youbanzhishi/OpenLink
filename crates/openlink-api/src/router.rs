@@ -257,7 +257,7 @@ pub fn build_app(state: AppState) -> Router {
         .route("/v1/knowledge/script/{name}", get(handlers::knowledge::get_script))
         .route("/v1/knowledge/hot-rules/{role}", get(handlers::knowledge::get_role_hot_rules))
         // 只读 Agent 知识 Markdown
-        .route("/v1/knowledge/markdown", get(handlers::knowledge::get_knowledge_markdown));
+        .route("/v1/knowledge/markdown", get(handlers::knowledge::get_knowledge_markdown))
         .merge(public_routes)
         .merge(admin_routes)
         .merge(agent_routes)

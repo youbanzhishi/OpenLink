@@ -280,8 +280,7 @@ mod tests {
     #[test]
     fn test_critical_turn_preserved() {
         let mut window = SlidingWindow::new(CompressionConfig::default());
-        let critical = ConversationTurn::new("user", "Remember this important info")
-            .mark_critical();
+        let critical = ConversationTurn::new("user", "Remember this important info").mark_critical();
         window.push(critical);
         assert!(!window.summaries.is_empty() || window.turns.iter().any(|t| t.is_critical));
     }
