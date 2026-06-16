@@ -480,17 +480,45 @@ mod tests {
         assert_eq!(found.name, "public");
         assert_eq!(found.repo_path, "/pub");
         assert!(config.find_source_by_code("nope").is_none());
+    }
+
+    #[test]
     fn test_knowledge_config_custom() {
+        let config = KnowledgeConfig {
+            enabled: true,
+            base_url: "https://api.example.com".to_string(),
+            sources: vec![],
+            repo_path: "/opt/knowledge".to_string(),
             invite_codes: vec!["test-code-1".to_string(), "test-code-2".to_string()],
+            sync_token: String::new(),
+        };
         assert!(config.enabled);
         assert_eq!(config.repo_path, "/opt/knowledge");
         assert_eq!(config.invite_codes.len(), 2);
         assert_eq!(config.base_url, "https://api.example.com");
+    }
+
+    #[test]
     fn test_app_config_with_knowledge() {
         let mut config = AppConfig::default();
         config.knowledge = KnowledgeConfig {
+            enabled: true,
+            base_url: "https://api.example.com".to_string(),
+            sources: vec![
+                KnowledgeSource {
+                    name: "test".to_string(),
+                    display_name: String::new(),
+                    short_code: "t".to_string(),
+                    repo_path: "/opt/test".to_string(),
+                    invite_codes: vec!["test-code".to_string()],
+                    sync_token: String::new(),
+                },
+            ],
+            repo_path: String::new(),
+            invite_codes: vec![],
+            sync_token: String::new(),
+        };
         assert!(config.knowledge.enabled);
         assert_eq!(config.knowledge.invite_codes.len(), 1);
-
     }
 }
