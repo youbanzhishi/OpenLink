@@ -168,6 +168,7 @@ impl SlidingWindow {
 
 /// 摘要压缩器
 pub struct SummaryCompressor {
+    #[allow(dead_code)]
     config: CompressionConfig,
 }
 

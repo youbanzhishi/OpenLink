@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// 任务阶段枚举
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskPhase {
     /// 发现阶段 - Agent探索环境和可用资源
@@ -23,6 +23,7 @@ pub enum TaskPhase {
     /// 异常恢复阶段 - Agent处理错误和恢复
     ErrorRecovery,
     /// 空闲阶段 - Agent等待指令
+    #[default]
     Idle,
 }
 
@@ -78,12 +79,6 @@ impl TaskPhase {
             TaskPhase::ErrorRecovery => "error_recovery",
             TaskPhase::Idle => "idle",
         }
-    }
-}
-
-impl Default for TaskPhase {
-    fn default() -> Self {
-        TaskPhase::Idle
     }
 }
 
