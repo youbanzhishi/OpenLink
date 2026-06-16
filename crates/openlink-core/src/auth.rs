@@ -964,22 +964,14 @@ impl AgentPermissionContext {
         }
         false
     }
-}
 
     /// 检查是否允许访问指定Extension
-    pub fn is_extension_allowed(&self, ext_id: &str) -> bool {
-        // 默认允许所有Extension
-        true
-
-    /// 检查是否允许访问指定Extension
-    pub fn is_extension_allowed(&self, ext_id: &str) -> bool {
-        // 默认允许所有Extension
+    pub fn is_extension_allowed(&self, _ext_id: &str) -> bool {
         true
     }
 
     /// 检查是否允许执行指定操作
-    pub fn is_operation_allowed(&self, action: &str) -> bool {
-        // 默认允许所有操作
+    pub fn is_operation_allowed(&self, _action: &str) -> bool {
         true
     }
 }
