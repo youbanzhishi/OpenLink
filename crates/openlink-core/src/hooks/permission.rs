@@ -56,7 +56,7 @@ impl Hook for PermissionHook {
         "before_route"
     }
 
-    fn execute(&self, ctx: &mut HookContext) -> HookResult {
+    fn execute(&self, ctx: &mut dyn HookContext) -> HookResult {
         // 1. 检查是否启用
         if !self.config.enabled {
             return Ok(HookAdvice::Continue);
@@ -100,8 +100,10 @@ impl Hook for PermissionHook {
 
             // 检查操作权限
             let action = ctx.action();
-            if !perm_ctx.is_operation_allowed(&action) {
-                return Err(CoreError::Forbidden(format!("Operation '{}' is not allowed", action)));
+            if let Some(action) = action {
+                if !perm_ctx.is_operation_allowed(action) {
+                    return Err(CoreError::Forbidden(format!("Operation not allowed")));
+                }
             }
         }
 
@@ -109,42 +111,9 @@ impl Hook for PermissionHook {
         Ok(HookAdvice::Continue)
     }
 
-    fn on_error(&self, ctx: &HookContext, error: &CoreError) -> HookResult {
+    fn on_error(&self, ctx: &dyn HookContext, error: &CoreError) -> HookResult {
         tracing::warn!("Permission hook error for path '{}': {}", ctx.path(), error);
         Err(error.clone())
-    }
-}
-
-/// HookContext 扩展 - 获取权限信息
-pub trait PermissionContextExt {
-    fn agent_permission(&self) -> Option<crate::auth::AgentPermissionContext>;
-    fn extension_id(&self) -> Option<String>;
-    fn action(&self) -> String;
-    fn auth_header(&self) -> Option<String>;
-}
-
-impl PermissionContextExt for HookContext {
-    fn agent_permission(&self) -> Option<crate::auth::AgentPermissionContext> {
-        self.get("agent_permission")
-            .map(|v| v.clone())
-            .and_then(|v| serde_json::from_value(v).ok())
-    }
-
-    fn extension_id(&self) -> Option<String> {
-        self.get("extension_id").map(|v| v.to_string())
-    }
-
-    fn action(&self) -> String {
-        self.get("action")
-            .map(|v| v.to_string())
-            .unwrap_or_else(|| "unknown".into())
-    }
-
-    fn auth_header(&self) -> Option<String> {
-        self.headers()
-            .get("authorization")
-            .cloned()
-            .or_else(|| self.headers().get("Authorization").cloned())
     }
 }
 
