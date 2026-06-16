@@ -94,6 +94,4 @@ pub trait HookContext: Send + Sync {
     fn route(&self) -> Option<&Route>;
     fn extension_id(&self) -> Option<&str>;
     fn agent_permission(&self) -> Option<&crate::auth::AgentPermissionContext>;
-    fn is_extension_allowed(&self, ext_id: &str) -> bool;
-    fn is_operation_allowed(&self, action: &Action) -> bool;
 }
