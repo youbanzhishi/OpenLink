@@ -15,6 +15,14 @@ pub enum CoreError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    /// 未授权
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
+
+    /// 禁止访问
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
+
     /// 扩展相关错误（注册/查找/执行）
     #[error("Extension error: {0}")]
     ExtensionError(String),

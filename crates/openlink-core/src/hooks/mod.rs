@@ -1,5 +1,7 @@
 //! Hooks 模块 - 路由钩子系统
 
+use crate::primitives::{Action, Context, Route};
+
 pub mod monitor;
 pub mod permission;
 
@@ -25,18 +27,20 @@ pub trait HookContext: Send + Sync {
 }
 
 // WO-080: HookAdvice - Hook执行建议
-#[derive(Debug, Clone)]
-pub struct HookAdvice {
-    pub proceed: bool,
-    pub reason: String,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HookAdvice {
+    /// 继续执行
+    Continue,
+    /// 拒绝执行（带原因）
+    Reject(String),
 }
 
 impl HookAdvice {
-    pub fn proceed(reason: impl Into<String>) -> Self {
-        Self { proceed: true, reason: reason.into() }
+    pub fn continue_() -> Self {
+        Self::Continue
     }
     pub fn reject(reason: impl Into<String>) -> Self {
-        Self { proceed: false, reason: reason.into() }
+        Self::Reject(reason.into())
     }
 }
 

@@ -95,9 +95,10 @@ pub struct SlidingWindow {
 
 impl SlidingWindow {
     pub fn new(config: CompressionConfig) -> Self {
+        let window_size = config.window_size;
         Self {
             config,
-            turns: VecDeque::with_capacity(config.window_size * 2),
+            turns: VecDeque::with_capacity(window_size * 2),
             summaries: vec![],
         }
     }
