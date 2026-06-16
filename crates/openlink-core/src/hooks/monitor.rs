@@ -53,7 +53,7 @@ pub trait MonitorHook: Send + Sync {
 }
 
 /// 监控校验引擎 - 聚合多个MonitorHook的建议
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MonitorEngine {
     hooks: Arc<RwLock<Vec<Arc<dyn MonitorHook>>>>,
     /// abort建议阈值：超过此数量的MonitorHook建议abort时，引擎返回abort

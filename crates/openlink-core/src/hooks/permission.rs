@@ -3,8 +3,7 @@
 //! 实现 BeforeRoute Hook，校验链：Token验证→会话状态→权限有效期→Extension白名单→操作检查→资源限制
 
 use crate::error::CoreError;
-use crate::hooks::{Hook, HookAdvice, HookContext, HookResult};
-use crate::primitives::{Action, Context, Route};
+use crate::hooks::{Hook, HookContext, HookResult};
 
 /// 权限Hook配置
 #[derive(Debug, Clone)]
@@ -59,14 +58,14 @@ impl Hook for PermissionHook {
     fn execute(&self, ctx: &mut dyn HookContext) -> HookResult {
         // 1. 检查是否启用
         if !self.config.enabled {
-            return Ok(HookAdvice::Continue);
+            return HookResult::continue_();
         }
 
         // 2. 检查白名单路径
         let path = ctx.path();
         for bypass in &self.config.bypass_paths {
             if path.starts_with(bypass) {
-                return Ok(HookAdvice::Continue);
+                return HookResult::continue_();
             }
         }
 
@@ -84,7 +83,7 @@ impl Hook for PermissionHook {
 
         // 5. 验证Token（需要调用auth模块，这里简化处理）
         if token.is_empty() {
-            return Err(CoreError::Unauthorized("Invalid token format".into()));
+            return HookResult::reject("Invalid token format");
         }
 
         // 6. 检查权限上下文
@@ -92,28 +91,27 @@ impl Hook for PermissionHook {
             // 检查Extension白名单
             let ext_id = ctx.extension_id().unwrap_or_default();
             if !perm_ctx.is_extension_allowed(&ext_id) {
-                return Err(CoreError::Forbidden(format!(
+                return HookResult::reject(format!(
                     "Extension '{}' is not in the allowed list",
                     ext_id
-                )));
+                ));
             }
 
             // 检查操作权限
-            let action = ctx.action();
-            if let Some(action) = action {
-                if !perm_ctx.is_operation_allowed(action) {
-                    return Err(CoreError::Forbidden(format!("Operation not allowed")));
+            if let Some(action) = ctx.action() {
+                if !perm_ctx.is_operation_allowed(action.as_str()) {
+                    return HookResult::reject("Operation not allowed");
                 }
             }
         }
 
         // 7. 继续执行
-        Ok(HookAdvice::Continue)
+        HookResult::continue_()
     }
 
     fn on_error(&self, ctx: &dyn HookContext, error: &CoreError) -> HookResult {
         tracing::warn!("Permission hook error for path '{}': {}", ctx.path(), error);
-        Err(error.clone())
+        HookResult::reject(error.to_string())
     }
 }
 
