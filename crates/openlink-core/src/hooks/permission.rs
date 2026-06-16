@@ -76,11 +76,7 @@ impl Hook for PermissionHook {
         };
 
         // 4. 校验Token格式
-        let token = if token.starts_with("Bearer ") {
-            &token[7..]
-        } else {
-            token
-        };
+        let token = token.strip_prefix("Bearer ").unwrap_or(token);
 
         // 5. 验证Token（需要调用auth模块，这里简化处理）
         if token.is_empty() {
@@ -91,7 +87,7 @@ impl Hook for PermissionHook {
         if let Some(perm_ctx) = ctx.agent_permission() {
             // 检查Extension白名单
             let ext_id = ctx.extension_id().unwrap_or_default();
-            if !perm_ctx.is_extension_allowed(&ext_id) {
+            if !perm_ctx.is_extension_allowed(ext_id) {
                 return HookResult::reject(format!("Extension '{}' is not in the allowed list", ext_id));
             }
 

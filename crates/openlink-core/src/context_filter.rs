@@ -122,12 +122,10 @@ impl ExtensionFilter {
     /// 检查Extension是否符合条件
     pub fn matches(&self, ext: &ExtensionFilterTarget) -> bool {
         // 1. 检查任务阶段
-        if !self.task_phases.is_empty() {
-            if !self.task_phases.contains(&ext.task_phase) {
-                // 如果Extension声明了特定阶段，则必须匹配
-                if !ext.supported_phases.is_empty() && !ext.supported_phases.contains(&ext.task_phase) {
-                    return false;
-                }
+        if !self.task_phases.is_empty() && !self.task_phases.contains(&ext.task_phase) {
+            // 如果Extension声明了特定阶段，则必须匹配
+            if !ext.supported_phases.is_empty() && !ext.supported_phases.contains(&ext.task_phase) {
+                return false;
             }
         }
 
