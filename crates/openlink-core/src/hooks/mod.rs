@@ -10,7 +10,7 @@ pub mod permission;
 pub use monitor::{
     ErrorRateMonitorHook, LatencyMonitorHook, MonitorAdvice, MonitorContext, MonitorEngine, MonitorHook,
 };
-pub use permission::{PermissionContextExt, PermissionHook, PermissionHookConfig};
+pub use permission::{PermissionHook, PermissionHookConfig};
 
 // WO-080: HookAdvice - Hook执行建议
 #[derive(Debug, Clone, PartialEq, Eq)]

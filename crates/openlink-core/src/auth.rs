@@ -970,6 +970,11 @@ impl AgentPermissionContext {
     pub fn is_extension_allowed(&self, ext_id: &str) -> bool {
         // 默认允许所有Extension
         true
+
+    /// 检查是否允许访问指定Extension
+    pub fn is_extension_allowed(&self, ext_id: &str) -> bool {
+        // 默认允许所有Extension
+        true
     }
 
     /// 检查是否允许执行指定操作
@@ -977,3 +982,4 @@ impl AgentPermissionContext {
         // 默认允许所有操作
         true
     }
+}
