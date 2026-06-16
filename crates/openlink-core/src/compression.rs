@@ -179,7 +179,6 @@ impl SummaryCompressor {
     /// 生成摘要
     pub fn compress(&self, turns: &[ConversationTurn]) -> ContextSummary {
         let original_size: usize = turns.iter().map(|t| t.content.len()).sum();
-        
         // 提取关键信息
         let key_points: Vec<String> = turns
             .iter()
@@ -210,7 +209,6 @@ impl SummaryCompressor {
         let roles: Vec<&str> = turns.iter().map(|t| t.role.as_str()).collect();
         let first_role = roles.first().unwrap_or(&"unknown");
         let last_role = roles.last().unwrap_or(&"unknown");
-        
         format!(
             "[对话摘要] {}轮对话, 角色: {} -> {}, 关键点: {}个",
             turns.len(),
@@ -269,13 +267,10 @@ mod tests {
             ..Default::default()
         };
         let mut window = SlidingWindow::new(config);
-        
         window.push(ConversationTurn::new("user", "Hello"));
         window.push(ConversationTurn::new("assistant", "Hi"));
         window.push(ConversationTurn::new("user", "How are you?"));
-        
         assert_eq!(window.turns.len(), 3);
-        
         // 超过窗口大小
         window.push(ConversationTurn::new("assistant", "I'm fine"));
         assert_eq!(window.turns.len(), 3); // 保持窗口大小
@@ -284,23 +279,19 @@ mod tests {
     #[test]
     fn test_critical_turn_preserved() {
         let mut window = SlidingWindow::new(CompressionConfig::default());
-        
         let critical = ConversationTurn::new("user", "Remember this important info")
             .mark_critical();
         window.push(critical);
-        
         assert!(!window.summaries.is_empty() || window.turns.iter().any(|t| t.is_critical));
     }
 
     #[test]
     fn test_summary_compressor() {
         let compressor = SummaryCompressor::new(CompressionConfig::default());
-        
         let turns = vec![
             ConversationTurn::new("user", "Hello"),
             ConversationTurn::new("assistant", "Hi there!"),
         ];
-        
         let summary = compressor.compress(&turns);
         assert!(!summary.summary_id.is_empty());
         assert!(summary.original_size > 0);
@@ -309,13 +300,11 @@ mod tests {
     #[test]
     fn test_extract_key_points() {
         let compressor = SummaryCompressor::new(CompressionConfig::default());
-        
         let turns = vec![
             ConversationTurn::new("user", "Hello"),
             ConversationTurn::new("assistant", "ERROR: something failed"),
             ConversationTurn::new("user", "OK").mark_critical(),
         ];
-        
         let key_points = compressor.extract_key_points(&turns);
         assert!(key_points.len() >= 2); // ERROR和critical
     }
@@ -324,7 +313,6 @@ mod tests {
     fn test_compression_stats() {
         let config = CompressionConfig::default();
         let window = SlidingWindow::new(config);
-        
         let stats = window.stats();
         assert_eq!(stats.turn_count, 0);
         assert_eq!(stats.total_size, 0);

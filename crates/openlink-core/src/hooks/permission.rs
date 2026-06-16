@@ -70,9 +70,10 @@ impl Hook for PermissionHook {
         }
 
         // 3. 提取Token
-        let token = ctx
-            .auth_header()
-            .ok_or_else(|| CoreError::Unauthorized("Missing authorization token".into()))?;
+        let token = match ctx.auth_header() {
+            Some(t) => t,
+            None => return HookResult::reject("Missing authorization token"),
+        };
 
         // 4. 校验Token格式
         let token = if token.starts_with("Bearer ") {
@@ -91,10 +92,7 @@ impl Hook for PermissionHook {
             // 检查Extension白名单
             let ext_id = ctx.extension_id().unwrap_or_default();
             if !perm_ctx.is_extension_allowed(&ext_id) {
-                return HookResult::reject(format!(
-                    "Extension '{}' is not in the allowed list",
-                    ext_id
-                ));
+                return HookResult::reject(format!("Extension '{}' is not in the allowed list", ext_id));
             }
 
             // 检查操作权限
