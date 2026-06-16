@@ -12,7 +12,6 @@
 //! Phase 3: 注册知识体系扩展
 //! Phase 5: 健康检查
 
-
 use openlink_api::{build_app, config::AppConfig, state::AppState};
 use openlink_core::ExtensionRegistry;
 use openlink_core::RoutingEngine;

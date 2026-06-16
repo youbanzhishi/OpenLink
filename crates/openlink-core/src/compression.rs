@@ -226,7 +226,7 @@ impl SummaryCompressor {
             .iter()
             .filter(|t| {
                 // 关键信息判定：标记为critical、包含错误、或包含决策
-                t.is_critical 
+                t.is_critical
                     || t.content.contains("error")
                     || t.content.contains("ERROR")
                     || t.content.contains("决策")
