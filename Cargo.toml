@@ -20,9 +20,11 @@ members = [
     "extensions/ext-direct-transfer",
     "extensions/ext-daw-distribute",
     "extensions/ext-p2p-transfer",
-    "extensions/ext-a2a-discovery",
-    "extensions/ext-orchestrator",
-    "extensions/ext-knowledge-join",
+        "extensions/ext-a2a-discovery",
+        "extensions/ext-orchestrator",
+    
+
+        "extensions/ext-knowledge-join",
 ]
 resolver = "2"
 

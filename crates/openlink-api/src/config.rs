@@ -144,7 +144,6 @@ pub struct KnowledgeSource {
     #[serde(default)]
     pub sync_token: String,
 }
-
 impl KnowledgeSource {
     /// 显示名称，未设置时用 name
     pub fn label(&self) -> &str {
@@ -168,7 +167,6 @@ pub struct KnowledgeConfig {
     /// 多知识源列表
     #[serde(default)]
     pub sources: Vec<KnowledgeSource>,
-
     // ── 兼容旧配置（单源）──
     /// 旧字段：知识体系仓库本地路径（兼容，会自动转为 sources[0]）
     #[serde(default)]
@@ -179,6 +177,9 @@ pub struct KnowledgeConfig {
     /// 旧字段：同步token（兼容，会自动转为 sources[0]）
     #[serde(default)]
     pub sync_token: String,
+    /// 知识体系仓库本地路径
+    /// MVP: 写死的邀请码列表
+
 }
 
 fn default_knowledge_enabled() -> bool {
@@ -208,7 +209,6 @@ impl KnowledgeConfig {
         }
         vec![]
     }
-
     /// 根据 invite_code 查找对应的知识源
     pub fn find_source_by_code(&self, code: &str) -> Option<KnowledgeSource> {
         for source in self.resolved_sources() {
@@ -218,7 +218,6 @@ impl KnowledgeConfig {
         }
         None
     }
-
     /// 根据短链码查找知识源（优先匹配 short_code，其次匹配 invite_code）
     pub fn find_source_by_short_code(&self, code: &str) -> Option<KnowledgeSource> {
         for source in self.resolved_sources() {
@@ -229,7 +228,6 @@ impl KnowledgeConfig {
         // fallback: 邀请码也能当短链用
         self.find_source_by_code(code)
     }
-
     /// 根据 name 查找知识源
     pub fn find_source_by_name(&self, name: &str) -> Option<KnowledgeSource> {
         self.resolved_sources().into_iter().find(|s| s.name == name)
@@ -245,6 +243,7 @@ impl Default for KnowledgeConfig {
             repo_path: String::new(),
             invite_codes: vec![],
             sync_token: String::new(),
+
         }
     }
 }
@@ -395,6 +394,7 @@ mod tests {
         let config = KnowledgeConfig::default();
         assert!(!config.enabled);
         assert!(config.sources.is_empty());
+
         assert!(config.repo_path.is_empty());
         assert!(config.invite_codes.is_empty());
         assert_eq!(config.base_url, "http://localhost:3000");
@@ -417,7 +417,6 @@ mod tests {
         assert_eq!(sources[0].repo_path, "/opt/knowledge");
         assert_eq!(sources[0].invite_codes.len(), 1);
     }
-
     #[test]
     fn test_knowledge_config_multi_source() {
         let config = KnowledgeConfig {
@@ -450,7 +449,6 @@ mod tests {
         assert_eq!(sources[0].name, "private");
         assert_eq!(sources[1].name, "public");
     }
-
     #[test]
     fn test_find_source_by_code() {
         let config = KnowledgeConfig {
@@ -482,5 +480,17 @@ mod tests {
         assert_eq!(found.name, "public");
         assert_eq!(found.repo_path, "/pub");
         assert!(config.find_source_by_code("nope").is_none());
+    fn test_knowledge_config_custom() {
+            invite_codes: vec!["test-code-1".to_string(), "test-code-2".to_string()],
+        assert!(config.enabled);
+        assert_eq!(config.repo_path, "/opt/knowledge");
+        assert_eq!(config.invite_codes.len(), 2);
+        assert_eq!(config.base_url, "https://api.example.com");
+    fn test_app_config_with_knowledge() {
+        let mut config = AppConfig::default();
+        config.knowledge = KnowledgeConfig {
+        assert!(config.knowledge.enabled);
+        assert_eq!(config.knowledge.invite_codes.len(), 1);
+
     }
 }

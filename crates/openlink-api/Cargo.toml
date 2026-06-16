@@ -12,13 +12,17 @@ openlink-core = { path = "../openlink-core" }
 openlink-store = { path = "../openlink-store" }
 openlink-cache = { path = "../openlink-cache" }
 ext-knowledge-join = { path = "../../extensions/ext-knowledge-join" }
-
 # HTTP server
 axum = "0.7"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
-
 # Serialization
+ext-redirect = { path = "../../extensions/ext-redirect" }
+ext-webhook = { path = "../../extensions/ext-webhook" }
+ext-conditions = { path = "../../extensions/ext-conditions" }
+ext-hooks = { path = "../../extensions/ext-hooks" }
+ext-json = { path = "../../extensions/ext-json" }
+
 serde = { workspace = true }
 serde_json = { workspace = true }
 

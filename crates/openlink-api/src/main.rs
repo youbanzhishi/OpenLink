@@ -12,6 +12,7 @@
 //! Phase 3: 注册知识体系扩展
 //! Phase 5: 健康检查
 
+
 use openlink_api::{build_app, config::AppConfig, state::AppState};
 use openlink_core::ExtensionRegistry;
 use openlink_core::RoutingEngine;
@@ -53,6 +54,9 @@ async fn main() {
     // Phase 3: 知识体系扩展
     ext_knowledge_join::register(&mut registry).expect("Failed to register knowledge join extension");
 
+    // Phase 3: 知识体系扩展
+    ext_knowledge_join::register(&mut registry).expect("Failed to register knowledge join extension");
+
     tracing::info!(
         actions = ?registry.list_actions(),
         "Extension registry initialized"
@@ -63,6 +67,21 @@ async fn main() {
 
     // 6. 构建 AppState
     let state = AppState::new(Arc::new(store), Arc::new(engine), Arc::new(config));
+    // 6. 构建 AppState（Phase 3: 包含知识仓库路径）
+    let knowledge_repo_path = if config.knowledge.enabled && !config.knowledge.repo_path.is_empty() {
+        tracing::info!(repo_path = %config.knowledge.repo_path, "Knowledge system enabled");
+        Some(config.knowledge.repo_path.clone())
+    } else {
+        tracing::info!("Knowledge system disabled or not configured");
+        None
+    };
+    let state = AppState {
+        store: Arc::new(store),
+        engine: Arc::new(engine),
+        config: Arc::new(config),
+        knowledge_repo_path,
+    };
+
 
     // 日志：知识体系源
     if state.config.knowledge.enabled {
@@ -91,4 +110,9 @@ async fn main() {
     tracing::info!("Phase 5 features: health checks, monitoring");
     tracing::info!("Phase 3 features: knowledge join, file transfer, agent API");
     axum::serve(listener, app).await.expect("Server error");
+    tracing::info!("Phase 2 features: conditional routing, webhook, hooks, stats, auth");
+    axum::serve(listener, app)
+        .await
+        .expect("Server error");
+
 }
